@@ -65,8 +65,8 @@ export function validateNationalId(nid: string): boolean {
   const month = parseInt(nid.substring(3, 5)) - 1; // JS months are 0-indexed
   const day = parseInt(nid.substring(5, 7));
 
-  const dob = new Date(year, month, day);
-  if (dob.getFullYear() !== year || dob.getMonth() !== month || dob.getDate() !== day) {
+  const dob = new Date(Date.UTC(year, month, day));
+  if (dob.getUTCFullYear() !== year || dob.getUTCMonth() !== month || dob.getUTCDate() !== day) {
     return false;
   }
 
@@ -87,7 +87,7 @@ export function parseNationalId(nid: string) {
   const year = parseInt(nid.substring(1, 3)) + century;
   const month = parseInt(nid.substring(3, 5)) - 1;
   const day = parseInt(nid.substring(5, 7));
-  const dob = new Date(year, month, day);
+  const dob = new Date(Date.UTC(year, month, day));
 
   const govCode = nid.substring(7, 9);
   const governorate = GOVERNORATES[govCode];

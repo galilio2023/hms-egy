@@ -1,0 +1,13 @@
+{
+  "common": {
+    "title": "HMS Egypt",
+    "welcome": "Welcome to Hospital Management System",
+    "hospitalName": "Egypt Specialist Hospital"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password"
+  }
+}

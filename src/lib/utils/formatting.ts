@@ -97,10 +97,18 @@ export function formatAge(dob: Date): string {
   return `${years} years`;
 }
 
+import Tafgeet from "tafgeetjs";
+
 /**
- * Placeholder for converting amount to Arabic words.
- * In production, a library like 'tafgeet' should be used.
+ * Converts amount to Arabic words (Tafgeet).
+ * Used for invoices and financial reports to prevent tampering.
  */
 export function amountToArabicWords(amount: number): string {
-  return `${amount} جنيه مصري فقط لا غير`; // Simplified placeholder
+  try {
+    const tafgeet = new Tafgeet(amount, "EGP");
+    return tafgeet.convert();
+  } catch (error) {
+    console.error("Tafgeet conversion failed", error);
+    return `${amount} جنيه مصري فقط لا غير`;
+  }
 }

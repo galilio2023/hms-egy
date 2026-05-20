@@ -18,7 +18,7 @@ export function encryptField(text: string): string {
   if (KEY_BUFFER.length !== 32) {
     throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits). Check your environment variables.");
   }
-  const iv = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", KEY_BUFFER, iv);
   const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
@@ -34,11 +34,11 @@ export function decryptField(data: string): string | null {
   }
   try {
     const buffer = Buffer.from(data, "base64");
-    if (buffer.length < 32) return null; // Minimum IV + Tag length
+    if (buffer.length < 28) return null; // Minimum IV (12) + Tag (16) length
 
-    const iv = buffer.subarray(0, 16);
-    const tag = buffer.subarray(16, 32);
-    const encrypted = buffer.subarray(32);
+    const iv = buffer.subarray(0, 12);
+    const tag = buffer.subarray(12, 28);
+    const encrypted = buffer.subarray(28);
     const decipher = crypto.createDecipheriv("aes-256-gcm", KEY_BUFFER, iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
