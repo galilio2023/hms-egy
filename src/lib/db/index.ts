@@ -25,7 +25,8 @@ export const db = drizzle(sql, { schema });
  * Scopes a query to a specific hospital.
  */
 export function scopeToHospital(hospitalId: string) {
-  return (table: any) => eq(table.hospitalId, hospitalId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (table: { hospitalId: any }) => eq(table.hospitalId, hospitalId);
 }
 
 /**

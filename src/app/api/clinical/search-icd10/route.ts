@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 import Fuse from "fuse.js";
+import { Icd10Code } from "@/lib/utils/clinical-codes";
 
-let icd10Cache: any[] | null = null;
-let fuseInstance: Fuse<any> | null = null;
+let icd10Cache: Icd10Code[] | null = null;
+let fuseInstance: Fuse<Icd10Code> | null = null;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
 
   if (!icd10Cache) {
     const filePath = path.join(process.cwd(), "db/clinical-data/icd10-ar.json");
-    const fileContent = fs.readFileSync(filePath, "utf-8");
+    const fileContent = await fs.readFile(filePath, "utf-8");
     icd10Cache = JSON.parse(fileContent);
     fuseInstance = new Fuse(icd10Cache!, {
       keys: ["code", "descriptionEn", "descriptionAr"],

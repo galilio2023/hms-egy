@@ -25,23 +25,30 @@ export function encryptField(text: string): string {
 /**
  * Decrypts sensitive data.
  */
-export function decryptField(data: string): string {
+export function decryptField(data: string): string | null {
   if (!ENCRYPTION_KEY || Buffer.from(ENCRYPTION_KEY, "utf-8").length !== 32) {
     throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits).");
   }
-  const buffer = Buffer.from(data, "base64");
-  const iv = buffer.subarray(0, 16);
-  const tag = buffer.subarray(16, 32);
-  const encrypted = buffer.subarray(32);
-  const decipher = crypto.createDecipheriv("aes-256-gcm", Buffer.from(ENCRYPTION_KEY, "utf-8"), iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  try {
+    const buffer = Buffer.from(data, "base64");
+    if (buffer.length < 32) return null; // Minimum IV + Tag length
+
+    const iv = buffer.subarray(0, 16);
+    const tag = buffer.subarray(16, 32);
+    const encrypted = buffer.subarray(32);
+    const decipher = crypto.createDecipheriv("aes-256-gcm", Buffer.from(ENCRYPTION_KEY, "utf-8"), iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  } catch (error) {
+    console.error("Decryption failed: Integrity check failed or invalid data", error);
+    return null;
+  }
 }
 
 /**
  * Signs an audit record using HMAC-SHA256.
  */
-export function signAuditRecord(record: any): string {
+export function signAuditRecord(record: Record<string, unknown>): string {
   const data = JSON.stringify(record);
   return crypto.createHmac("sha256", AUDIT_HMAC_SECRET).update(data).digest("hex");
 }
@@ -49,7 +56,7 @@ export function signAuditRecord(record: any): string {
 /**
  * Verifies an audit record signature.
  */
-export function verifyAuditRecord(record: any, signature: string): boolean {
+export function verifyAuditRecord(record: Record<string, unknown>, signature: string): boolean {
   const expectedSignature = signAuditRecord(record);
   const sigBuf = Buffer.from(signature);
   const expectedBuf = Buffer.from(expectedSignature);

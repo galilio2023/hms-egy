@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 import Fuse from "fuse.js";
+import { CptCode } from "@/lib/utils/clinical-codes";
 
-let cptCache: any[] | null = null;
-let fuseInstance: Fuse<any> | null = null;
+let cptCache: CptCode[] | null = null;
+let fuseInstance: Fuse<CptCode> | null = null;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
 
   if (!cptCache) {
     const filePath = path.join(process.cwd(), "db/clinical-data/cpt-egypt.json");
-    const fileContent = fs.readFileSync(filePath, "utf-8");
+    const fileContent = await fs.readFile(filePath, "utf-8");
     cptCache = JSON.parse(fileContent);
     fuseInstance = new Fuse(cptCache!, {
       keys: ["code", "descriptionEn", "descriptionAr"],

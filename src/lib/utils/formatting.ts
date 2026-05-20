@@ -20,6 +20,8 @@ export function formatEGP(amount: number, options: { arabic?: boolean; compact?:
 
 /**
  * Converts numbers to Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩).
+ * WARNING: strictly for UI rendering/PDF outputs. Never use for system logic,
+ * parsing, or database queries.
  */
 export function toEasternArabicNumerals(n: number | string): string {
   const easternDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
@@ -43,7 +45,7 @@ export function formatArabicDate(
     datetime: "yyyy/MM/dd h:mm a",
   };
 
-  return format(date, patterns[variant === "relative" ? "short" : variant], { locale: arEG });
+  return format(date, patterns[variant], { locale: arEG });
 }
 
 /**
@@ -83,7 +85,7 @@ export function formatAge(dob: Date): string {
   const diff = Date.now() - dob.getTime();
   const ageDate = new Date(diff);
   const years = Math.abs(ageDate.getUTCFullYear() - 1970);
-  const months = ageDate.getUTCMonths();
+  const months = ageDate.getUTCMonth();
 
   if (years === 0) return `${months} months`;
   return `${years} years`;

@@ -2,8 +2,6 @@
  * HMS Egypt - Clinical Type Definitions
  */
 
-import { Patient } from "./patient.types";
-
 export type AppointmentStatus = "scheduled" | "confirmed" | "arrived" | "in_consultation" | "completed" | "cancelled" | "no_show";
 
 export interface Appointment {

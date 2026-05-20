@@ -49,7 +49,7 @@ export const ArabicErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.LOINC_NOT_FOUND]: "كود المختبر الدولي غير موجود.",
 };
 
-export function handleApiError(error: any) {
+export function handleApiError(error: unknown) {
   if (error instanceof AppError) {
     return {
       success: false,

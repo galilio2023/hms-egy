@@ -1,7 +1,4 @@
-/**
- * HMS Egypt - Egyptian Utility Library
- * Handles National ID parsing, validation, and hospital-specific formatting.
- */
+import { toZonedTime } from "date-fns-tz";
 
 export const GOVERNORATES: Record<string, { code: string; ar: string; en: string }> = {
   "01": { code: "01", ar: "القاهرة", en: "Cairo" },
@@ -35,8 +32,19 @@ export const GOVERNORATES: Record<string, { code: string; ar: string; en: string
 };
 
 export const EGYPTIAN_INSURANCE_PROVIDERS = [
-  { id: "hio", nameAr: "الهيئة العامة للتأمين الصحي", nameEn: "Health Insurance Organization (HIO)", type: "government" },
-  { id: "uhis", nameAr: "التأمين الصحي الشامل", nameEn: "Universal Health Insurance System (UHIS)", type: "government" },
+  { 
+    id: "hio", 
+    nameAr: "الهيئة العامة للتأمين الصحي", 
+    nameEn: "Health Insurance Organization (HIO)", 
+    type: "government" 
+  },
+  { 
+    id: "uhis", 
+    nameAr: "التأمين الصحي الشامل", 
+    nameEn: "Universal Health Insurance System (UHIS)", 
+    type: "government",
+    rolloutGovernorates: ["03", "29", "19", "35", "04", "28"] // Port Said, Luxor, Ismailia, South Sinai, Suez, Aswan
+  },
   { id: "axa", nameAr: "أكسا للتأمين", nameEn: "AXA Insurance", type: "private" },
   { id: "metlife", nameAr: "متلايف", nameEn: "MetLife", type: "private" },
   { id: "bupa", nameAr: "بوبا", nameEn: "Bupa", type: "private" },
@@ -45,7 +53,7 @@ export const EGYPTIAN_INSURANCE_PROVIDERS = [
 ];
 
 /**
- * Validates the 14-digit Egyptian National ID.
+ * Validates the 14-digit Egyptian National ID with strict date checking.
  */
 export function validateNationalId(nid: string): boolean {
   if (!/^\d{14}$/.test(nid)) return false;
@@ -53,10 +61,14 @@ export function validateNationalId(nid: string): boolean {
   const centuryCode = parseInt(nid[0]);
   if (centuryCode !== 2 && centuryCode !== 3) return false;
 
-  const month = parseInt(nid.substring(3, 5));
+  const year = parseInt(nid.substring(1, 3)) + (centuryCode === 2 ? 1900 : 2000);
+  const month = parseInt(nid.substring(3, 5)) - 1; // JS months are 0-indexed
   const day = parseInt(nid.substring(5, 7));
-  if (month < 1 || month > 12) return false;
-  if (day < 1 || day > 31) return false;
+
+  const dob = new Date(year, month, day);
+  if (dob.getFullYear() !== year || dob.getMonth() !== month || dob.getDate() !== day) {
+    return false;
+  }
 
   const govCode = nid.substring(7, 9);
   if (!GOVERNORATES[govCode]) return false;
@@ -70,16 +82,12 @@ export function validateNationalId(nid: string): boolean {
 export function parseNationalId(nid: string) {
   if (!validateNationalId(nid)) return null;
 
-  const century = nid[0] === "2" ? 1900 : 2000;
+  const centuryCode = parseInt(nid[0]);
+  const century = centuryCode === 2 ? 1900 : 2000;
   const year = parseInt(nid.substring(1, 3)) + century;
-  const month = parseInt(nid.substring(3, 5)) - 1; // JS months are 0-indexed
+  const month = parseInt(nid.substring(3, 5)) - 1;
   const day = parseInt(nid.substring(5, 7));
   const dob = new Date(year, month, day);
-
-  // Strict validation: verify the date didn't roll over (e.g. Feb 30 -> March 2)
-  if (dob.getFullYear() !== year || dob.getMonth() !== month || dob.getDate() !== day) {
-    return null;
-  }
 
   const govCode = nid.substring(7, 9);
   const governorate = GOVERNORATES[govCode];
@@ -100,9 +108,11 @@ export function formatPatientNumber(hospitalCode: string, year: number, seq: num
 
 /**
  * Checks if a given date is a working day in Egypt (excludes Fridays and Saturdays).
+ * Accounts for Africa/Cairo timezone.
  */
 export function isWorkingDay(date: Date): boolean {
-  const day = date.getDay();
+  const zonedDate = toZonedTime(date, "Africa/Cairo");
+  const day = zonedDate.getDay();
   return day !== 5 && day !== 6; // 5 = Friday, 6 = Saturday
 }
 

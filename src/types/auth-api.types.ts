@@ -11,17 +11,17 @@ export interface User {
   departmentId?: string;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   meta?: {
     timestamp: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
-export interface ServerActionResponse<T = any> {
+export interface ServerActionResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
