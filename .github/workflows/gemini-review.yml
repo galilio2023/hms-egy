@@ -1,0 +1,84 @@
+name: Gemini AI Code Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@gemini-cli /review'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve PR Reference
+        id: pr-ref
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Ensures we get the correct branch even if triggered via issue_comment
+            if (context.eventName === 'issue_comment') {
+              const pr = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number
+              });
+              core.exportVariable('PR_HEAD_REF', pr.data.head.ref);
+              core.exportVariable('PR_BASE_REF', pr.data.base.ref);
+              core.exportVariable('PR_NUMBER', pr.data.number);
+            } else {
+              core.exportVariable('PR_HEAD_REF', context.payload.pull_request.head.ref);
+              core.exportVariable('PR_BASE_REF', context.payload.pull_request.base.ref);
+              core.exportVariable('PR_NUMBER', context.payload.pull_request.number);
+            }
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.PR_HEAD_REF }}
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Run Gemini AI Review
+        id: gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: "gemini-flash-latest"
+        run: |
+          # Fetch the dynamic base branch
+          git fetch origin ${{ env.PR_BASE_REF }}
+          
+          # Calculate diff based on the dynamic base, excluding large irrelevant files
+          git diff origin/${{ env.PR_BASE_REF }}...HEAD --unified=2 \
+            -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' \
+            ':(exclude)package-lock.json' ':(exclude)drizzle/migrations/**' > changes.diff
+          
+          # Run review using the dependency-free script (Node 18+ native fetch)
+          node scripts/ai-review.mjs < changes.diff
+
+      - name: Post Review Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('review.md')) {
+              const review = fs.readFileSync('review.md', 'utf8');
+              if (review.trim()) {
+                const pr_number = process.env.PR_NUMBER;
+                github.rest.issues.createComment({
+                  issue_number: parseInt(pr_number),
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `### 🤖 Gemini AI Code Review\n\n${review}`
+                });
+              }
+            }
