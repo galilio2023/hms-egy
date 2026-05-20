@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, pgEnum, index } from "drizzle-orm/pg-core";
 
 export const hospitalTypeEnum = pgEnum("hospital_type", ["private", "government", "military", "ngo"]);
 
@@ -16,6 +16,11 @@ export const hospitals = pgTable("hospitals", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    governorateIdx: index("gov_idx").on(table.governorate),
+    isActiveIdx: index("active_idx").on(table.isActive),
+  };
 });
 
 export const hospitalSettings = pgTable("hospital_settings", {

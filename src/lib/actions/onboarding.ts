@@ -15,7 +15,7 @@ export async function setupHospital(data: HospitalOnboarding) {
   }
 
   try {
-    const { modules, ...hospitalData } = validated.data;
+    const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
 
     // 2. Create hospital
     const [hospital] = await db.insert(hospitals).values({
@@ -38,10 +38,9 @@ export async function setupHospital(data: HospitalOnboarding) {
       isOnlinePaymentsEnabled: modules.payments,
     });
 
-    // 4. Create admin user (Stubbed until Better Auth is ready)
-    console.log("Creating admin user for hospital:", hospital.id, hospitalData.adminEmail);
-    
-    // In production, we'd call better-auth's signUp or use drizzle to insert into auth tables
+    // 4. Create admin user (Placeholder - Phase 6 will implement full Better Auth integration)
+    // NOTE: In Phase 6, we will hash adminPassword and insert into the 'users' and 'staff' tables.
+    console.log(`[ONBOARDING] Admin user creation queued for ${adminEmail} (${adminName})`);
     
     return { success: true, hospitalId: hospital.id };
   } catch (error) {

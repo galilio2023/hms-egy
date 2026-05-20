@@ -12,11 +12,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
 
-  if (!query) {
+  if (!query || query.trim().length === 0) {
     return NextResponse.json({ data: [] });
   }
 
-  const results = fuseInstance.search(query).slice(0, 15).map(r => r.item);
+  // Truncate to reasonable length to prevent DoS (Fuse.js is CPU intensive)
+  const sanitizedQuery = query.substring(0, 64).trim();
+  const results = fuseInstance.search(sanitizedQuery).slice(0, 15).map(r => r.item);
 
   return NextResponse.json({ data: results });
 }

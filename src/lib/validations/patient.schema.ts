@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { validateNationalId } from "../utils/egypt";
+import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS } from "../utils/egypt";
 
 const egyptianPhoneSchema = z
   .string()
@@ -25,6 +25,15 @@ export const patientSchema = z.object({
   guardianName: z.string().optional(),
   guardianNid: z.string().optional(),
   guardianPhone: egyptianPhoneSchema.optional(),
+}).refine((data) => {
+  if (data.insuranceProviderId === "uhis") {
+    const provider = EGYPTIAN_INSURANCE_PROVIDERS.find(p => p.id === "uhis");
+    return provider?.rolloutGovernorates?.includes(data.governorate);
+  }
+  return true;
+}, {
+  message: "UHIS is not yet rolled out in the selected governorate.",
+  path: ["insuranceProviderId"]
 });
 
 export type PatientSchema = z.infer<typeof patientSchema>;

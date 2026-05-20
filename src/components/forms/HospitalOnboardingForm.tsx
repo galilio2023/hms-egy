@@ -108,8 +108,7 @@ export function HospitalOnboardingForm() {
             <label key={module} className="flex items-center gap-3 p-4 border rounded-xl hover:bg-gray-50 cursor-pointer transition">
               <input
                 type="checkbox"
-                // @ts-expect-error - mapping string to nested keys
-                {...register(`modules.${module}`)}
+                {...register(`modules.${module as "surgical" | "telemedicine" | "portal" | "payments"}`)}
                 className="w-5 h-5 text-blue-600 rounded"
               />
               <span className="capitalize font-medium">{module}</span>
