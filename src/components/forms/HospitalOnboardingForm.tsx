@@ -56,7 +56,7 @@ export function HospitalOnboardingForm() {
             <label className="block text-sm font-medium text-gray-700">Arabic Name / الاسم بالعربية</label>
             <input
               {...register("nameAr")}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
               placeholder="مستشفى الأمل"
             />
             {errors.nameAr && <p className="text-red-500 text-xs">{errors.nameAr.message}</p>}
@@ -66,7 +66,7 @@ export function HospitalOnboardingForm() {
             <label className="block text-sm font-medium text-gray-700">English Name / الاسم بالإنجليزية</label>
             <input
               {...register("nameEn")}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
               placeholder="Al-Amal Hospital"
             />
             {errors.nameEn && <p className="text-red-500 text-xs">{errors.nameEn.message}</p>}
@@ -77,7 +77,7 @@ export function HospitalOnboardingForm() {
           <label className="block text-sm font-medium text-gray-700">URL Slug / الرابط التعريفي</label>
           <input
             {...register("slug")}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
             placeholder="al-amal-hosp"
           />
           {errors.slug && <p className="text-red-500 text-xs">{errors.slug.message}</p>}
@@ -88,7 +88,7 @@ export function HospitalOnboardingForm() {
             <label className="block text-sm font-medium text-gray-700">Contact Email / البريد للتواصل</label>
             <input
               {...register("contactEmail")}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
             />
             {errors.contactEmail && <p className="text-red-500 text-xs">{errors.contactEmail.message}</p>}
           </div>
@@ -96,7 +96,7 @@ export function HospitalOnboardingForm() {
             <label className="block text-sm font-medium text-gray-700">Phone / رقم الهاتف</label>
             <input
               {...register("contactPhone")}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
               placeholder="01xxxxxxxxx"
             />
             {errors.contactPhone && <p className="text-red-500 text-xs">{errors.contactPhone.message}</p>}
@@ -107,7 +107,7 @@ export function HospitalOnboardingForm() {
           <label className="block text-sm font-medium text-gray-700">Address / العنوان</label>
           <input
             {...register("address")}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
             placeholder="123 Nile St, Cairo, Egypt"
           />
           {errors.address && <p className="text-red-500 text-xs">{errors.address.message}</p>}
@@ -118,7 +118,7 @@ export function HospitalOnboardingForm() {
             <label className="block text-sm font-medium text-gray-700">Governorate / المحافظة</label>
             <select
               {...register("governorate")}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
             >
               <option value="">Select Governorate</option>
               {Object.values(GOVERNORATES).map((gov) => (
@@ -134,7 +134,7 @@ export function HospitalOnboardingForm() {
             <label className="block text-sm font-medium text-gray-700">Hospital Type / نوع المستشفى</label>
             <select
               {...register("type")}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
             >
               <option value="private">Private (خاص)</option>
               <option value="government">Government (حكومي)</option>
@@ -168,21 +168,21 @@ export function HospitalOnboardingForm() {
           <input
             {...register("adminName")}
             placeholder="Admin Full Name"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
           />
           {errors.adminName && <p className="text-red-500 text-xs">{errors.adminName.message}</p>}
           <input
             {...register("adminEmail")}
             type="email"
             placeholder="Admin Email"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
           />
           {errors.adminEmail && <p className="text-red-500 text-xs">{errors.adminEmail.message}</p>}
           <input
             {...register("adminPassword")}
             type="password"
             placeholder="Admin Password"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
           />
           {errors.adminPassword && <p className="text-red-500 text-xs">{errors.adminPassword.message}</p>}
         </div>

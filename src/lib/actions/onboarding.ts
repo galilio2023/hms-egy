@@ -1,23 +1,38 @@
 "use server";
 
-import { db } from "@/lib/db";
-import { hospitals, hospitalSettings } from "@db/schema";
 import { hospitalOnboardingSchema, type HospitalOnboarding } from "@/lib/validations/hospital.schema";
 
 /**
  * Server action to handle hospital onboarding.
  */
-export async function setupHospital(data: HospitalOnboarding) {
+export async function setupHospital(data: HospitalOnboarding): Promise<{ 
+  success?: boolean; 
+  hospitalId?: string; 
+  error?: string; 
+  details?: Record<string, unknown> 
+}> {
   // 1. Validate data
   const validated = hospitalOnboardingSchema.safeParse(data);
   if (!validated.success) {
-    return { error: "Invalid data submitted", details: validated.error.format() };
+    return { 
+      error: "Invalid data submitted", 
+      details: validated.error.format() as unknown as Record<string, unknown> 
+    };
   }
 
-  // Destructure immediately to isolate sensitive credentials
-  const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
+  // TEMPORARY GUARD: Block onboarding until Phase 6 (Auth) is implemented to prevent UX Deadlock.
+  // This ensures users don't create hospitals with no way to log in.
+  console.log(`[ONBOARDING_GUARD] Request for ${validated.data.adminEmail} blocked (Phase 6 pending)`);
+  
+  return { 
+    error: "Hospital onboarding is temporarily paused until authentication (Phase 6) is fully integrated. Please check the project roadmap." 
+  };
 
+  /* Logic preserved for Phase 4/6:
+  // Requires: import { db } from "@/lib/db"; import { hospitals, hospitalSettings } from "@db/schema";
   try {
+    const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
+
     // Execute within a transaction for atomicity
     const result = await db.transaction(async (tx) => {
       // 2. Create hospital
@@ -53,11 +68,10 @@ export async function setupHospital(data: HospitalOnboarding) {
     
     return { success: true, hospitalId: result.id };
   } catch (error) {
-    // Capture safely to internal telemetry (e.g. Sentry / CloudWatch)
-    console.error(`[ONBOARDING_FAILURE] Slug: ${hospitalData.slug}`, {
+    console.error(`[ONBOARDING_FAILURE] Slug: ${validated.data.slug}`, {
       error: error instanceof Error ? error.message : "Unknown error",
-      // NEVER log 'adminPassword' here
     });
     return { error: "An unexpected error occurred during setup." };
   }
+  */
 }
