@@ -1,5 +1,6 @@
 [
   {
+    "nameEn": "Warfarin - Aspirin",
     "drug1": "Warfarin",
     "drug2": "Aspirin",
     "severity": "severe",
@@ -7,10 +8,12 @@
     "mechanismAr": "تأثيرات مضادة للتجلط ومضادة للصفائح مضافة، وإزاحة الوارفارين من مواقع ارتباط الألبومين.",
     "clinicalEffectEn": "Increased risk of bleeding, especially gastrointestinal hemorrhage.",
     "clinicalEffectAr": "زيادة خطر النزيف، وخاصة النزيف الهضمي.",
+    "managementEn": "Avoid concurrent use unless necessary; monitor INR and signs of bleeding closely.",
     "managementAr": "تجنب الاستخدام المتزامن ما لم يكن ذلك ضرورياً؛ مراقبة INR وعلامات النزيف عن كثب.",
     "category": "Anticoagulant interaction"
   },
   {
+    "nameEn": "Sildenafil - Nitroglycerin",
     "drug1": "Sildenafil",
     "drug2": "Nitroglycerin",
     "severity": "severe",
@@ -18,10 +21,12 @@
     "mechanismAr": "كلا الدواءين يزيدان من مستويات cGMP، مما يؤدي إلى توسع الأوعية الدموية بشكل مفرط.",
     "clinicalEffectEn": "Severe hypotension, potentially fatal.",
     "clinicalEffectAr": "انخفاض حاد في ضغط الدم، قد يكون مميتاً.",
+    "managementEn": "Concurrent use is contraindicated; allow at least 24-48 hours between administration of these drugs.",
     "managementAr": "يمنع الاستخدام المتزامن؛ يجب الانتظار 24-48 ساعة على الأقل بين الاستخدامين.",
     "category": "Cardiovascular interaction"
   },
   {
+    "nameEn": "Simvastatin - Clarithromycin",
     "drug1": "Simvastatin",
     "drug2": "Clarithromycin",
     "severity": "severe",
@@ -29,10 +34,12 @@
     "mechanismAr": "تثبيط CYP3A4 بواسطة الكلاريثرومايسين يزيد من تركيزات السيمفاستاتين في البلازما.",
     "clinicalEffectEn": "Increased risk of myopathy and rhabdomyolysis.",
     "clinicalEffectAr": "زيادة خطر الإصابة باعتلال العضلات وانحلال العضلات المخططة.",
+    "managementEn": "Avoid combination; use a statin not metabolized by CYP3A4 or temporarily withhold statin therapy.",
     "managementAr": "تجنب الدمج؛ استخدم ستاتين لا يعتمد على CYP3A4 أو توقف مؤقتاً عن الستاتين.",
     "category": "Statins interaction"
   },
   {
+    "nameEn": "Metformin - Contrast Media (Iodinated)",
     "drug1": "Metformin",
     "drug2": "Contrast Media (Iodinated)",
     "severity": "moderate",
@@ -40,10 +47,12 @@
     "mechanismAr": "الصبغة يمكن أن تسبب إصابة كلوية حادة، مما يؤدي إلى تراكم الميتفورمين.",
     "clinicalEffectEn": "Increased risk of lactic acidosis.",
     "clinicalEffectAr": "زيادة خطر الإصابة بالحماض اللبني.",
+    "managementEn": "Withhold metformin at the time of the procedure and for 48 hours afterward; resume after confirming normal renal function.",
     "managementAr": "توقف عن الميتفورمين وقت الإجراء ولمدة 48 ساعة بعده؛ استأنف بعد التأكد من وظائف الكلى.",
     "category": "Antidiabetic interaction"
   },
   {
+    "nameEn": "Spironolactone - Enalapril",
     "drug1": "Spironolactone",
     "drug2": "Enalapril",
     "severity": "moderate",
@@ -51,10 +60,12 @@
     "mechanismAr": "تأثيرات مضافة موفرة للبوتاسيوم.",
     "clinicalEffectEn": "Increased risk of hyperkalemia.",
     "clinicalEffectAr": "زيادة خطر فرط بوتاسيوم الدم.",
+    "managementEn": "Regularly monitor serum potassium levels.",
     "managementAr": "مراقبة مستويات البوتاسيوم في الدم بانتظام.",
     "category": "Electrolyte interaction"
   },
   {
+    "nameEn": "Digoxin - Amiodarone",
     "drug1": "Digoxin",
     "drug2": "Amiodarone",
     "severity": "severe",
@@ -62,10 +73,12 @@
     "mechanismAr": "الأميودارون يثبط البروتين السكري P، مما يقلل من تصفية الديجوكسين.",
     "clinicalEffectEn": "Digoxin toxicity (nausea, vomiting, arrhythmias).",
     "clinicalEffectAr": "تسمم الديجوكسين (غثيان، قيء، عدم انتظام ضربات القلب).",
+    "managementEn": "Reduce digoxin dose by 30-50% when starting amiodarone and monitor digoxin levels.",
     "managementAr": "قلل جرعة الديجوكسين بنسبة 30-50% عند بدء الأميودارون ومراقبة مستويات الديجوكسين.",
     "category": "Cardiac glycoside interaction"
   },
   {
+    "nameEn": "Ciprofloxacin - Theophylline",
     "drug1": "Ciprofloxacin",
     "drug2": "Theophylline",
     "severity": "moderate",
@@ -73,10 +86,12 @@
     "mechanismAr": "السيبروفلوكساسين يثبط CYP1A2، مما يقلل من تمثيل الثيوفيلين.",
     "clinicalEffectEn": "Increased theophylline levels, risk of toxicity (seizures, arrhythmias).",
     "clinicalEffectAr": "زيادة مستويات الثيوفيلين، خطر التسمم (تشنجات، عدم انتظام ضربات القلب).",
+    "managementEn": "Monitor theophylline levels and adjust dose if necessary.",
     "managementAr": "مراقبة مستويات الثيوفيلين وتعديل الجرعة إذا لزم الأمر.",
     "category": "Respiratory interaction"
   },
   {
+    "nameEn": "Warfarin - Amiodarone",
     "drug1": "Warfarin",
     "drug2": "Amiodarone",
     "severity": "severe",
@@ -84,10 +99,12 @@
     "mechanismAr": "الأميودارون يثبط CYP2C9، مما يقلل من تمثيل S-warfarin.",
     "clinicalEffectEn": "Significant increase in INR, increased risk of bleeding.",
     "clinicalEffectAr": "زيادة كبيرة في INR، وزيادة خطر النزيف.",
+    "managementEn": "Reduce warfarin dose by 25-50% and monitor INR frequently.",
     "managementAr": "قلل جرعة الوارفارين بنسبة 25-50% وراقب INR بشكل متكرر.",
     "category": "Anticoagulant interaction"
   },
   {
+    "nameEn": "Clopidogrel - Omeprazole",
     "drug1": "Clopidogrel",
     "drug2": "Omeprazole",
     "severity": "moderate",
@@ -95,10 +112,12 @@
     "mechanismAr": "الأوميبرازول يثبط CYP2C19، مما يقلل من تنشيط الكلوبيدوجريل.",
     "clinicalEffectEn": "Reduced antiplatelet efficacy, increased risk of cardiovascular events.",
     "clinicalEffectAr": "تقليل فعالية مضادات الصفائح، وزيادة خطر الأحداث القلبية الوعائية.",
+    "managementEn": "Use alternative proton pump inhibitors such as pantoprazole which have less effect on CYP2C19.",
     "managementAr": "استخدم مثبطات مضخة البروتون البديلة مثل البانتوبرازول التي لها تأثير أقل على CYP2C19.",
     "category": "Antiplatelet interaction"
   },
   {
+    "nameEn": "Lithium - Ibuprofen",
     "drug1": "Lithium",
     "drug2": "Ibuprofen",
     "severity": "moderate",
@@ -106,10 +125,12 @@
     "mechanismAr": "مضادات الالتهاب غير الستيروئيدية تقلل من البروستاجلاندين الكلوي، مما يؤدي إلى انخفاض إفراز الليثيوم.",
     "clinicalEffectEn": "Lithium toxicity (tremor, ataxia, confusion).",
     "clinicalEffectAr": "تسمم الليثيوم (رعشة، ترنح، ارتباك).",
+    "managementEn": "Monitor lithium levels; avoid long-term use of NSAIDs.",
     "managementAr": "مراقبة مستويات الليثيوم؛ تجنب الاستخدام طويل الأمد لمضادات الالتهاب غير الستيروئيدية.",
     "category": "Psychiatric interaction"
   },
   {
+    "nameEn": "Fluoxetine - Tramadol",
     "drug1": "Fluoxetine",
     "drug2": "Tramadol",
     "severity": "severe",
@@ -117,10 +138,12 @@
     "mechanismAr": "تأثيرات سيروتونينية مضافة وتثبيت تمثيل الترامادول بواسطة CYP2D6.",
     "clinicalEffectEn": "Increased risk of serotonin syndrome and seizures.",
     "clinicalEffectAr": "زيادة خطر الإصابة بمتلازمة السيروتونين والتشنجات.",
+    "managementEn": "Monitor for signs of serotonin syndrome; avoid combination if possible.",
     "managementAr": "مراقبة علامات متلازمة السيروتونين؛ تجنب الدمج إذا أمكن.",
     "category": "Serotonergic interaction"
   },
   {
+    "nameEn": "Azithromycin - Amiodarone",
     "drug1": "Azithromycin",
     "drug2": "Amiodarone",
     "severity": "severe",
@@ -128,10 +151,12 @@
     "mechanismAr": "إطالة مضافة لفاصل QT.",
     "clinicalEffectEn": "Increased risk of Torsades de Pointes and ventricular arrhythmias.",
     "clinicalEffectAr": "زيادة خطر الإصابة بـ Torsades de Pointes واضطراب نظم القلب البطيني.",
+    "managementEn": "Monitor ECG for QT prolongation; use with extreme caution.",
     "managementAr": "مراقبة رسم القلب (ECG) لفاصل QT؛ توخي الحذر الشديد.",
     "category": "QT Prolongation"
   },
   {
+    "nameEn": "Levothyroxine - Calcium Carbonate",
     "drug1": "Levothyroxine",
     "drug2": "Calcium Carbonate",
     "severity": "moderate",
@@ -139,10 +164,12 @@
     "mechanismAr": "الكالسيوم يتداخل مع امتصاص الليفوثيروكسين في الجهاز الهضمي.",
     "clinicalEffectEn": "Reduced efficacy of levothyroxine, symptoms of hypothyroidism.",
     "clinicalEffectAr": "تقليل فعالية الليفوثيروكسين، أعراض قصور الغدة الدرقية.",
+    "managementEn": "Separate administration by at least 4 hours.",
     "managementAr": "افصل بين تناول الدواءين بـ 4 ساعات على الأقل.",
     "category": "Absorption interaction"
   },
   {
+    "nameEn": "Ciprofloxacin - Ferrous Sulfate",
     "drug1": "Ciprofloxacin",
     "drug2": "Ferrous Sulfate",
     "severity": "moderate",
@@ -150,10 +177,12 @@
     "mechanismAr": "الحديد يرتبط بالسيبروفلوكساسين، مما يقلل من امتصاصه.",
     "clinicalEffectEn": "Reduced antibiotic efficacy.",
     "clinicalEffectAr": "تقليل فعالية المضاد الحيوي.",
+    "managementEn": "Separate administration by 2 hours before or 6 hours after iron intake.",
     "managementAr": "افصل بين التناول بـ ساعتين قبل أو 6 ساعات بعد الحديد.",
     "category": "Absorption interaction"
   },
   {
+    "nameEn": "St. John's Wort - Cyclosporine",
     "drug1": "St. John's Wort",
     "drug2": "Cyclosporine",
     "severity": "severe",
@@ -161,6 +190,7 @@
     "mechanismAr": "تحفيز CYP3A4 والبروتين السكري P، مما يزيد من تمثيل السيكلوسبورين.",
     "clinicalEffectEn": "Reduced cyclosporine levels, risk of organ transplant rejection.",
     "clinicalEffectAr": "تقليل مستويات السيكلوسبورين، خطر رفض زرع الأعضاء.",
+    "managementEn": "Avoid concurrent use of enzyme-inducing herbs with immunosuppressants.",
     "managementAr": "تجنب الاستخدام المتزامن للأعشاب المحفزة للإنزيمات مع مثبطات المناعة.",
     "category": "Herbal-Drug interaction"
   }

@@ -80,10 +80,16 @@ export function formatDuration(minutes: number): string {
 
 /**
  * Formats age from date of birth.
+ * For neonates (< 30 days), returns age in days or weeks for clinical safety.
  */
 export function formatAge(dob: Date): string {
-  const diff = Date.now() - dob.getTime();
-  const ageDate = new Date(diff);
+  const diffMs = Date.now() - dob.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 7) return `${diffDays} days`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks`;
+
+  const ageDate = new Date(diffMs);
   const years = Math.abs(ageDate.getUTCFullYear() - 1970);
   const months = ageDate.getUTCMonth();
 

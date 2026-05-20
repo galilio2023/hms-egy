@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
 import Fuse from "fuse.js";
+import cptData from "@db/clinical-data/cpt-egypt.json";
 import { CptCode } from "@/lib/utils/clinical-codes";
 
-let cptCache: CptCode[] | null = null;
-let fuseInstance: Fuse<CptCode> | null = null;
+const fuseInstance = new Fuse(cptData as CptCode[], {
+  keys: ["nameEn", "nameAr", "code"],
+  threshold: 0.3,
+});
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -15,17 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ data: [] });
   }
 
-  if (!cptCache) {
-    const filePath = path.join(process.cwd(), "db/clinical-data/cpt-egypt.json");
-    const fileContent = await fs.readFile(filePath, "utf-8");
-    cptCache = JSON.parse(fileContent);
-    fuseInstance = new Fuse(cptCache!, {
-      keys: ["code", "descriptionEn", "descriptionAr"],
-      threshold: 0.3,
-    });
-  }
-
-  const results = fuseInstance!.search(query).slice(0, 15).map(r => r.item);
+  const results = fuseInstance.search(query).slice(0, 15).map(r => r.item);
 
   return NextResponse.json({ data: results });
 }

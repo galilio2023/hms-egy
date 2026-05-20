@@ -5,18 +5,21 @@
 
 import crypto from "crypto";
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+const KEY_BUFFER = process.env.ENCRYPTION_KEY?.length === 64 
+  ? Buffer.from(process.env.ENCRYPTION_KEY, "hex")
+  : Buffer.from(process.env.ENCRYPTION_KEY || "", "utf-8");
+
 const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET || "audit-secret-key";
 
 /**
  * Encrypts sensitive data using AES-256-GCM.
  */
 export function encryptField(text: string): string {
-  if (!ENCRYPTION_KEY || Buffer.from(ENCRYPTION_KEY, "utf-8").length !== 32) {
-    throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits).");
+  if (KEY_BUFFER.length !== 32) {
+    throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits). Check your environment variables.");
   }
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv("aes-256-gcm", Buffer.from(ENCRYPTION_KEY, "utf-8"), iv);
+  const cipher = crypto.createCipheriv("aes-256-gcm", KEY_BUFFER, iv);
   const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return Buffer.concat([iv, tag, encrypted]).toString("base64");
@@ -26,8 +29,8 @@ export function encryptField(text: string): string {
  * Decrypts sensitive data.
  */
 export function decryptField(data: string): string | null {
-  if (!ENCRYPTION_KEY || Buffer.from(ENCRYPTION_KEY, "utf-8").length !== 32) {
-    throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits).");
+  if (KEY_BUFFER.length !== 32) {
+    throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits). Check your environment variables.");
   }
   try {
     const buffer = Buffer.from(data, "base64");
@@ -36,7 +39,7 @@ export function decryptField(data: string): string | null {
     const iv = buffer.subarray(0, 16);
     const tag = buffer.subarray(16, 32);
     const encrypted = buffer.subarray(32);
-    const decipher = crypto.createDecipheriv("aes-256-gcm", Buffer.from(ENCRYPTION_KEY, "utf-8"), iv);
+    const decipher = crypto.createDecipheriv("aes-256-gcm", KEY_BUFFER, iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
   } catch (error) {

@@ -13,7 +13,7 @@ export const patientSchema = z.object({
   phone: z
     .string()
     .transform((val) => val.replace(/\s+/g, "")) // sanitize whitespace
-    .refine((val) => /^(?:\+20|0020)?1[0125]\d{8}$/.test(val), {
+    .refine((val) => /^(?:\+20|0020)?0?1[0125]\d{8}$/.test(val), {
       message: "Invalid Egyptian mobile number",
     }),
   email: z.string().email().optional().or(z.literal("")),

@@ -4,15 +4,15 @@
 
 export interface Icd10Code {
   code: string;
-  descriptionEn: string;
-  descriptionAr: string;
+  nameEn: string;
+  nameAr: string;
   category: string;
 }
 
 export interface CptCode {
   code: string;
-  descriptionEn: string;
-  descriptionAr: string;
+  nameEn: string;
+  nameAr: string;
   category: string;
   egyptInsurancePrice?: number;
 }
