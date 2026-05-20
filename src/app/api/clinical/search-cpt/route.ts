@@ -3,10 +3,17 @@ import Fuse from "fuse.js";
 import cptData from "@db/clinical-data/cpt-egypt.json";
 import { CptCode } from "@/lib/utils/clinical-codes";
 
-const fuseInstance = new Fuse(cptData as CptCode[], {
-  keys: ["nameEn", "nameAr", "code"],
-  threshold: 0.3,
-});
+let fuseInstance: Fuse<CptCode> | null = null;
+
+function getFuse() {
+  if (!fuseInstance) {
+    fuseInstance = new Fuse(cptData as CptCode[], {
+      keys: ["nameEn", "nameAr", "code"],
+      threshold: 0.3,
+    });
+  }
+  return fuseInstance;
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,7 +25,7 @@ export async function GET(request: Request) {
 
   // Truncate to reasonable length to prevent DoS (Fuse.js is CPU intensive)
   const sanitizedQuery = query.substring(0, 64).trim();
-  const results = fuseInstance.search(sanitizedQuery).slice(0, 15).map(r => r.item);
+  const results = getFuse().search(sanitizedQuery).slice(0, 15).map(r => r.item);
 
   return NextResponse.json({ data: results });
 }

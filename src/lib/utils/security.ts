@@ -6,15 +6,13 @@
 import crypto from "crypto";
 
 const rawKey = process.env.ENCRYPTION_KEY;
-if (!rawKey || (rawKey.length !== 32 && rawKey.length !== 64)) {
+if (!rawKey || rawKey.length !== 64) {
   throw new Error(
-    "CRITICAL: ENCRYPTION_KEY must be configured as a 32-byte string or 64-character hex in environment variables."
+    "CRITICAL: ENCRYPTION_KEY must be configured as a 64-character hex string (32 bytes) in environment variables."
   );
 }
 
-const KEY_BUFFER = rawKey.length === 64 
-  ? Buffer.from(rawKey, "hex")
-  : Buffer.from(rawKey, "utf-8");
+const KEY_BUFFER = Buffer.from(rawKey, "hex");
 
 const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET || "audit-secret-key";
 

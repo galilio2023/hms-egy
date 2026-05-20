@@ -7,7 +7,7 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center">
-      <div className="absolute top-4 right-4 rtl:right-auto rtl:left-4">
+      <div className="absolute top-4 end-4">
         <LanguageSwitcher />
       </div>
       

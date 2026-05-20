@@ -99,6 +99,46 @@ export function HospitalOnboardingForm() {
             />
           </div>
         </div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Address / العنوان</label>
+          <input
+            {...register("address")}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="123 Nile St, Cairo, Egypt"
+          />
+          {errors.address && <p className="text-red-500 text-xs">{errors.address.message}</p>}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">Governorate / المحافظة</label>
+            <select
+              {...register("governorate")}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">Select Governorate</option>
+              <option value="01">Cairo (القاهرة)</option>
+              <option value="02">Alexandria (الإسكندرية)</option>
+              {/* More options would go here, simplified for now */}
+            </select>
+            {errors.governorate && <p className="text-red-500 text-xs">{errors.governorate.message}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">Hospital Type / نوع المستشفى</label>
+            <select
+              {...register("type")}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="private">Private (خاص)</option>
+              <option value="government">Government (حكومي)</option>
+              <option value="military">Military (عسكري)</option>
+              <option value="ngo">NGO (جمعية خيرية)</option>
+            </select>
+            {errors.type && <p className="text-red-500 text-xs">{errors.type.message}</p>}
+          </div>
+        </div>
       </div>
 
       <div className="space-y-4 pt-4 border-t">
@@ -121,17 +161,25 @@ export function HospitalOnboardingForm() {
         <h2 className="text-2xl font-bold text-blue-900 border-b pb-2">Admin Account / حساب المسؤول</h2>
         <div className="space-y-3">
           <input
+            {...register("adminName")}
+            placeholder="Admin Full Name"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+          {errors.adminName && <p className="text-red-500 text-xs">{errors.adminName.message}</p>}
+          <input
             {...register("adminEmail")}
             type="email"
             placeholder="Admin Email"
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
           />
+          {errors.adminEmail && <p className="text-red-500 text-xs">{errors.adminEmail.message}</p>}
           <input
             {...register("adminPassword")}
             type="password"
             placeholder="Admin Password"
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
           />
+          {errors.adminPassword && <p className="text-red-500 text-xs">{errors.adminPassword.message}</p>}
         </div>
       </div>
 

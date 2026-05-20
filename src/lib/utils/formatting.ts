@@ -3,7 +3,7 @@
  * Handles currency, dates, numbers, and strings with Arabic support.
  */
 
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, differenceInDays, differenceInWeeks, differenceInMonths, differenceInYears } from "date-fns";
 import { arEG } from "date-fns/locale";
 
 /**
@@ -80,20 +80,19 @@ export function formatDuration(minutes: number): string {
 
 /**
  * Formats age from date of birth.
- * For neonates (< 30 days), returns age in days or weeks for clinical safety.
+ * Provides high precision for clinical records (days/weeks/months/years).
  */
 export function formatAge(dob: Date): string {
-  const diffMs = Date.now() - dob.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const now = new Date();
+  const diffDays = differenceInDays(now, dob);
 
   if (diffDays < 7) return `${diffDays} days`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks`;
+  if (diffDays < 30) return `${differenceInWeeks(now, dob)} weeks`;
 
-  const ageDate = new Date(diffMs);
-  const years = Math.abs(ageDate.getUTCFullYear() - 1970);
-  const months = ageDate.getUTCMonth();
-
-  if (years === 0) return `${months} months`;
+  const years = differenceInYears(now, dob);
+  if (years === 0) {
+    return `${differenceInMonths(now, dob)} months`;
+  }
   return `${years} years`;
 }
 
