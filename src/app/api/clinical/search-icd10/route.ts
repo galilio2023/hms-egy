@@ -27,5 +27,12 @@ export async function GET(request: Request) {
   const sanitizedQuery = query.substring(0, 64).trim();
   const results = getFuse().search(sanitizedQuery).slice(0, 15).map(r => r.item);
 
-  return NextResponse.json({ data: results });
+  return NextResponse.json(
+    { data: results },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=60",
+      },
+    }
+  );
 }

@@ -70,6 +70,10 @@ export function validateNationalId(nid: string): boolean {
     return false;
   }
 
+  if (dob > new Date()) {
+    return false;
+  }
+
   const govCode = nid.substring(7, 9);
   if (!GOVERNORATES[govCode]) return false;
 

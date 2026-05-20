@@ -14,7 +14,10 @@ if (!rawKey || rawKey.length !== 64) {
 
 const KEY_BUFFER = Buffer.from(rawKey, "hex");
 
-const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET || "audit-secret-key";
+const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET;
+if (!AUDIT_HMAC_SECRET) {
+  throw new Error("CRITICAL: AUDIT_HMAC_SECRET must be configured in environment variables.");
+}
 
 /**
  * Encrypts sensitive data using AES-256-GCM.
@@ -52,7 +55,7 @@ export function decryptField(data: string): string | null {
  */
 export function signAuditRecord(record: Record<string, unknown>): string {
   const data = JSON.stringify(record);
-  return crypto.createHmac("sha256", AUDIT_HMAC_SECRET).update(data).digest("hex");
+  return crypto.createHmac("sha256", AUDIT_HMAC_SECRET as string).update(data).digest("hex");
 }
 
 /**

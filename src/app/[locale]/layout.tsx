@@ -35,7 +35,7 @@ export default async function LocaleLayout({
       dir={locale === "ar" ? "rtl" : "ltr"}
       className={`${cairo.variable} h-full`}
     >
-      <body className="min-h-full font-sans antialiased">
+      <body className={`${cairo.className} min-h-full antialiased`}>
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>

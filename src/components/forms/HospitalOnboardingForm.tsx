@@ -89,6 +89,7 @@ export function HospitalOnboardingForm() {
               {...register("contactEmail")}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             />
+            {errors.contactEmail && <p className="text-red-500 text-xs">{errors.contactEmail.message}</p>}
           </div>
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">Phone / رقم الهاتف</label>
@@ -97,6 +98,7 @@ export function HospitalOnboardingForm() {
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="01xxxxxxxxx"
             />
+            {errors.contactPhone && <p className="text-red-500 text-xs">{errors.contactPhone.message}</p>}
           </div>
         </div>
 

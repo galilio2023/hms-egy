@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS } from "../utils/egypt";
+import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId } from "../utils/egypt";
 
 const egyptianPhoneSchema = z
   .string()
@@ -34,6 +34,26 @@ export const patientSchema = z.object({
 }, {
   message: "UHIS is not yet rolled out in the selected governorate.",
   path: ["insuranceProviderId"]
+}).superRefine((data, ctx) => {
+  const parsed = parseNationalId(data.nationalId);
+  if (parsed) {
+    // Validate Gender Match
+    if (parsed.gender !== data.gender) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Gender does not match National ID",
+        path: ["gender"],
+      });
+    }
+    // Validate Date of Birth Match (ignoring hours/minutes)
+    if (parsed.dob.toISOString().split("T")[0] !== data.dob.toISOString().split("T")[0]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Date of birth does not match National ID",
+        path: ["dob"],
+      });
+    }
+  }
 });
 
 export type PatientSchema = z.infer<typeof patientSchema>;
