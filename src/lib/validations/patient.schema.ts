@@ -10,7 +10,12 @@ export const patientSchema = z.object({
   dob: z.date(),
   gender: z.enum(["male", "female"]),
   governorate: z.string().min(2, "Governorate is required"),
-  phone: z.string().regex(/^01[0125]\d{8}$/, "Invalid Egyptian phone number"),
+  phone: z
+    .string()
+    .transform((val) => val.replace(/\s+/g, "")) // sanitize whitespace
+    .refine((val) => /^(?:\+20|0020)?1[0125]\d{8}$/.test(val), {
+      message: "Invalid Egyptian mobile number",
+    }),
   email: z.string().email().optional().or(z.literal("")),
   bloodType: z.string().optional(),
   insuranceProviderId: z.string().optional(),

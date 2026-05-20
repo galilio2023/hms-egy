@@ -4,6 +4,7 @@
 
 import { neon, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
+import { eq } from "drizzle-orm";
 import * as schema from "../../../db/schema";
 
 // Enable connection caching for serverless environments
@@ -24,11 +25,7 @@ export const db = drizzle(sql, { schema });
  * Scopes a query to a specific hospital.
  */
 export function scopeToHospital(hospitalId: string) {
-  return (table: any) => {
-    // This is a simplified helper; in actual implementation, 
-    // it would return a partial query filter.
-    return table.hospitalId === hospitalId;
-  };
+  return (table: any) => eq(table.hospitalId, hospitalId);
 }
 
 /**

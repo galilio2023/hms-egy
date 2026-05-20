@@ -5,13 +5,16 @@
 
 import crypto from "crypto";
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "default-secret-key-at-least-32-chars"; // Must be 32 bytes
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET || "audit-secret-key";
 
 /**
  * Encrypts sensitive data using AES-256-GCM.
  */
 export function encryptField(text: string): string {
+  if (!ENCRYPTION_KEY || Buffer.from(ENCRYPTION_KEY, "utf-8").length !== 32) {
+    throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits).");
+  }
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv("aes-256-gcm", Buffer.from(ENCRYPTION_KEY, "utf-8"), iv);
   const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
@@ -23,6 +26,9 @@ export function encryptField(text: string): string {
  * Decrypts sensitive data.
  */
 export function decryptField(data: string): string {
+  if (!ENCRYPTION_KEY || Buffer.from(ENCRYPTION_KEY, "utf-8").length !== 32) {
+    throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits).");
+  }
   const buffer = Buffer.from(data, "base64");
   const iv = buffer.subarray(0, 16);
   const tag = buffer.subarray(16, 32);
@@ -45,7 +51,11 @@ export function signAuditRecord(record: any): string {
  */
 export function verifyAuditRecord(record: any, signature: string): boolean {
   const expectedSignature = signAuditRecord(record);
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+  const sigBuf = Buffer.from(signature);
+  const expectedBuf = Buffer.from(expectedSignature);
+
+  if (sigBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expectedBuf);
 }
 
 /**

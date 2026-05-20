@@ -76,6 +76,11 @@ export function parseNationalId(nid: string) {
   const day = parseInt(nid.substring(5, 7));
   const dob = new Date(year, month, day);
 
+  // Strict validation: verify the date didn't roll over (e.g. Feb 30 -> March 2)
+  if (dob.getFullYear() !== year || dob.getMonth() !== month || dob.getDate() !== day) {
+    return null;
+  }
+
   const govCode = nid.substring(7, 9);
   const governorate = GOVERNORATES[govCode];
 
