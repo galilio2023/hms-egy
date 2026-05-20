@@ -17,11 +17,17 @@ export interface CptCode {
   egyptInsurancePrice?: number;
 }
 
+import { queryIcd10Locally, queryCptLocally } from "./clinical-search-engine";
+
 /**
- * Searches for ICD-10 codes via server-side API.
- * Safe for both client and server (requires NEXT_PUBLIC_APP_URL for SSR).
+ * Searches for ICD-10 codes.
+ * Uses local engine if server-side to avoid HTTP loopback; uses API if client-side.
  */
 export async function searchIcd10(query: string): Promise<Icd10Code[]> {
+  if (typeof window === "undefined") {
+    return queryIcd10Locally(query);
+  }
+
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const response = await fetch(`${baseUrl}/api/clinical/search-icd10?q=${encodeURIComponent(query)}`);
   const { data } = await response.json();
@@ -29,10 +35,14 @@ export async function searchIcd10(query: string): Promise<Icd10Code[]> {
 }
 
 /**
- * Searches for CPT codes via server-side API.
- * Safe for both client and server (requires NEXT_PUBLIC_APP_URL for SSR).
+ * Searches for CPT codes.
+ * Uses local engine if server-side to avoid HTTP loopback; uses API if client-side.
  */
 export async function searchCptCodes(query: string): Promise<CptCode[]> {
+  if (typeof window === "undefined") {
+    return queryCptLocally(query);
+  }
+
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
   const response = await fetch(`${baseUrl}/api/clinical/search-cpt?q=${encodeURIComponent(query)}`);
   const { data } = await response.json();

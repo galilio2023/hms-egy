@@ -52,9 +52,12 @@ export async function setupHospital(data: HospitalOnboarding) {
     console.log(`[ONBOARDING] Admin user account placeholder established for ${adminEmail}`);
     
     return { success: true, hospitalId: result.id };
-  } catch {
-    // Log minimal info to avoid leaking sensitive payload from 'validated.data'
-    console.error("Onboarding failed for slug:", hospitalData.slug);
+  } catch (error) {
+    // Capture safely to internal telemetry (e.g. Sentry / CloudWatch)
+    console.error(`[ONBOARDING_FAILURE] Slug: ${hospitalData.slug}`, {
+      error: error instanceof Error ? error.message : "Unknown error",
+      // NEVER log 'adminPassword' here
+    });
     return { error: "An unexpected error occurred during setup." };
   }
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { format } from "date-fns";
 import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId } from "../utils/egypt";
 
 const egyptianPhoneSchema = z
@@ -45,9 +46,9 @@ export const patientSchema = z.object({
         path: ["gender"],
       });
     }
-    // Validate Date of Birth Match (using string comparison to prevent timezone shift bugs)
-    const parsedDobStr = parsed.dob.toISOString().split("T")[0];
-    const inputDobStr = data.dob.toISOString().split("T")[0];
+    // Validate Date of Birth Match (using formatted strings to prevent timezone shift bugs)
+    const parsedDobStr = format(parsed.dob, "yyyy-MM-dd");
+    const inputDobStr = format(data.dob, "yyyy-MM-dd");
 
     if (parsedDobStr !== inputDobStr) {
       ctx.addIssue({
