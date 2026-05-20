@@ -14,7 +14,7 @@ export const patientSchema = z.object({
   }),
   nameAr: z.string().min(3, "Name in Arabic must be at least 3 characters"),
   nameEn: z.string().min(3, "Name in English must be at least 3 characters"),
-  dob: z.date(),
+  dob: z.coerce.date(),
   gender: z.enum(["male", "female"]),
   governorate: z.string().min(2, "Governorate is required"),
   phone: egyptianPhoneSchema,

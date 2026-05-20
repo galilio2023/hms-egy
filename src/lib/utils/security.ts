@@ -5,9 +5,16 @@
 
 import crypto from "crypto";
 
-const KEY_BUFFER = process.env.ENCRYPTION_KEY?.length === 64 
-  ? Buffer.from(process.env.ENCRYPTION_KEY, "hex")
-  : Buffer.from(process.env.ENCRYPTION_KEY || "", "utf-8");
+const rawKey = process.env.ENCRYPTION_KEY;
+if (!rawKey || (rawKey.length !== 32 && rawKey.length !== 64)) {
+  throw new Error(
+    "CRITICAL: ENCRYPTION_KEY must be configured as a 32-byte string or 64-character hex in environment variables."
+  );
+}
+
+const KEY_BUFFER = rawKey.length === 64 
+  ? Buffer.from(rawKey, "hex")
+  : Buffer.from(rawKey, "utf-8");
 
 const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET || "audit-secret-key";
 
@@ -15,9 +22,6 @@ const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET || "audit-secret-key";
  * Encrypts sensitive data using AES-256-GCM.
  */
 export function encryptField(text: string): string {
-  if (KEY_BUFFER.length !== 32) {
-    throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits). Check your environment variables.");
-  }
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", KEY_BUFFER, iv);
   const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
@@ -29,9 +33,6 @@ export function encryptField(text: string): string {
  * Decrypts sensitive data.
  */
 export function decryptField(data: string): string | null {
-  if (KEY_BUFFER.length !== 32) {
-    throw new Error("ENCRYPTION_KEY must be exactly 32 bytes (256 bits). Check your environment variables.");
-  }
   try {
     const buffer = Buffer.from(data, "base64");
     if (buffer.length < 28) return null; // Minimum IV (12) + Tag (16) length
@@ -76,9 +77,13 @@ export function generateSecureToken(length: number = 32): string {
 }
 
 /**
- * Sanitizes AI input to prevent prompt injection.
+ * Sanitizes AI input to reduce the risk of prompt injection.
+ * WARNING: This is a basic filter. For production, use specialized LLM security 
+ * layers (e.g., LLM Guard) and strict system-prompt constraints.
  */
 export function sanitizeAiInput(input: string): string {
-  // Basic sanitization, can be expanded.
-  return input.replace(/[<>]/g, "").trim();
+  return input
+    .replace(/[<>]/g, "") // Prevent basic tag injection
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .trim();
 }

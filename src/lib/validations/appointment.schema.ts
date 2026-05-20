@@ -5,9 +5,10 @@ export const appointmentSchema = z.object({
   patientId: z.string().uuid(),
   doctorId: z.string().uuid(),
   departmentId: z.string().uuid(),
-  scheduledAt: z.date().refine((date) => date > new Date(), {
-    message: "Appointment must be in the future",
-  }).refine(isWorkingDay, {
+  scheduledAt: z.coerce.date().refine(
+    (date) => date > new Date(Date.now() - 10 * 60 * 1000), 
+    { message: "Appointment must be in the future (with 10min buffer)" }
+  ).refine(isWorkingDay, {
     message: "Appointments cannot be scheduled on Fridays or Saturdays",
   }),
   type: z.enum(["consultation", "follow_up", "procedure", "telemedicine"]),
