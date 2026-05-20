@@ -63,10 +63,15 @@ export function signAuditRecord(record: Record<string, unknown>): string {
  */
 export function verifyAuditRecord(record: Record<string, unknown>, signature: string): boolean {
   const expectedSignature = signAuditRecord(record);
-  const sigBuf = Buffer.from(signature);
-  const expectedBuf = Buffer.from(expectedSignature);
+  
+  // Use 'hex' encoding explicitly since HMAC digest is in hex
+  const sigBuf = Buffer.from(signature, "hex");
+  const expectedBuf = Buffer.from(expectedSignature, "hex");
 
-  if (sigBuf.length !== expectedBuf.length) return false;
+  if (sigBuf.length !== expectedBuf.length || sigBuf.length === 0) {
+    return false;
+  }
+  
   return crypto.timingSafeEqual(sigBuf, expectedBuf);
 }
 

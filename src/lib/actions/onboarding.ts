@@ -14,9 +14,10 @@ export async function setupHospital(data: HospitalOnboarding) {
     return { error: "Invalid data submitted", details: validated.error.format() };
   }
 
-  try {
-    const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
+  // Destructure immediately to isolate sensitive credentials
+  const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
 
+  try {
     // Execute within a transaction for atomicity
     const result = await db.transaction(async (tx) => {
       // 2. Create hospital
@@ -43,14 +44,17 @@ export async function setupHospital(data: HospitalOnboarding) {
       return hospital;
     });
 
+    if (!result) throw new Error("Hospital creation failed");
+
     // 4. Create admin user (Placeholder - Phase 6 will implement full Better Auth integration)
     // NOTE: In Phase 6, we will hash adminPassword and insert into the 'users' and 'staff' tables.
     // NEVER log plain passwords or sensitive identifiers in production logs.
     console.log(`[ONBOARDING] Admin user account placeholder established for ${adminEmail}`);
     
     return { success: true, hospitalId: result.id };
-  } catch (error) {
-    console.error("Onboarding failed:", error);
+  } catch {
+    // Log minimal info to avoid leaking sensitive payload from 'validated.data'
+    console.error("Onboarding failed for slug:", hospitalData.slug);
     return { error: "An unexpected error occurred during setup." };
   }
 }

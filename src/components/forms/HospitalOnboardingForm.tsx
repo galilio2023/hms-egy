@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { hospitalOnboardingSchema, type HospitalOnboarding } from "@/lib/validations/hospital.schema";
 import { setupHospital } from "@/lib/actions/onboarding";
 import { useRouter } from "@/i18n/routing";
+import { GOVERNORATES } from "@/lib/utils/egypt";
 
 export function HospitalOnboardingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,9 +121,11 @@ export function HospitalOnboardingForm() {
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="">Select Governorate</option>
-              <option value="01">Cairo (القاهرة)</option>
-              <option value="02">Alexandria (الإسكندرية)</option>
-              {/* More options would go here, simplified for now */}
+              {Object.values(GOVERNORATES).map((gov) => (
+                <option key={gov.code} value={gov.code}>
+                  {gov.en} ({gov.ar})
+                </option>
+              ))}
             </select>
             {errors.governorate && <p className="text-red-500 text-xs">{errors.governorate.message}</p>}
           </div>

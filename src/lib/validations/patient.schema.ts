@@ -45,13 +45,11 @@ export const patientSchema = z.object({
         path: ["gender"],
       });
     }
-    // Validate Date of Birth Match (using UTC getters to prevent timezone shift bugs)
-    const matchesDob = 
-      parsed.dob.getUTCFullYear() === data.dob.getUTCFullYear() &&
-      parsed.dob.getUTCMonth() === data.dob.getUTCMonth() &&
-      parsed.dob.getUTCDate() === data.dob.getUTCDate();
+    // Validate Date of Birth Match (using string comparison to prevent timezone shift bugs)
+    const parsedDobStr = parsed.dob.toISOString().split("T")[0];
+    const inputDobStr = data.dob.toISOString().split("T")[0];
 
-    if (!matchesDob) {
+    if (parsedDobStr !== inputDobStr) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Date of birth does not match National ID",
