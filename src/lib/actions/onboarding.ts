@@ -45,7 +45,8 @@ export async function setupHospital(data: HospitalOnboarding) {
 
     // 4. Create admin user (Placeholder - Phase 6 will implement full Better Auth integration)
     // NOTE: In Phase 6, we will hash adminPassword and insert into the 'users' and 'staff' tables.
-    console.log(`[ONBOARDING] Admin user creation queued for ${adminEmail} (${adminName})`);
+    // NEVER log plain passwords or sensitive identifiers in production logs.
+    console.log(`[ONBOARDING] Admin user account placeholder established for ${adminEmail}`);
     
     return { success: true, hospitalId: result.id };
   } catch (error) {

@@ -78,9 +78,10 @@ export function generateSecureToken(length: number = 32): string {
 }
 
 /**
- * Sanitizes AI input to reduce the risk of prompt injection.
- * WARNING: This is a basic filter. For production, use specialized LLM security 
- * layers (e.g., LLM Guard) and strict system-prompt constraints.
+ * Sanitizes AI input to reduce the risk of structural injection (e.g., HTML/XML tags).
+ * WARNING: This is a basic filter. It does NOT prevent semantic prompt injection 
+ * (e.g., "Ignore previous instructions"). For production, use LLM-native security 
+ * layers (like LLM Guard) and strict output schema enforcement.
  */
 export function sanitizeAiInput(input: string): string {
   return input
