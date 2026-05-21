@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { toZonedTime } from "date-fns-tz";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { createAppointment, addToWaitingList, getDoctorAvailability } from "@/lib/actions/appointments";
+import { isEgyptianPublicHoliday } from "@/lib/utils/egypt";
 
 interface BookingWizardClientProps {
   departments: { id: string; nameAr: string; nameEn: string }[];
@@ -66,6 +67,8 @@ export function BookingWizardClient({
   const [selectedSlot, setSelectedSlot] = useState("");
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isWeekendWarning, setIsWeekendWarning] = useState(false);
+  const [isHolidayWarning, setIsHolidayWarning] = useState(false);
+  const [holidayName, setHolidayName] = useState("");
   const [queueToWaitingList, setQueueToWaitingList] = useState(false);
 
   // Trigger patient lookup with 300ms debounce
@@ -96,6 +99,21 @@ export function BookingWizardClient({
       const isWeekend = day === 5 || day === 6;
       setIsWeekendWarning(isWeekend);
       setQueueToWaitingList(false);
+
+      // 2. Cairo Timezone holiday check
+      const dateToCheck = new Date(year, month - 1, dayNum);
+      const holidayInfo = isEgyptianPublicHoliday(dateToCheck);
+      if (holidayInfo?.isHoliday) {
+        setIsHolidayWarning(true);
+        setHolidayName((locale === "ar" ? holidayInfo.nameAr : holidayInfo.nameEn) || "");
+        setAvailableSlots([]);
+        setQueueToWaitingList(false);
+        setLoadingSlots(false);
+        return;
+      } else {
+        setIsHolidayWarning(false);
+        setHolidayName("");
+      }
 
       setLoadingSlots(true);
       setSelectedSlot("");
@@ -444,6 +462,19 @@ export function BookingWizardClient({
                   {isRtl 
                     ? "اليوم المختار يصادف عطلة نهاية الأسبوع الرسمية (الجمعة أو السبت). الكشف قد يتطلب تصريحاً عاجلاً." 
                     : "The selected date falls on the official hospital weekend (Friday or Saturday) in Egypt."}
+                </div>
+              </div>
+            )}
+
+            {/* Cairo Timezone Egyptian Public Holiday safeguards */}
+            {isHolidayWarning && (
+              <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-700 rounded-xl text-xs flex gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-black block mb-0.5">{isRtl ? "عطلة رسمية بالجمهورية" : "Official Public Holiday"}</span>
+                  {isRtl 
+                    ? `اليوم المختار يصادف عطلة رسمية بالدولة (${holidayName}). العيادات الخارجية مغلقة بالكامل ولا تقدم سوى الطوارئ.` 
+                    : `The selected date is an official public holiday (${holidayName}). Outpatient clinics are closed, and bookings are unavailable.`}
                 </div>
               </div>
             )}

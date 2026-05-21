@@ -141,11 +141,110 @@ export function isWorkingDay(date: Date): boolean {
 }
 
 /**
+ * Database of Egyptian shifting/lunar public holidays (2024–2030).
+ * Months are 0-indexed to match JS Date.
+ */
+const SHIFTING_HOLIDAYS_DB: Record<number, { month: number; day: number; nameAr: string; nameEn: string }[]> = {
+  2024: [
+    { month: 4, day: 6, nameAr: "شم النسيم", nameEn: "Sham El-Nessim" },
+    { month: 3, day: 9, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 3, day: 10, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 3, day: 11, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 3, day: 12, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 5, day: 15, nameAr: "وقفة عرفات", nameEn: "Arafat Day" },
+    { month: 5, day: 16, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 17, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 18, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 19, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 6, day: 7, nameAr: "رأس السنة الهجرية", nameEn: "Islamic New Year" },
+    { month: 8, day: 15, nameAr: "المولد النبوي الشريف", nameEn: "Prophet's Birthday" },
+  ],
+  2025: [
+    { month: 3, day: 21, nameAr: "شم النسيم", nameEn: "Sham El-Nessim" },
+    { month: 2, day: 30, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 2, day: 31, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 3, day: 1, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 5, day: 6, nameAr: "وقفة عرفات", nameEn: "Arafat Day" },
+    { month: 5, day: 7, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 8, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 9, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 10, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 26, nameAr: "رأس السنة الهجرية", nameEn: "Islamic New Year" },
+    { month: 8, day: 4, nameAr: "المولد النبوي الشريف", nameEn: "Prophet's Birthday" },
+  ],
+  2026: [
+    { month: 3, day: 13, nameAr: "شم النسيم", nameEn: "Sham El-Nessim" },
+    { month: 2, day: 19, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 2, day: 20, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 2, day: 21, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 4, day: 26, nameAr: "وقفة عرفات", nameEn: "Arafat Day" },
+    { month: 4, day: 27, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 28, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 29, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 30, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 16, nameAr: "رأس السنة الهجرية", nameEn: "Islamic New Year" },
+    { month: 7, day: 25, nameAr: "المولد النبوي الشريف", nameEn: "Prophet's Birthday" },
+  ],
+  2027: [
+    { month: 4, day: 3, nameAr: "شم النسيم", nameEn: "Sham El-Nessim" },
+    { month: 2, day: 9, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 2, day: 10, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 2, day: 11, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 4, day: 16, nameAr: "وقفة عرفات", nameEn: "Arafat Day" },
+    { month: 4, day: 17, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 18, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 19, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 20, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 5, day: 5, nameAr: "رأس السنة الهجرية", nameEn: "Islamic New Year" },
+    { month: 7, day: 14, nameAr: "المولد النبوي الشريف", nameEn: "Prophet's Birthday" },
+  ],
+  2028: [
+    { month: 3, day: 17, nameAr: "شم النسيم", nameEn: "Sham El-Nessim" },
+    { month: 1, day: 26, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 1, day: 27, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 1, day: 28, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 4, day: 4, nameAr: "وقفة عرفات", nameEn: "Arafat Day" },
+    { month: 4, day: 5, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 6, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 7, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 8, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 24, nameAr: "رأس السنة الهجرية", nameEn: "Islamic New Year" },
+    { month: 7, day: 2, nameAr: "المولد النبوي الشريف", nameEn: "Prophet's Birthday" },
+  ],
+  2029: [
+    { month: 3, day: 9, nameAr: "شم النسيم", nameEn: "Sham El-Nessim" },
+    { month: 1, day: 14, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 1, day: 15, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 1, day: 16, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 3, day: 23, nameAr: "وقفة عرفات", nameEn: "Arafat Day" },
+    { month: 3, day: 24, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 3, day: 25, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 3, day: 26, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 3, day: 27, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 13, nameAr: "رأس السنة الهجرية", nameEn: "Islamic New Year" },
+    { month: 6, day: 23, nameAr: "المولد النبوي الشريف", nameEn: "Prophet's Birthday" },
+  ],
+  2030: [
+    { month: 3, day: 29, nameAr: "شم النسيم", nameEn: "Sham El-Nessim" },
+    { month: 1, day: 4, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 1, day: 5, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 1, day: 6, nameAr: "عيد الفطر المبارك", nameEn: "Eid Al-Fitr" },
+    { month: 3, day: 12, nameAr: "وقفة عرفات", nameEn: "Arafat Day" },
+    { month: 3, day: 13, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 3, day: 14, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 3, day: 15, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 3, day: 16, nameAr: "عيد الأضحى المبارك", nameEn: "Eid Al-Adha" },
+    { month: 4, day: 2, nameAr: "رأس السنة الهجرية", nameEn: "Islamic New Year" },
+    { month: 6, day: 12, nameAr: "المولد النبوي الشريف", nameEn: "Prophet's Birthday" },
+  ],
+};
+
+/**
  * Returns common public holidays in Egypt for a given year.
- * Note: Islamic holidays are approximations as they depend on the lunar calendar.
+ * Combines fixed national holidays and dynamic shifting holidays.
  */
 export function getPublicHolidays(year: number) {
-  return [
+  const fixed = [
     { date: new Date(year, 0, 7), nameAr: "عيد الميلاد المجيد", nameEn: "Coptic Christmas Day", isIslamic: false },
     { date: new Date(year, 0, 25), nameAr: "ثورة ٢٥ يناير / عيد الشرطة", nameEn: "Revolution Day / Police Day", isIslamic: false },
     { date: new Date(year, 3, 25), nameAr: "عيد تحرير سيناء", nameEn: "Sinai Liberation Day", isIslamic: false },
@@ -154,6 +253,41 @@ export function getPublicHolidays(year: number) {
     { date: new Date(year, 6, 23), nameAr: "عيد الثورة", nameEn: "Revolution Day", isIslamic: false },
     { date: new Date(year, 9, 6), nameAr: "عيد القوات المسلحة", nameEn: "Armed Forces Day", isIslamic: false },
   ];
+
+  const shifting = SHIFTING_HOLIDAYS_DB[year] || [];
+  const shiftingMapped = shifting.map((h) => ({
+    date: new Date(year, h.month, h.day),
+    nameAr: h.nameAr,
+    nameEn: h.nameEn,
+    isIslamic: h.nameAr !== "شم النسيم",
+  }));
+
+  return [...fixed, ...shiftingMapped];
+}
+
+/**
+ * Checks if a given date is an official public holiday in Egypt.
+ * Resolves dates in the Africa/Cairo timezone to avoid off-by-one errors.
+ */
+export function isEgyptianPublicHoliday(date: Date): { isHoliday: boolean; nameAr?: string; nameEn?: string } | null {
+  const zoned = toZonedTime(date, "Africa/Cairo");
+  const year = zoned.getFullYear();
+  const month = zoned.getMonth();
+  const day = zoned.getDate();
+
+  const holidays = getPublicHolidays(year);
+  for (const h of holidays) {
+    const hDate = h.date;
+    if (
+      hDate.getFullYear() === year &&
+      hDate.getMonth() === month &&
+      hDate.getDate() === day
+    ) {
+      return { isHoliday: true, nameAr: h.nameAr, nameEn: h.nameEn };
+    }
+  }
+
+  return { isHoliday: false };
 }
 
 /**
