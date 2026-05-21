@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { onlinePayments, payments, invoices } from "@db/schema/billing";
 import { eq } from "drizzle-orm";
 import { withBypassContext, withTenantContext } from "@/lib/db/tenant";
@@ -19,10 +18,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Payload too large" }, { status: 400 });
     }
 
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
     let body: any;
     try {
       body = JSON.parse(rawBody);
-    } catch (e) {
+    } catch {
       return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
     }
 
@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
       "success"
     ];
 
-    const getValue = (o: any, path: string) => {
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    const getValue = (o: any, path: string): any => {
       if (path === "order") {
         if (typeof o?.order === "object" && o.order !== null) {
           return o.order.id;

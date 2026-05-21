@@ -40,8 +40,9 @@ async function verify() {
       } else {
         console.error("❌ FAIL-CLOSED FAILURE: Unscoped query leaked database owner records!");
       }
-    } catch (e: any) {
-      console.log(`ℹ️ Unscoped query thrown exception (expected if connection is restricted): ${e.message}`);
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      console.log(`ℹ️ Unscoped query thrown exception (expected if connection is restricted): ${err.message}`);
     }
 
     // 3. Query patients table inside withTenantContext
