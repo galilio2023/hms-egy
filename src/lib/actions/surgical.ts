@@ -212,6 +212,23 @@ export async function createSurgicalCase(
       // Enforce a strict 2-second timeout to prevent lock contention
       await tx.execute(sql`SET LOCAL lock_timeout = '2000';`);
       await tx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId} FOR UPDATE`);
+      
+      // 0.5. Acquire row-level locks on the staff (surgeons and anesthesiologists) to prevent double-booking
+      // the same medical personnel across different rooms simultaneously
+      const staffIdsToLock = [validatedData.leadSurgeonId];
+      if (validatedData.anesthesiologistId) {
+        staffIdsToLock.push(validatedData.anesthesiologistId);
+      }
+      if (validatedData.assistantSurgeonIds && validatedData.assistantSurgeonIds.length > 0) {
+        staffIdsToLock.push(...validatedData.assistantSurgeonIds);
+      }
+      
+      const inClauseStaff = sql.join(
+        staffIdsToLock.map(id => sql`${id}`),
+        sql`, `
+      );
+      
+      await tx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff}) FOR UPDATE`);
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
       const scheduledDate = new Date(Date.UTC(

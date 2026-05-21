@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
         const insertedLogs = await tx
           .insert(sentReminders)
           .values(remindersToInsert)
-          .onConflictDoNothing()
+          .onConflictDoNothing({ target: [sentReminders.hospitalId, sentReminders.entityType, sentReminders.entityId, sentReminders.reminderType, sentReminders.channel] })
           .returning();
 
         remindersSent = insertedLogs.length;

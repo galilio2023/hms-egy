@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     const results = await withBypassContext(async (tx) => {
       // 3. Fetch scheduled appointments matching today or tomorrow that haven't received their reminder yet
-      const apps = await tx
+      const tomorrowApps = await tx
         .select({
           id: appointments.id,
           hospitalId: appointments.hospitalId,
@@ -93,29 +93,57 @@ export async function GET(req: NextRequest) {
           sentReminders,
           and(
             eq(sentReminders.entityId, appointments.id),
-            or(
-              and(
-                eq(appointments.scheduledDate, tomorrowMidnight),
-                eq(sentReminders.reminderType, "24h_reminder")
-              ),
-              and(
-                eq(appointments.scheduledDate, todayMidnight),
-                eq(sentReminders.reminderType, "2h_reminder")
-              )
-            )
+            eq(sentReminders.reminderType, "24h_reminder")
           )
         )
         .where(
           and(
             eq(appointments.status, "scheduled"),
-            or(
-              eq(appointments.scheduledDate, todayMidnight),
-              eq(appointments.scheduledDate, tomorrowMidnight)
-            ),
+            eq(appointments.scheduledDate, tomorrowMidnight),
             isNull(sentReminders.id)
           )
         )
         .limit(500);
+
+      const todayApps = await tx
+        .select({
+          id: appointments.id,
+          hospitalId: appointments.hospitalId,
+          patientId: appointments.patientId,
+          patientPhone: patients.contactPhone,
+          patientNameAr: patients.nameAr,
+          patientNameEn: patients.nameEn,
+          doctorId: appointments.doctorId,
+          doctorNameAr: staff.nameAr,
+          doctorNameEn: staff.nameEn,
+          departmentId: appointments.departmentId,
+          departmentNameAr: departments.nameAr,
+          departmentNameEn: departments.nameEn,
+          scheduledDate: appointments.scheduledDate,
+          startTime: appointments.startTime,
+          status: appointments.status,
+        })
+        .from(appointments)
+        .innerJoin(patients, eq(appointments.patientId, patients.id))
+        .innerJoin(staff, eq(appointments.doctorId, staff.id))
+        .innerJoin(departments, eq(appointments.departmentId, departments.id))
+        .leftJoin(
+          sentReminders,
+          and(
+            eq(sentReminders.entityId, appointments.id),
+            eq(sentReminders.reminderType, "2h_reminder")
+          )
+        )
+        .where(
+          and(
+            eq(appointments.status, "scheduled"),
+            eq(appointments.scheduledDate, todayMidnight),
+            isNull(sentReminders.id)
+          )
+        )
+        .limit(500);
+
+      const apps = [...tomorrowApps, ...todayApps];
 
       console.log(`Found ${apps.length} total active scheduled appointments for today/tomorrow.`);
 
@@ -175,7 +203,7 @@ export async function GET(req: NextRequest) {
         const insertedLogs = await tx
           .insert(sentReminders)
           .values(remindersToInsert)
-          .onConflictDoNothing()
+          .onConflictDoNothing({ target: [sentReminders.hospitalId, sentReminders.entityType, sentReminders.entityId, sentReminders.reminderType, sentReminders.channel] })
           .returning();
 
         remindersSent = insertedLogs.length;

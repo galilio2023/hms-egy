@@ -139,7 +139,7 @@ export function BookingWizardClient({
     const total = fee + fileFee;
     
     // Convert to Arabic words for Egyptian tax/invoice audit compliance using Tafqeet
-    const textAr = tafqeet(total);
+    const textAr = tafqeet(Math.round(total));
 
     return { fee, fileFee, total, textAr };
   };
