@@ -6,7 +6,7 @@ import { patients } from "@db/schema/patients";
 import { sentReminders } from "@db/schema/system";
 import { toCairoTime } from "@/lib/utils/egypt";
 import { formatEGP } from "@/lib/utils/formatting";
-import { and, eq, lte, inArray } from "drizzle-orm";
+import { and, eq, lte, inArray, isNull } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 

@@ -6,7 +6,7 @@ import { patients } from "@db/schema/patients";
 import { staff, departments } from "@db/schema/core";
 import { sentReminders } from "@db/schema/system";
 import { toCairoTime } from "@/lib/utils/egypt";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, or, sql, isNull } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 

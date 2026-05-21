@@ -315,8 +315,8 @@ export async function createSurgicalCase(
       // 4. Generate custom surgical case number (SC-YYYY-NNNNNN) atomically using DB sequence
       const currentYear = new Date().getFullYear();
       
-      const [{ nextval }] = await tx.execute(sql`SELECT nextval('surgical_case_seq')::int`);
-      const sequence = Number(nextval);
+      const result = await tx.execute(sql`SELECT nextval('surgical_case_seq')::int`);
+      const sequence = Number((result as any).rows[0].nextval);
       const caseNumber = `SC-${currentYear}-${String(sequence).padStart(6, "0")}`;
 
       // 5. Insert surgical case record
