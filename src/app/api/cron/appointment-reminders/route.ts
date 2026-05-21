@@ -12,14 +12,17 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. Authorization check
+    // 1. Authorization check - strict fail-closed across all environments
     const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
-    if (process.env.NODE_ENV === "production" || cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (!cronSecret) {
+      console.error("CRON_SECRET is not configured on the server.");
+      return NextResponse.json({ error: "Unauthorized: Missing server configuration" }, { status: 401 });
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     console.log("⏰ Starting Appointment Reminders Cron Job...");
@@ -85,8 +88,8 @@ export async function GET(req: NextRequest) {
 
       console.log(`Found ${apps.length} total active scheduled appointments for today/tomorrow.`);
 
-      let remindersSent = 0;
-      let duplicatesSkipped = 0;
+      const remindersToInsert: any[] = [];
+      const appRemindersMap = new Map<string, { type: "24h_reminder" | "2h_reminder", app: any }>();
 
       for (const app of apps) {
         const appDate = app.scheduledDate instanceof Date ? app.scheduledDate : new Date(app.scheduledDate);
@@ -94,30 +97,18 @@ export async function GET(req: NextRequest) {
 
         // 4. Handle 24h Tomorrow Reminders
         if (appDateStr === tomorrowMidnight.toDateString()) {
-          // Attempt inserting 24h_reminder (relying on composite unique index for deduplication)
-          const [inserted] = await tx
-            .insert(sentReminders)
-            .values({
-              hospitalId: app.hospitalId,
-              entityType: "appointment",
-              entityId: app.id,
-              reminderType: "24h_reminder",
-              channel: "sms",
-              patientId: app.patientId,
-              success: true,
-              sentAt: new Date(),
-            })
-            .onConflictDoNothing()
-            .returning();
-
-          if (inserted) {
-            // Log/Simulate SMS Gateway Delivery
-            console.log(`[24h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
-            console.log(`Message: تذكير: موعدكم غداً في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر. لخدمتكم.`);
-            remindersSent++;
-          } else {
-            duplicatesSkipped++;
-          }
+          const key = `appointment_24h_${app.id}`;
+          remindersToInsert.push({
+            hospitalId: app.hospitalId,
+            entityType: "appointment",
+            entityId: app.id,
+            reminderType: "24h_reminder",
+            channel: "sms",
+            patientId: app.patientId,
+            success: true,
+            sentAt: new Date(),
+          });
+          appRemindersMap.set(key, { type: "24h_reminder", app });
         }
 
         // 5. Handle 2h Today Urgent Reminders
@@ -131,27 +122,47 @@ export async function GET(req: NextRequest) {
 
           // If the appointment starts within 2 hours (0 to 120 minutes in the future)
           if (diffMinutes > 0 && diffMinutes <= 120) {
-            const [inserted] = await tx
-              .insert(sentReminders)
-              .values({
-                hospitalId: app.hospitalId,
-                entityType: "appointment",
-                entityId: app.id,
-                reminderType: "2h_reminder",
-                channel: "sms",
-                patientId: app.patientId,
-                success: true,
-                sentAt: new Date(),
-              })
-              .onConflictDoNothing()
-              .returning();
+            const key = `appointment_2h_${app.id}`;
+            remindersToInsert.push({
+              hospitalId: app.hospitalId,
+              entityType: "appointment",
+              entityId: app.id,
+              reminderType: "2h_reminder",
+              channel: "sms",
+              patientId: app.patientId,
+              success: true,
+              sentAt: new Date(),
+            });
+            appRemindersMap.set(key, { type: "2h_reminder", app });
+          }
+        }
+      }
 
-            if (inserted) {
+      let remindersSent = 0;
+      let duplicatesSkipped = 0;
+
+      if (remindersToInsert.length > 0) {
+        const insertedLogs = await tx
+          .insert(sentReminders)
+          .values(remindersToInsert)
+          .onConflictDoNothing()
+          .returning();
+
+        remindersSent = insertedLogs.length;
+        duplicatesSkipped = remindersToInsert.length - remindersSent;
+
+        // Log the printed simulated outcomes of successfully inserted ones
+        for (const log of insertedLogs) {
+          const key = `${log.entityType}_${log.reminderType === "24h_reminder" ? "24h" : "2h"}_${log.entityId}`;
+          const mapped = appRemindersMap.get(key);
+          if (mapped) {
+            const { type, app } = mapped;
+            if (type === "24h_reminder") {
+              console.log(`[24h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
+              console.log(`Message: تذكير: موعدكم غداً في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر. لخدمتكم.`);
+            } else {
               console.log(`[2h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
               console.log(`Message: تذكير عاجل: موعدكم اليوم خلال ساعتين في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر.`);
-              remindersSent++;
-            } else {
-              duplicatesSkipped++;
             }
           }
         }

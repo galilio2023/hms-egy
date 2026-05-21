@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { hospitals } from "@db/schema/core";
 import { eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { PatientRegistrationWizard } from "@/components/forms/PatientRegistrationWizard";
@@ -40,7 +40,11 @@ export default async function NewPatientPage({
 }) {
   const { locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "patients" });
+  
   const session = await auth();
+  if (!session) {
+    redirect(`/${locale}/login`);
+  }
 
   // Fetch hospital tenant data
   const [dbHospital] = await db
@@ -56,6 +60,13 @@ export default async function NewPatientPage({
   if (!dbHospital) {
     notFound();
   }
+
+  // Validate cross-tenant access context
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  if (!isSuperAdmin && session.user.hospitalId !== dbHospital.id) {
+    notFound(); // Return 404 to avoid exposing that the slug exists
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50/10 py-8 px-4 sm:px-6 lg:px-8">

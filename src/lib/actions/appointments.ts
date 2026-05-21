@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
 import { appointments, waitingList } from "@db/schema/clinical";
-import { staff, departments } from "@db/schema/core";
+import { staff, departments, hospitals } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
 import { and, eq, ne, gte, lte, or, sql, desc } from "drizzle-orm";
 import { appointmentSchema, type AppointmentSchema } from "@/lib/validations/appointment.schema";
@@ -141,7 +141,14 @@ export async function createAppointment(data: AppointmentSchema) {
         throw new AppError(ErrorCode.INTERNAL_ERROR, "فشل حفظ بيانات الموعد الجديد.");
       }
 
-      revalidatePath(`/[locale]/${hospitalId}/appointments`, "page");
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+      const hospitalSlug = hospital?.slug || hospitalId;
+
+      revalidatePath(`/[locale]/${hospitalSlug}/appointments`, "page");
       return { success: true, appointmentId: newApp.id };
     });
   } catch (error: any) {
@@ -191,7 +198,14 @@ export async function updateAppointmentStatus(id: string, status: string, cancel
         throw new AppError(ErrorCode.NOT_FOUND, "الموعد المطلوب غير موجود.");
       }
 
-      revalidatePath(`/[locale]/${hospitalId}/appointments`, "page");
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+      const hospitalSlug = hospital?.slug || hospitalId;
+
+      revalidatePath(`/[locale]/${hospitalSlug}/appointments`, "page");
       return { success: true };
     });
   } catch (error: any) {
@@ -396,7 +410,14 @@ export async function addToWaitingList(data: {
         throw new AppError(ErrorCode.INTERNAL_ERROR, "فشل إضافة المريض لقائمة الانتظار.");
       }
 
-      revalidatePath(`/[locale]/${hospitalId}/appointments`, "page");
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+      const hospitalSlug = hospital?.slug || hospitalId;
+
+      revalidatePath(`/[locale]/${hospitalSlug}/appointments`, "page");
       return { success: true, id: newEntry.id };
     });
   } catch (error: any) {
@@ -434,7 +455,14 @@ export async function scheduleFromWaitingList(waitingListId: string, appointment
         .set({ status: "scheduled" })
         .where(and(eq(waitingList.id, waitingListId), eq(waitingList.hospitalId, hospitalId)));
 
-      revalidatePath(`/[locale]/${hospitalId}/appointments`, "page");
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+      const hospitalSlug = hospital?.slug || hospitalId;
+
+      revalidatePath(`/[locale]/${hospitalSlug}/appointments`, "page");
       return { success: true, appointmentId: schedRes.appointmentId };
     });
   } catch (error) {

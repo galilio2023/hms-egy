@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/tables/DataTable";
 import { useRouter } from "@/i18n/routing";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -164,7 +165,7 @@ export function AppointmentSchedulerClient({
         router.refresh();
       } else {
         const errorMsg = res && "error" in res ? res.error : "Failed to update appointment status";
-        alert(errorMsg);
+        toast.error(errorMsg);
       }
     });
   };
@@ -173,9 +174,9 @@ export function AppointmentSchedulerClient({
   const handleScheduleFromWaiting = () => {
     if (!selectedWaitingEntry || !scheduleDoctorId || !scheduleDate || !selectedSlot) return;
 
-    const scheduledDateObj = new Date(scheduleDate);
     const [h, m] = selectedSlot.split(":").map(Number);
-    scheduledDateObj.setHours(h, m, 0, 0);
+    const [year, month, dayNum] = scheduleDate.split("-").map(Number);
+    const scheduledDateObj = new Date(year, month - 1, dayNum, h, m, 0, 0);
 
     const appointmentDetails = {
       patientId: selectedWaitingEntry.patientId,
@@ -197,7 +198,7 @@ export function AppointmentSchedulerClient({
         router.refresh();
       } else {
         const errorMsg = res && "error" in res ? res.error : "خطأ أثناء جدولة الموعد.";
-        alert(errorMsg);
+        toast.error(errorMsg);
       }
     });
   };

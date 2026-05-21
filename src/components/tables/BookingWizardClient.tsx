@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
+import { toast } from "sonner";
+import { tafqeet } from "@/lib/utils/tafqeet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -84,7 +86,9 @@ export function BookingWizardClient({
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
       // 1. Cairo Timezone weekend check (Friday = 5, Saturday = 6)
-      const day = new Date(selectedDate).getDay();
+      // Safe split-parsing to bypass UTC timezone off-by-one shifts
+      const [year, month, dayNum] = selectedDate.split("-").map(Number);
+      const day = new Date(year, month - 1, dayNum).getDay();
       const isWeekend = day === 5 || day === 6;
       setIsWeekendWarning(isWeekend);
       setQueueToWaitingList(false);
@@ -131,13 +135,8 @@ export function BookingWizardClient({
 
     const total = fee + fileFee;
     
-    // Convert to Arabic words for Egyptian tax/invoice audit compliance
-    let textAr = "";
-    if (total === 500) textAr = "خمسمائة جنيه مصري فقط لا غير";
-    else if (total === 250) textAr = "مائتان وخمسون جنيهاً مصرياً فقط لا غير";
-    else if (total === 1050) textAr = "ألف وخمسون جنيهاً مصرياً فقط لا غير";
-    else if (total === 400) textAr = "أربعمائة جنيه مصري فقط لا غير";
-    else textAr = `${total} جنيهاً مصرياً فقط لا غير`;
+    // Convert to Arabic words for Egyptian tax/invoice audit compliance using Tafqeet
+    const textAr = tafqeet(total);
 
     return { fee, fileFee, total, textAr };
   };
@@ -176,14 +175,14 @@ export function BookingWizardClient({
           router.refresh();
         } else {
           const errorMsg = res && "error" in res ? res.error : "فشلت عملية الإضافة لقائمة الانتظار.";
-          alert(errorMsg);
+          toast.error(errorMsg);
         }
       });
     } else {
       // Schedule Appointment Slot
-      const scheduledAt = new Date(selectedDate);
       const [h, m] = selectedSlot.split(":").map(Number);
-      scheduledAt.setHours(h, m, 0, 0);
+      const [year, month, dayNum] = selectedDate.split("-").map(Number);
+      const scheduledAt = new Date(year, month - 1, dayNum, h, m, 0, 0);
 
       const data = {
         patientId: selectedPatient.id,
@@ -201,7 +200,7 @@ export function BookingWizardClient({
           router.refresh();
         } else {
           const errorMsg = res && "error" in res ? res.error : "فشل تسجيل الموعد. يرجى إعادة المحاولة.";
-          alert(errorMsg);
+          toast.error(errorMsg);
         }
       });
     }

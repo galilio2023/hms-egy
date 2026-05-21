@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import { useRouter } from "@/i18n/routing";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -109,7 +110,7 @@ export function SurgicalScheduleClient({
       setCases(res.cases || []);
     } else {
       const errorMsg = res && "error" in res ? (res as any).error : "Failed to load schedule board";
-      alert(errorMsg);
+      toast.error(errorMsg);
     }
     setLoading(false);
   };
@@ -155,9 +156,9 @@ export function SurgicalScheduleClient({
       return;
     }
 
-    const scheduledAt = new Date(selectedDate);
     const [h, m] = scheduledTime.split(":").map(Number);
-    scheduledAt.setHours(h, m, 0, 0);
+    const [year, month, dayNum] = selectedDate.split("-").map(Number);
+    const scheduledAt = new Date(year, month - 1, dayNum, h, m, 0, 0);
 
     const data = {
       patientId: selectedPatientId,
@@ -198,15 +199,23 @@ export function SurgicalScheduleClient({
   };
 
   const handlePrevDay = () => {
-    const d = new Date(selectedDate);
+    const [year, month, dayNum] = selectedDate.split("-").map(Number);
+    const d = new Date(year, month - 1, dayNum);
     d.setDate(d.getDate() - 1);
-    setSelectedDate(d.toISOString().split("T")[0]);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    setSelectedDate(`${y}-${m}-${day}`);
   };
 
   const handleNextDay = () => {
-    const d = new Date(selectedDate);
+    const [year, month, dayNum] = selectedDate.split("-").map(Number);
+    const d = new Date(year, month - 1, dayNum);
     d.setDate(d.getDate() + 1);
-    setSelectedDate(d.toISOString().split("T")[0]);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    setSelectedDate(`${y}-${m}-${day}`);
   };
 
   // Status style helpers for surgery cases
@@ -253,7 +262,10 @@ export function SurgicalScheduleClient({
           </Button>
 
           <span className="font-mono text-[10px] text-muted-foreground font-bold hidden md:inline bg-muted/40 p-2 rounded-lg">
-            {new Date(selectedDate).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {(() => {
+              const [year, month, dayNum] = selectedDate.split("-").map(Number);
+              return new Date(year, month - 1, dayNum).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            })()}
           </span>
         </div>
 

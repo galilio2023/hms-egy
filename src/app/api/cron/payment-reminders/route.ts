@@ -12,14 +12,17 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. Authorization check
+    // 1. Authorization check - strict fail-closed across all environments
     const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
-    if (process.env.NODE_ENV === "production" || cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (!cronSecret) {
+      console.error("CRON_SECRET is not configured on the server.");
+      return NextResponse.json({ error: "Unauthorized: Missing server configuration" }, { status: 401 });
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     console.log("⏰ Starting Payment Reminders Cron Job...");
@@ -59,36 +62,49 @@ export async function GET(req: NextRequest) {
 
       console.log(`Found ${overdueInvoices.length} unpaid/partially paid invoices overdue by 7+ days.`);
 
+      const remindersToInsert: any[] = [];
+      const overdueRemindersMap = new Map<string, any>();
+
+      for (const invoice of overdueInvoices) {
+        const key = `invoice_overdue_7days_${invoice.id}`;
+        remindersToInsert.push({
+          hospitalId: invoice.hospitalId,
+          entityType: "invoice",
+          entityId: invoice.id,
+          reminderType: "overdue_7days",
+          channel: "sms",
+          patientId: invoice.patientId,
+          success: true,
+          sentAt: new Date(),
+        });
+        overdueRemindersMap.set(key, invoice);
+      }
+
       let remindersSent = 0;
       let duplicatesSkipped = 0;
 
-      for (const invoice of overdueInvoices) {
-        // Attempt inserting 7-day overdue reminder (relying on unique index for deduplication)
-        const [inserted] = await tx
+      if (remindersToInsert.length > 0) {
+        const insertedLogs = await tx
           .insert(sentReminders)
-          .values({
-            hospitalId: invoice.hospitalId,
-            entityType: "invoice",
-            entityId: invoice.id,
-            reminderType: "overdue_7days",
-            channel: "sms",
-            patientId: invoice.patientId,
-            success: true,
-            sentAt: new Date(),
-          })
+          .values(remindersToInsert)
           .onConflictDoNothing()
           .returning();
 
-        if (inserted) {
-          const rawAmount = parseFloat(invoice.totalAmount);
-          const formattedAmount = formatEGP(rawAmount, { arabic: false });
+        remindersSent = insertedLogs.length;
+        duplicatesSkipped = remindersToInsert.length - remindersSent;
 
-          // Log/Simulate SMS Gateway Delivery
-          console.log(`[OVERDUE SMS SENT] To: ${invoice.patientPhone || "N/A"} (${invoice.patientNameAr || invoice.patientNameEn})`);
-          console.log(`Message: تذكير بالدفع: نود تذكيركم بوجود فاتورة مستحقة برقم ${invoice.invoiceNumber} بمبلغ ${formattedAmount} ج.م في HMS مصر. يرجى السداد في أقرب وقت.`);
-          remindersSent++;
-        } else {
-          duplicatesSkipped++;
+        // Log the printed simulated outcomes of successfully inserted ones
+        for (const log of insertedLogs) {
+          const key = `${log.entityType}_overdue_7days_${log.entityId}`;
+          const invoice = overdueRemindersMap.get(key);
+          if (invoice) {
+            const rawAmount = parseFloat(invoice.totalAmount);
+            const formattedAmount = formatEGP(rawAmount, { arabic: false });
+
+            // Log/Simulate SMS Gateway Delivery
+            console.log(`[OVERDUE SMS SENT] To: ${invoice.patientPhone || "N/A"} (${invoice.patientNameAr || invoice.patientNameEn})`);
+            console.log(`Message: تذكير بالدفع: نود تذكيركم بوجود فاتورة مستحقة برقم ${invoice.invoiceNumber} بمبلغ ${formattedAmount} ج.م في HMS مصر. يرجى السداد في أقرب وقت.`);
+          }
         }
       }
 

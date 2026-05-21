@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
 import { surgicalCases, surgicalChecklists } from "@db/schema/surgical";
-import { operatingRooms, orBlocks, departments, staff } from "@db/schema/core";
+import { operatingRooms, orBlocks, departments, staff, hospitals } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
 import { and, eq, ne, gte, lte, or, sql } from "drizzle-orm";
 import { surgicalSchema, type SurgicalSchema } from "@/lib/validations/surgical.schema";
@@ -329,7 +329,14 @@ export async function createSurgicalCase(
         throw new AppError(ErrorCode.INTERNAL_ERROR, "فشل حفظ بيانات الحالة الجراحية الجديدة.");
       }
 
-      revalidatePath(`/[locale]/${hospitalId}/surgical/schedule`, "page");
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+      const hospitalSlug = hospital?.slug || hospitalId;
+
+      revalidatePath(`/[locale]/${hospitalSlug}/surgical/schedule`, "page");
       return { success: true, caseId: newCase.id, caseNumber };
     });
   } catch (error: any) {
