@@ -2,8 +2,10 @@
 
 import { db, withBypassContext } from "@/lib/db";
 import { hospitals, hospitalSettings, staff } from "@db/schema/core";
+import { users } from "@db/schema/auth";
 import { authInstance } from "@/lib/auth";
 import { hospitalOnboardingSchema, type HospitalOnboarding } from "@/lib/validations/hospital.schema";
+import { eq } from "drizzle-orm";
 
 /**
  * Server action to handle hospital onboarding and administrative registration.
@@ -25,6 +27,9 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
   }
 
   const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
+
+  let createdHospitalId: string | null = null;
+  let createdUserId: string | null = null;
 
   try {
     // Execute hospital creation and initial setup within a single transaction with RLS bypassed
@@ -63,35 +68,63 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
       throw new Error("Hospital onboarding transaction failed");
     }
 
+    createdHospitalId = result.id;
+
     // 4. Create the administrative user via Better Auth Server API
     // This will hash the password and insert the record into the 'users' and 'accounts' tables
-    const userResult = await authInstance.api.signUpEmail({
-      body: {
-        email: adminEmail.toLowerCase().trim(),
-        password: adminPassword,
-        name: adminName,
-        role: "ADMIN",
-        hospitalId: result.id,
-      },
-    });
+    let userResult;
+    try {
+      userResult = await authInstance.api.signUpEmail({
+        body: {
+          email: adminEmail.toLowerCase().trim(),
+          password: adminPassword,
+          name: adminName,
+          role: "ADMIN",
+          hospitalId: result.id,
+        },
+      });
 
-    if (!userResult || !userResult.user) {
-      throw new Error("Failed to register the administrator account in Better Auth");
+      if (!userResult || !userResult.user) {
+        throw new Error("Failed to register the administrator account in Better Auth");
+      }
+      
+      createdUserId = userResult.user.id;
+    } catch (authError: any) {
+      console.error("[ONBOARDING_CLEANUP] Better Auth signUpEmail failed. Triggering rollback...");
+      // Cleanup the created hospital and settings
+      await withBypassContext(async (tx) => {
+        await tx.delete(hospitalSettings).where(eq(hospitalSettings.hospitalId, result.id));
+        await tx.delete(hospitals).where(eq(hospitals.id, result.id));
+      });
+      throw authError;
     }
 
     // 5. Create the staff entry linked to the new authenticated user
-    await withBypassContext(async (tx) => {
-      await tx.insert(staff).values({
-        hospitalId: result.id,
-        userId: userResult.user.id, // Better Auth User ID
-        nameAr: adminName,
-        nameEn: adminName,
-        role: "ADMIN",
-        email: adminEmail.toLowerCase().trim(),
-        phone: hospitalData.contactPhone,
-        isActive: true,
+    try {
+      await withBypassContext(async (tx) => {
+        await tx.insert(staff).values({
+          hospitalId: result.id,
+          userId: userResult.user.id, // Better Auth User ID
+          nameAr: adminName,
+          nameEn: adminName,
+          role: "ADMIN",
+          email: adminEmail.toLowerCase().trim(),
+          phone: hospitalData.contactPhone,
+          isActive: true,
+        });
       });
-    });
+    } catch (staffError: any) {
+      console.error("[ONBOARDING_CLEANUP] Staff table insertion failed. Triggering rollback...");
+      // Cleanup created user, hospital, and settings
+      await withBypassContext(async (tx) => {
+        if (createdUserId) {
+          await tx.delete(users).where(eq(users.id, createdUserId));
+        }
+        await tx.delete(hospitalSettings).where(eq(hospitalSettings.hospitalId, result.id));
+        await tx.delete(hospitals).where(eq(hospitals.id, result.id));
+      });
+      throw staffError;
+    }
 
     console.log(`[ONBOARDING] Successfully established hospital ${result.nameEn} and admin account ${adminEmail}`);
     return { success: true, hospitalId: result.id };

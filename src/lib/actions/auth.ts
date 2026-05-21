@@ -96,6 +96,11 @@ export async function loginAction(
             })
             .where(eq(users.email, email));
         });
+      } else {
+        // Prevent timing attack / user enumeration by running a dummy DB query & artificial sleep
+        await withBypassContext(async (tx) => {
+          await tx.execute(sql`SELECT pg_sleep(0.05)`);
+        });
       }
 
       return { success: false, error: errorMessage };

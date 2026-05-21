@@ -195,8 +195,8 @@ export function hasPermission(
   if (userRole === "SURGEON") {
     // Surgeons can view the overall schedule, but edit/create or checklist details require context checks
     if (permission === "surgical:edit" || permission === "surgical:checklist") {
-      if (context && context.leadSurgeonId !== user.id) {
-        return false; // Not the lead surgeon on this case
+      if (!context?.leadSurgeonId || context.leadSurgeonId !== user.id) {
+        return false; // Fail closed if context or leadSurgeonId is missing or mismatching
       }
     }
   }
@@ -205,8 +205,8 @@ export function hasPermission(
   if (userRole === "ANESTHESIOLOGIST") {
     // Anesthesiologists can read/update clinical files ONLY for surgical cases they are assigned to
     if (permission === "patients:view" || permission === "surgical:view" || permission === "surgical:anesthesia") {
-      if (context && context.anesthesiologistId !== user.id) {
-        return false; // Not the assigned anesthesiologist for this case
+      if (!context?.anesthesiologistId || context.anesthesiologistId !== user.id) {
+        return false; // Fail closed if context or anesthesiologistId is missing or mismatching
       }
     }
   }
@@ -215,9 +215,8 @@ export function hasPermission(
   if (userRole === "OR_NURSE") {
     // OR Nurses can update surgical checklists ONLY if assigned as scrub/circulating nurse
     if (permission === "surgical:checklist" || permission === "surgical:view") {
-      if (context) {
-        const isAssigned = context.scrubNurseId === user.id || context.circulatingNurseId === user.id;
-        if (!isAssigned) return false;
+      if (!context || (context.scrubNurseId !== user.id && context.circulatingNurseId !== user.id)) {
+        return false; // Fail closed if context is missing or nurse is not assigned to the case
       }
     }
   }
@@ -226,8 +225,8 @@ export function hasPermission(
   if (userRole === "HOUSEKEEPING") {
     // Housekeepers can update task status ONLY if they are the assigned housekeeper
     if (permission === "housekeeping:update") {
-      if (context && context.assignedHousekeeperId !== user.id) {
-        return false;
+      if (!context?.assignedHousekeeperId || context.assignedHousekeeperId !== user.id) {
+        return false; // Fail closed if context or assignedHousekeeperId is missing or mismatching
       }
     }
   }

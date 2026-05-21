@@ -135,7 +135,7 @@ export default function LoginPage() {
                 {t("auth.email")}
               </label>
               <div className="relative">
-                <span className={`absolute inset-y-0 ${isRtl ? "right-4" : "left-4"} flex items-center text-slate-500`}>
+                <span className="absolute inset-y-0 start-4 flex items-center text-slate-500">
                   <Mail size={18} />
                 </span>
                 <input
@@ -143,7 +143,7 @@ export default function LoginPage() {
                   name="email"
                   required
                   placeholder="name@hospital.com.eg"
-                  className={`w-full py-3.5 ${isRtl ? "pr-11 pl-4" : "pl-11 pr-4"} bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800/80 focus:border-teal-500 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-sans text-sm`}
+                  className="w-full py-3.5 ps-11 pe-4 bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800/80 focus:border-teal-500 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-sans text-sm"
                 />
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function LoginPage() {
                 </label>
               </div>
               <div className="relative">
-                <span className={`absolute inset-y-0 ${isRtl ? "right-4" : "left-4"} flex items-center text-slate-500`}>
+                <span className="absolute inset-y-0 start-4 flex items-center text-slate-500">
                   <Lock size={18} />
                 </span>
                 <input
@@ -164,7 +164,7 @@ export default function LoginPage() {
                   name="password"
                   required
                   placeholder="••••••••"
-                  className={`w-full py-3.5 ${isRtl ? "pr-11 pl-4" : "pl-11 pr-4"} bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800/80 focus:border-teal-500 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-sans text-sm`}
+                  className="w-full py-3.5 ps-11 pe-4 bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800/80 focus:border-teal-500 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-sans text-sm"
                 />
               </div>
             </div>

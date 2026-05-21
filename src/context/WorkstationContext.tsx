@@ -13,7 +13,7 @@ interface WorkstationContextType {
 
 const WorkstationContext = createContext<WorkstationContextType | undefined>(undefined);
 
-const AUTO_LOCK_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+const AUTO_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 export function WorkstationProvider({ children }: { children: React.ReactNode }) {
   const [isLocked, setIsLocked] = useState<boolean>(false);
