@@ -55,9 +55,19 @@ export const labOrderItems = pgTable("lab_order_items", {
   notes: text("notes"),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (
+        SELECT 1 FROM lab_orders 
+        WHERE lab_orders.id = lab_order_id 
+          AND (current_setting('app.bypass_rls', true) = 'true' 
+               OR lab_orders.hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)
+      )`
+    }),
     labOrderIdIdx: index("laboi_order_idx").on(table.labOrderId),
   };
-});
+}).enableRLS();
 
 export const criticalValueAlerts = pgTable("critical_value_alerts", {
   id: uuid("id").primaryKey().defaultRandom(),

@@ -8,10 +8,10 @@
  * 4. runDataArchivingJob correctly processes and archives historical medical records and invoices.
  */
 
-import { db } from "../src/lib/db";
+import { db } from "../src/lib/db/index";
 import { withTenantContext, withBypassContext } from "../src/lib/db/tenant";
 import { runDataArchivingJob } from "../src/lib/actions/retention";
-import * as schema from "./schema";
+import * as schema from "./schema/index";
 import { eq } from "drizzle-orm";
 
 async function verify() {

@@ -29,7 +29,9 @@ export const patients = pgTable("patients", {
     hospitalNidUnique: unique("pat_hospital_nid_unique").on(table.hospitalId, table.nationalId),
     hospitalNumIdx: index("pat_hospital_num_idx").on(table.hospitalId, table.patientNumber),
     govIdx: index("pat_gov_idx").on(table.governorate),
-    nationalIdNumericCheck: sql`CHECK (national_id ~ '^[0-9]{14}$')`,
+    nationalIdNumericCheck: sql`CHECK (
+      national_id ~ '^[23][0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])(0[1-4]|1[1-9]|2[1-9]|3[1-5]|88)[0-9]{4}[0-9]$'
+    )`,
   };
 }).enableRLS();
 

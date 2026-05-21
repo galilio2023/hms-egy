@@ -58,9 +58,19 @@ export const prescriptionItems = pgTable("prescription_items", {
   status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, dispensed, partial, cancelled
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (
+        SELECT 1 FROM prescriptions 
+        WHERE prescriptions.id = prescription_id 
+          AND (current_setting('app.bypass_rls', true) = 'true' 
+               OR prescriptions.hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)
+      )`
+    }),
     prescriptionIdIdx: index("rxi_prescription_idx").on(table.prescriptionId),
   };
-});
+}).enableRLS();
 
 export const stockTransactions = pgTable("stock_transactions", {
   id: uuid("id").primaryKey().defaultRandom(),

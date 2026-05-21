@@ -28,12 +28,15 @@ export const patientSchema = z.object({
   guardianPhone: egyptianPhoneSchema.optional().or(z.literal("")),
 }).refine((data) => {
   if (data.insuranceProviderId === "uhis") {
+    const parsed = parseNationalId(data.nationalId);
+    if (!parsed) return true; // Let National ID validator handle invalid format
+    const birthGovCode = parsed.governorate?.code;
     const provider = EGYPTIAN_INSURANCE_PROVIDERS.find(p => p.id === "uhis");
-    return provider?.rolloutGovernorates?.includes(data.governorate);
+    return !!(birthGovCode && provider?.rolloutGovernorates?.includes(birthGovCode));
   }
   return true;
 }, {
-  message: "UHIS is not yet rolled out in the selected governorate.",
+  message: "UHIS is not yet rolled out in the patient's birth governorate encoded in their National ID.",
   path: ["insuranceProviderId"]
 }).superRefine((data, ctx) => {
   const parsed = parseNationalId(data.nationalId);

@@ -35,15 +35,15 @@ export async function runDataArchivingJob(
     throw new Error("runDataArchivingJob: hospitalId and performedByStaffId are required.");
   }
 
-  return await withTenantContext(hospitalId, async (tx) => {
-    console.log(`⏱️ Starting compliance data archiving for hospital: ${hospitalId}`);
+  console.log(`⏱️ Starting compliance data archiving for hospital: ${hospitalId}`);
 
-    // 1. Fetch the data retention policy or initialize default (10y clinical / 5y financial)
-    let policy = await tx.query.dataRetentionPolicies.findFirst({
+  // 1. Fetch the data retention policy or initialize default (10y clinical / 5y financial)
+  const policy = await withTenantContext(hospitalId, async (tx) => {
+    let p = await tx.query.dataRetentionPolicies.findFirst({
       where: eq(schema.dataRetentionPolicies.hospitalId, hospitalId),
     });
 
-    if (!policy) {
+    if (!p) {
       console.log("ℹ️ No active policy found. Deploying default MOH/ETA data retention boundaries.");
       const [newPolicy] = await tx
         .insert(schema.dataRetentionPolicies)
@@ -53,103 +53,160 @@ export async function runDataArchivingJob(
           financialRetentionYears: 5,  // 5 years financial invoices (ETA standard)
         })
         .returning();
-      policy = newPolicy;
+      p = newPolicy;
     }
-
-    const now = new Date();
-    
-    // Calculate timezone-independent absolute compliance cutoff timestamps
-    const clinicalCutoff = subYears(now, policy.clinicalRetentionYears);
-    const financialCutoff = subYears(now, policy.financialRetentionYears);
-    const logsCutoff = subYears(now, 1);
-
-    console.log(`- Clinical Cutoff (MOH): ${clinicalCutoff.toISOString()}`);
-    console.log(`- Financial Cutoff (ETA): ${financialCutoff.toISOString()}`);
-    console.log(`- Transient Logs Cutoff: ${logsCutoff.toISOString()}`);
-
-    // 2. Archive medical records (MOH Audits) - CTE database-side to prevent Heap OOM
-    const clinicalResult = await tx.execute(sql`
-      WITH archived AS (
-        UPDATE medical_records 
-        SET is_archived = true, updated_at = ${now}
-        WHERE hospital_id = ${hospitalId} AND is_archived = false AND created_at < ${clinicalCutoff}
-        RETURNING id
-      )
-      SELECT COALESCE(count(*), 0)::int AS count FROM archived;
-    `);
-    const clinicalCount = (clinicalResult.rows[0] as { count: number })?.count ?? 0;
-    console.log(`📦 Archived ${clinicalCount} clinical medical records.`);
-
-    // 3. Archive financial invoices (ETA Compliance) - CTE database-side to prevent Heap OOM
-    const financialResult = await tx.execute(sql`
-      WITH archived AS (
-        UPDATE invoices 
-        SET is_archived = true, updated_at = ${now}
-        WHERE hospital_id = ${hospitalId} AND is_archived = false AND created_at < ${financialCutoff}
-        RETURNING id
-      )
-      SELECT COALESCE(count(*), 0)::int AS count FROM archived;
-    `);
-    const financialCount = (financialResult.rows[0] as { count: number })?.count ?? 0;
-    console.log(`📦 Archived ${financialCount} financial invoices.`);
-
-    // 4. Prune transient logs (Reminders & Notifications older than 1 year) to save database space - CTE database-side
-    const remindersResult = await tx.execute(sql`
-      WITH deleted AS (
-        DELETE FROM sent_reminders
-        WHERE hospital_id = ${hospitalId} AND sent_at < ${logsCutoff}
-        RETURNING id
-      )
-      SELECT COALESCE(count(*), 0)::int AS count FROM deleted;
-    `);
-    const remindersCount = (remindersResult.rows[0] as { count: number })?.count ?? 0;
-      
-    const notificationsResult = await tx.execute(sql`
-      WITH deleted AS (
-        DELETE FROM notifications
-        WHERE hospital_id = ${hospitalId} AND created_at < ${logsCutoff}
-        RETURNING id
-      )
-      SELECT COALESCE(count(*), 0)::int AS count FROM deleted;
-    `);
-    const notificationsCount = (notificationsResult.rows[0] as { count: number })?.count ?? 0;
-      
-    const transientCount = remindersCount + notificationsCount;
-    console.log(`🗑️ Pruned ${transientCount} transient/reminder notifications logs.`);
-
-    // 5. Write Compliance Audit Logs of archiving operations
-    if (clinicalCount > 0) {
-      await tx.insert(schema.dataRetentionLogs).values({
-        hospitalId,
-        entityType: "medical_records",
-        archivedCount: clinicalCount,
-        cutoffDate: clinicalCutoff,
-        performedBy: performedByStaffId,
-      });
-    }
-
-    if (financialCount > 0) {
-      await tx.insert(schema.dataRetentionLogs).values({
-        hospitalId,
-        entityType: "invoices",
-        archivedCount: financialCount,
-        cutoffDate: financialCutoff,
-        performedBy: performedByStaffId,
-      });
-    }
-
-    const messageAr = `تمت أرشفة وتصفية البيانات بنجاح: ${clinicalCount} سجل طبي، ${financialCount} فاتورة مالية، وتنظيف ${transientCount} سجل مؤقت.`;
-    const messageEn = `Data archiving and pruning executed successfully: ${clinicalCount} clinical charts, ${financialCount} invoices archived, and ${transientCount} transient logs pruned.`;
-
-    console.log("🎉 Compliance data archiving job completed successfully!");
-
-    return {
-      success: true,
-      clinicalArchived: clinicalCount,
-      financialArchived: financialCount,
-      transientLogsCleaned: transientCount,
-      messageAr,
-      messageEn,
-    };
+    return p;
   });
+
+  const now = new Date();
+  
+  // Calculate timezone-independent absolute compliance cutoff timestamps
+  const clinicalCutoff = subYears(now, policy.clinicalRetentionYears);
+  const financialCutoff = subYears(now, policy.financialRetentionYears);
+  const logsCutoff = subYears(now, 1);
+
+  console.log(`- Clinical Cutoff (MOH): ${clinicalCutoff.toISOString()}`);
+  console.log(`- Financial Cutoff (ETA): ${financialCutoff.toISOString()}`);
+  console.log(`- Transient Logs Cutoff: ${logsCutoff.toISOString()}`);
+
+  // 2. Archive medical records (MOH Audits) - Independent Batched Loops
+  let clinicalCount = 0;
+  while (true) {
+    const batchCount = await withTenantContext(hospitalId, async (tx) => {
+      const result = await tx.execute(sql`
+        WITH batch AS (
+          SELECT id FROM medical_records
+          WHERE hospital_id = ${hospitalId} AND is_archived = false AND created_at < ${clinicalCutoff}
+          LIMIT 2000
+          FOR UPDATE SKIP LOCKED
+        ),
+        updated AS (
+          UPDATE medical_records 
+          SET is_archived = true, updated_at = ${now}
+          WHERE id IN (SELECT id FROM batch)
+          RETURNING id
+        )
+        SELECT COALESCE(count(*), 0)::int AS count FROM updated;
+      `);
+      return (result.rows[0] as { count: number })?.count ?? 0;
+    });
+    clinicalCount += batchCount;
+    if (batchCount < 2000) break;
+  }
+  console.log(`📦 Archived ${clinicalCount} clinical medical records.`);
+
+  // 3. Archive financial invoices (ETA Compliance) - Independent Batched Loops
+  let financialCount = 0;
+  while (true) {
+    const batchCount = await withTenantContext(hospitalId, async (tx) => {
+      const result = await tx.execute(sql`
+        WITH batch AS (
+          SELECT id FROM invoices
+          WHERE hospital_id = ${hospitalId} AND is_archived = false AND created_at < ${financialCutoff}
+          LIMIT 2000
+          FOR UPDATE SKIP LOCKED
+        ),
+        updated AS (
+          UPDATE invoices 
+          SET is_archived = true, updated_at = ${now}
+          WHERE id IN (SELECT id FROM batch)
+          RETURNING id
+        )
+        SELECT COALESCE(count(*), 0)::int AS count FROM updated;
+      `);
+      return (result.rows[0] as { count: number })?.count ?? 0;
+    });
+    financialCount += batchCount;
+    if (batchCount < 2000) break;
+  }
+  console.log(`📦 Archived ${financialCount} financial invoices.`);
+
+  // 4. Prune transient logs (Reminders & Notifications older than 1 year) - Independent Batched Loops
+  let remindersCount = 0;
+  while (true) {
+    const batchCount = await withTenantContext(hospitalId, async (tx) => {
+      const result = await tx.execute(sql`
+        WITH batch AS (
+          SELECT id FROM sent_reminders
+          WHERE hospital_id = ${hospitalId} AND sent_at < ${logsCutoff}
+          LIMIT 2000
+          FOR UPDATE SKIP LOCKED
+        ),
+        deleted AS (
+          DELETE FROM sent_reminders
+          WHERE id IN (SELECT id FROM batch)
+          RETURNING id
+        )
+        SELECT COALESCE(count(*), 0)::int AS count FROM deleted;
+      `);
+      return (result.rows[0] as { count: number })?.count ?? 0;
+    });
+    remindersCount += batchCount;
+    if (batchCount < 2000) break;
+  }
+    
+  let notificationsCount = 0;
+  while (true) {
+    const batchCount = await withTenantContext(hospitalId, async (tx) => {
+      const result = await tx.execute(sql`
+        WITH batch AS (
+          SELECT id FROM notifications
+          WHERE hospital_id = ${hospitalId} AND created_at < ${logsCutoff}
+          LIMIT 2000
+          FOR UPDATE SKIP LOCKED
+        ),
+        deleted AS (
+          DELETE FROM notifications
+          WHERE id IN (SELECT id FROM batch)
+          RETURNING id
+        )
+        SELECT COALESCE(count(*), 0)::int AS count FROM deleted;
+      `);
+      return (result.rows[0] as { count: number })?.count ?? 0;
+    });
+    notificationsCount += batchCount;
+    if (batchCount < 2000) break;
+  }
+    
+  const transientCount = remindersCount + notificationsCount;
+  console.log(`🗑️ Pruned ${transientCount} transient/reminder notifications logs.`);
+
+  // 5. Write Compliance Audit Logs of archiving operations
+  if (clinicalCount > 0 || financialCount > 0) {
+    await withTenantContext(hospitalId, async (tx) => {
+      if (clinicalCount > 0) {
+        await tx.insert(schema.dataRetentionLogs).values({
+          hospitalId,
+          entityType: "medical_records",
+          archivedCount: clinicalCount,
+          cutoffDate: clinicalCutoff,
+          performedBy: performedByStaffId,
+        });
+      }
+
+      if (financialCount > 0) {
+        await tx.insert(schema.dataRetentionLogs).values({
+          hospitalId,
+          entityType: "invoices",
+          archivedCount: financialCount,
+          cutoffDate: financialCutoff,
+          performedBy: performedByStaffId,
+        });
+      }
+    });
+  }
+
+  const messageAr = `تمت أرشفة وتصفية البيانات بنجاح: ${clinicalCount} سجل طبي، ${financialCount} فاتورة مالية، وتنظيف ${transientCount} سجل مؤقت.`;
+  const messageEn = `Data archiving and pruning executed successfully: ${clinicalCount} clinical charts, ${financialCount} invoices archived, and ${transientCount} transient logs pruned.`;
+
+  console.log("🎉 Compliance data archiving job completed successfully!");
+
+  return {
+    success: true,
+    clinicalArchived: clinicalCount,
+    financialArchived: financialCount,
+    transientLogsCleaned: transientCount,
+    messageAr,
+    messageEn,
+  };
 }

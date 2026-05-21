@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { hospitalSettingsSchema, type HospitalSettingsType } from "@/lib/validations/hospital.schema";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { encryptField } from "@/lib/utils/security";
+import { encryptField, decryptField } from "@/lib/utils/security";
 import { validateHospitalModules } from "@/lib/utils/plans";
 import { type PlanTier } from "@/types/plans.types";
 
@@ -26,7 +26,7 @@ export async function updateHospitalSettings(
 
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
   const isAdmin = session.user.role === "ADMIN";
-  const isDevBypass = process.env.NODE_ENV !== "production" && session.user.hospitalId === "default-hospital-id";
+  const isDevBypass = process.env.NODE_ENV === "development" && session.user.hospitalId === "default-hospital-id";
   const matchesHospital = session.user.hospitalId === hospitalId || isDevBypass;
 
   if (!isSuperAdmin && (!isAdmin || !matchesHospital)) {
@@ -181,5 +181,39 @@ export async function updateHospitalSettings(
   } catch (error) {
     console.error(`[SETTINGS_ACTION] Failed to update settings for hospital ${hospitalId}:`, error);
     return { success: false, error: "An unexpected database error occurred while saving settings." };
+  }
+}
+
+export async function getDecryptedPaymobCredentials(hospitalId: string) {
+  try {
+    const [settings] = await db
+      .select({
+        paymobApiKey: hospitalSettings.paymobApiKey,
+        paymobHmacSecret: hospitalSettings.paymobHmacSecret,
+      })
+      .from(hospitalSettings)
+      .where(eq(hospitalSettings.hospitalId, hospitalId))
+      .limit(1);
+
+    if (!settings) {
+      return {
+        paymobApiKey: null,
+        paymobHmacSecret: null,
+      };
+    }
+
+    const decryptedApiKey = settings.paymobApiKey ? decryptField(settings.paymobApiKey) : null;
+    const decryptedHmacSecret = settings.paymobHmacSecret ? decryptField(settings.paymobHmacSecret) : null;
+
+    return {
+      paymobApiKey: decryptedApiKey,
+      paymobHmacSecret: decryptedHmacSecret,
+    };
+  } catch (error) {
+    console.error(`[SETTINGS_ACTION] Failed to decrypt Paymob credentials for hospital ${hospitalId}:`, error);
+    return {
+      paymobApiKey: null,
+      paymobHmacSecret: null,
+    };
   }
 }

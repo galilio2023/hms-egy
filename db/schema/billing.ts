@@ -40,9 +40,19 @@ export const invoiceItems = pgTable("invoice_items", {
   type: varchar("type", { length: 50 }).notNull(), // consultation, lab, radiology, pharmacy, surgical_room, accommodation
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (
+        SELECT 1 FROM invoices 
+        WHERE invoices.id = invoice_id 
+          AND (current_setting('app.bypass_rls', true) = 'true' 
+               OR invoices.hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)
+      )`
+    }),
     invoiceIdIdx: index("invi_invoice_idx").on(table.invoiceId),
   };
-});
+}).enableRLS();
 
 export const payments = pgTable("payments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -75,7 +85,7 @@ export const insuranceClaims = pgTable("insurance_claims", {
   status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, approved, rejected, paid
   rejectionReason: text("rejection_reason"),
   submittedAt: timestamp("submitted_at").defaultNow().notNull(),
-  settledAt: timestamp(),
+  settledAt: timestamp("settled_at"),
 }, (table) => {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
