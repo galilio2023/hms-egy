@@ -4,9 +4,12 @@ import { patients } from "@db/schema/patients";
 import { hospitals, staff, operatingRooms } from "@db/schema/core";
 import { surgicalCases } from "@db/schema/surgical";
 import { and, eq, desc, aliasedTable } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { getHospitalBySlug } from "@/lib/db/cache";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { PatientProfileClient } from "@/components/tables/PatientProfileClient";
+import { auth } from "@/lib/auth";
+
 
 export async function generateMetadata({
   params,
@@ -16,15 +19,7 @@ export async function generateMetadata({
   const { id, locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "patients" });
 
-  const [hospital] = await db
-    .select({
-      id: hospitals.id,
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const hospital = await getHospitalBySlug(hospitalSlug);
 
   if (!hospital) return { title: "Patient Profile" };
 
@@ -56,20 +51,25 @@ export default async function PatientProfilePage({
   const { id, locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "patients" });
 
+  const session = await auth();
+  if (!session) {
+    redirect(`/${locale}/login`);
+  }
+
   // Fetch hospital tenant data
-  const [dbHospital] = await db
-    .select({
-      id: hospitals.id,
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const dbHospital = await getHospitalBySlug(hospitalSlug);
 
   if (!dbHospital) {
     notFound();
   }
+
+  // Validate cross-tenant access context
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const currentHospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!isSuperAdmin && currentHospitalId !== dbHospital.id) {
+    notFound(); // Return 404 to avoid exposing that the slug exists
+  }
+
 
   const hospitalId = dbHospital.id;
 

@@ -1,10 +1,13 @@
 import { db } from "@/lib/db";
 import { hospitals } from "@db/schema/core";
 import { eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { getHospitalBySlug } from "@/lib/db/cache";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { PatientDirectoryClient } from "@/components/tables/PatientDirectoryClient";
+import { auth } from "@/lib/auth";
+
 
 export async function generateMetadata({
   params,
@@ -14,14 +17,7 @@ export async function generateMetadata({
   const { locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "patients" });
 
-  const [hospital] = await db
-    .select({
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const hospital = await getHospitalBySlug(hospitalSlug);
 
   const hospitalName = hospital 
     ? (locale === "ar" ? hospital.nameAr : hospital.nameEn)
@@ -41,20 +37,25 @@ export default async function PatientsListPage({
   const { locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "patients" });
 
+  const session = await auth();
+  if (!session) {
+    redirect(`/${locale}/login`);
+  }
+
   // Fetch hospital tenant data
-  const [dbHospital] = await db
-    .select({
-      id: hospitals.id,
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const dbHospital = await getHospitalBySlug(hospitalSlug);
 
   if (!dbHospital) {
     notFound();
   }
+
+  // Validate cross-tenant access context
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const currentHospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!isSuperAdmin && currentHospitalId !== dbHospital.id) {
+    notFound(); // Return 404 to avoid exposing that the slug exists
+  }
+
 
   // Fetch initial list of patients (first 20) via server action to ensure correct tenant context
   const searchResult = await searchPatientsAction("");

@@ -38,7 +38,12 @@ interface SidebarItem {
   subItems?: SidebarItem[];
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  setIsMobileOpen?: (open: boolean) => void;
+}
+
+export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
   const t = useTranslations("navigation");
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -190,13 +195,25 @@ export function Sidebar() {
   };
 
   return (
-    <aside 
-      className={cn(
-        "h-screen flex flex-col bg-primary text-primary-foreground border-border/10 transition-all duration-300 ease-in-out shadow-2xl relative z-20",
-        isCollapsed ? "w-20" : "w-64",
-        isRtl ? "border-l" : "border-r"
+    <>
+      {/* Mobile overlay */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden animate-fade-in"
+          onClick={() => setIsMobileOpen?.(false)}
+        />
       )}
-    >
+      
+      <aside 
+        className={cn(
+          "h-screen flex flex-col bg-primary text-primary-foreground border-border/10 transition-all duration-300 ease-in-out shadow-2xl z-50",
+          "fixed lg:relative top-0 bottom-0",
+          isCollapsed ? "lg:w-20 w-64" : "w-64",
+          isRtl ? "border-l" : "border-r",
+          !isMobileOpen && (isRtl ? "translate-x-full lg:translate-x-0" : "-translate-x-full lg:translate-x-0"),
+          isMobileOpen && "translate-x-0"
+        )}
+      >
       {/* Sidebar Header Brand block */}
       <div className="flex items-center justify-between px-4 py-6 border-b border-white/5 h-20">
         <div className="flex items-center gap-3 overflow-hidden">
@@ -279,6 +296,11 @@ export function Sidebar() {
                         <Link
                           key={sub.key}
                           href={sub.href}
+                          onClick={() => {
+                            if (isMobileOpen && setIsMobileOpen) {
+                              setIsMobileOpen(false);
+                            }
+                          }}
                           className={cn(
                             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 relative group",
                             isSubActive 
@@ -304,6 +326,11 @@ export function Sidebar() {
             <Link
               key={item.key}
               href={item.href}
+              onClick={() => {
+                if (isMobileOpen && setIsMobileOpen) {
+                  setIsMobileOpen(false);
+                }
+              }}
               className={cn(
                 "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative",
                 isActive 
@@ -349,6 +376,7 @@ export function Sidebar() {
           {!isCollapsed && <span>{t("logout")}</span>}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

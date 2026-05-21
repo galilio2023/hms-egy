@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
 import { hospitals, hospitalSettings } from "@db/schema/core";
 import { eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { getHospitalBySlug } from "@/lib/db/cache";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { HospitalSettingsForm } from "@/components/forms/HospitalSettingsForm";
 import { type PlanTier } from "@/types/plans.types";
+import { auth } from "@/lib/auth";
 
 export async function generateMetadata({
   params,
@@ -15,14 +17,7 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "settings" });
   
   // Fetch name for SEO page title
-  const [hospital] = await db
-    .select({
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const hospital = await getHospitalBySlug(hospitalSlug);
 
   const hospitalName = hospital 
     ? (locale === "ar" ? hospital.nameAr : hospital.nameEn)
@@ -41,6 +36,11 @@ export default async function HospitalSettingsPage({
 }) {
   const { locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "settings" });
+
+  const session = await auth();
+  if (!session) {
+    redirect(`/${locale}/login`);
+  }
 
   // Fetch hospital tenant data with leftJoin settings
   const [dbHospital] = await db
@@ -75,6 +75,13 @@ export default async function HospitalSettingsPage({
 
   if (!dbHospital) {
     notFound();
+  }
+
+  // Validate cross-tenant access context
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const currentHospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!isSuperAdmin && currentHospitalId !== dbHospital.id) {
+    notFound(); // Return 404 to avoid exposing that the slug exists
   }
 
   // Graceful fallback for values in case they are null

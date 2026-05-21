@@ -8,7 +8,7 @@ import { searchPatientsAction } from "@/lib/actions/patients";
 import { useRouter } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+
 import { Badge } from "@/components/ui/badge";
 import { GOVERNORATES } from "@/lib/utils/egypt";
 import { Card, CardContent } from "@/components/ui/card";
@@ -179,7 +179,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push(`/patients/${row.original.id}`)}
+          onClick={() => router.push(`/${hospitalSlug}/patients/${row.original.id}`)}
           className="gap-1.5 h-8 text-xs font-bold"
         >
           <Eye className="w-3.5 h-3.5" />
@@ -214,7 +214,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
 
             <Button
               variant="accent"
-              onClick={() => router.push("/patients/new")}
+              onClick={() => router.push(`/${hospitalSlug}/patients/new`)}
               className="gap-2 h-11 px-5 shadow-lg shadow-accent/15 shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[3px]" />
@@ -227,10 +227,11 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
             {/* Governorate filter */}
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">{t("governorate")}</label>
-              <Select
+              <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedGov}
                 onChange={(e) => setSelectedGov(e.target.value)}
-                className="h-10 text-xs"
+                className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{isRtl ? "جميع المحافظات" : "All Governorates"}</option>
                 {Object.values(GOVERNORATES).map((gov) => (
@@ -238,21 +239,22 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
                     {isRtl ? gov.ar : gov.en}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
 
             {/* Gender filter */}
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">{t("gender")}</label>
-              <Select
+              <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedGender}
                 onChange={(e) => setSelectedGender(e.target.value)}
-                className="h-10 text-xs"
+                className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{isRtl ? "كل الأجناس" : "All Genders"}</option>
                 <option value="male">{t("male")}</option>
                 <option value="female">{t("female")}</option>
-              </Select>
+              </select>
             </div>
 
             {/* UHIS status toggle */}
@@ -279,7 +281,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
         <DataTable
           columns={columns}
           data={filteredPatients}
-          onRowClick={(row) => router.push(`/patients/${row.id}`)}
+          onRowClick={(row) => router.push(`/${hospitalSlug}/patients/${row.id}`)}
         />
       </div>
     </div>

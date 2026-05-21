@@ -24,7 +24,7 @@ export async function registerPatient(data: PatientSchema) {
   }
 
   const isAuthorized = hasPermission(session.user as any, "patients:create", {
-    hospitalId: session.user.hospitalId,
+    hospitalId: session.activeHospitalId || session.user.hospitalId,
   });
 
   if (!isAuthorized) {
@@ -42,7 +42,7 @@ export async function registerPatient(data: PatientSchema) {
   }
 
   const validatedData = validated.data;
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
 
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital session context missing." };
@@ -180,14 +180,14 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
   }
 
   const isAuthorized = hasPermission(session.user as any, "patients:edit", {
-    hospitalId: session.user.hospitalId,
+    hospitalId: session.activeHospitalId || session.user.hospitalId,
   });
 
   if (!isAuthorized) {
     return { success: false, error: "Forbidden: You do not have permission to edit patient records." };
   }
 
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital session context missing." };
   }
@@ -238,8 +238,8 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
         })
         .where(eq(patients.id, patientId));
 
-      revalidatePath(`/[locale]/${session.user.hospitalId}/patients/${patientId}`, "page");
-      revalidatePath(`/[locale]/${session.user.hospitalId}/patients`, "page");
+      revalidatePath(`/[locale]/${hospitalId}/patients/${patientId}`, "page");
+      revalidatePath(`/[locale]/${hospitalId}/patients`, "page");
 
       return { success: true };
     });
@@ -261,7 +261,7 @@ export async function getPatientById(patientId: string) {
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital session context missing." };
   }
@@ -299,7 +299,7 @@ export async function searchPatientsAction(query: string) {
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital session context missing." };
   }

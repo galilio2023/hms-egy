@@ -1,9 +1,26 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { auth } from "@/lib/auth";
 
-export default function HomePage() {
-  const t = useTranslations("common");
+import { redirect } from "next/navigation";
+
+export default async function HomePage(props: { params: Promise<{ locale: string }> }) {
+  const { locale } = await props.params;
+  const session = await auth();
+
+  // Redirect authenticated users to their respective dashboards
+  if (session?.user) {
+    if (session.activeHospitalId || (session.user.hospitalId && session.user.hospitalId !== "system-wide")) {
+      const slug = session.activeHospitalId || session.user.hospitalId;
+      redirect(`/${locale}/${slug}/appointments`);
+    } else if (session.user.role === "SUPER_ADMIN") {
+      redirect(`/${locale}/super-admin`);
+    }
+  }
+
+  // Fallback translation hook for Server Components
+  // (In RSCs, next-intl uses next-intl/server normally, but we can pass it if we configure it)
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6 text-center">
@@ -12,9 +29,8 @@ export default function HomePage() {
       </div>
       
       <header className="mb-12">
-        <h1 className="text-4xl font-bold text-blue-900 mb-4">{t("title")}</h1>
-        <p className="text-xl text-gray-600">{t("welcome")}</p>
-        <p className="mt-2 font-semibold text-blue-700">{t("hospitalName")}</p>
+        <h1 className="text-4xl font-bold text-blue-900 mb-4">HMS Egypt</h1>
+        <p className="text-xl text-gray-600">Enterprise Hospital Management</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg w-full">

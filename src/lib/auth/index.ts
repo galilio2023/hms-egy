@@ -133,17 +133,19 @@ export async function auth(): Promise<Session | null> {
       };
     }
 
-    // Default mock tenant administrator (fallback if nothing else is specified)
-    return {
-      user: {
-        id: "admin-id-1",
-        email: "admin@alshifa.com.eg",
-        name: "د. أحمد الشافعي",
-        role: "ADMIN",
-        hospitalId: "default-hospital-id",
-      },
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000),
-    };
+    const isMockAdmin = process.env.NODE_ENV === "development" && cookieStore.get("mock_tenant_admin")?.value === "true";
+    if (isMockAdmin) {
+      return {
+        user: {
+          id: "admin-id-1",
+          email: "admin@alshifa.com.eg",
+          name: "د. أحمد الشافعي",
+          role: "ADMIN",
+          hospitalId: "default-hospital-id",
+        },
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      };
+    }
   }
 
   return null;

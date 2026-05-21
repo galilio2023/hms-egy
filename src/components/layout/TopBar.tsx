@@ -5,14 +5,15 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSession } from "@/lib/auth/client";
 import { useTheme } from "next-themes";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { Sun, Moon, Search, Clock, ShieldCheck, Hospital, ChevronDown, User, Activity } from "lucide-react";
+import { Sun, Moon, Search, Clock, ShieldCheck, Hospital, ChevronDown, User, Activity, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TopBarProps {
   onSearchClick?: () => void;
+  onMobileMenuClick?: () => void;
 }
 
-export function TopBar({ onSearchClick }: TopBarProps) {
+export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
   const t = useTranslations("common");
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -70,22 +71,41 @@ export function TopBar({ onSearchClick }: TopBarProps) {
     : "U";
 
   return (
-    <header className="h-20 bg-card/60 backdrop-blur-md border-b border-border/40 px-6 flex items-center justify-between relative z-10 w-full glass">
-      {/* Search / Command palette trigger button */}
-      <div className="flex-1 max-w-md">
+    <header className="h-20 bg-card/60 backdrop-blur-md border-b border-border/40 px-4 md:px-6 flex items-center justify-between relative z-10 w-full glass">
+      
+      <div className="flex items-center gap-3 flex-1">
+        {/* Mobile menu trigger button */}
+        <button
+          onClick={onMobileMenuClick}
+          className="lg:hidden p-2.5 bg-background border border-border hover:border-accent/40 rounded-xl text-muted-foreground hover:text-foreground hover:shadow-sm transition-all duration-200"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        {/* Search / Command palette trigger button (Desktop) */}
+        <div className="flex-1 max-w-md hidden sm:block">
+          <button
+            onClick={onSearchClick}
+            className="w-full flex items-center justify-between px-4 py-2.5 bg-background border border-border hover:border-accent/40 rounded-xl text-muted-foreground hover:text-foreground hover:shadow-sm transition-all duration-200 group text-start"
+          >
+            <div className="flex items-center gap-3">
+              <Search className="h-4.5 w-4.5 text-muted-foreground group-hover:text-accent transition-colors duration-200" />
+              <span className="text-xs">
+                {isRtl ? "البحث عن المرضى، الحالات الجراحية (Ctrl+K)..." : "Search patients, surgical cases (Ctrl+K)..."}
+              </span>
+            </div>
+            <kbd className="hidden md:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </button>
+        </div>
+        
+        {/* Search / Command palette trigger button (Mobile) */}
         <button
           onClick={onSearchClick}
-          className="w-full flex items-center justify-between px-4 py-2.5 bg-background border border-border hover:border-accent/40 rounded-xl text-muted-foreground hover:text-foreground hover:shadow-sm transition-all duration-200 group text-start"
+          className="sm:hidden p-2.5 bg-background border border-border hover:border-accent/40 rounded-xl text-muted-foreground hover:text-foreground hover:shadow-sm transition-all duration-200"
         >
-          <div className="flex items-center gap-3">
-            <Search className="h-4.5 w-4.5 text-muted-foreground group-hover:text-accent transition-colors duration-200" />
-            <span className="text-xs">
-              {isRtl ? "البحث عن المرضى، الحالات الجراحية (Ctrl+K)..." : "Search patients, surgical cases (Ctrl+K)..."}
-            </span>
-          </div>
-          <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-            <span className="text-xs">⌘</span>K
-          </kbd>
+          <Search className="h-5 w-5" />
         </button>
       </div>
 

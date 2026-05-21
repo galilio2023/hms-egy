@@ -47,6 +47,7 @@ export const surgicalCases = pgTable("surgical_cases", {
     hospitalOrDateIdx: index("sc_hospital_or_date_idx").on(table.hospitalId, table.orRoomId, table.scheduledDate),
     hospitalSurgDateIdx: index("sc_hospital_surg_date_idx").on(table.hospitalId, table.leadSurgeonId, table.scheduledDate),
     hospitalPatIdx: index("sc_hospital_patient_idx").on(table.hospitalId, table.patientId),
+    hospitalDateIdx: index("sc_hospital_date_idx").on(table.hospitalId, table.scheduledDate),
   };
 }).enableRLS();
 

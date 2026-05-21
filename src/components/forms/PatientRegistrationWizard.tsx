@@ -248,7 +248,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
       const result = await registerPatient(data);
       if (result.success && "patientId" in result) {
         toast.success(t("successMessage"));
-        router.push(`/patients/${result.patientId}`);
+        router.push(`/${hospitalSlug}/patients/${result.patientId}`);
       } else {
         toast.error((result as any).error || t("errorMessage"));
       }

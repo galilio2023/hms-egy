@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { hospitals } from "@db/schema/core";
 import { eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { getHospitalBySlug } from "@/lib/db/cache";
+import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { PatientRegistrationWizard } from "@/components/forms/PatientRegistrationWizard";
@@ -14,14 +15,7 @@ export async function generateMetadata({
   const { locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "patients" });
   
-  const [hospital] = await db
-    .select({
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const hospital = await getHospitalBySlug(hospitalSlug);
 
   const hospitalName = hospital 
     ? (locale === "ar" ? hospital.nameAr : hospital.nameEn)
@@ -40,22 +34,25 @@ export default async function NewPatientPage({
 }) {
   const { locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "patients" });
+  
   const session = await auth();
+  if (!session) {
+    redirect(`/${locale}/login`);
+  }
 
-  // Fetch hospital tenant data
-  const [dbHospital] = await db
-    .select({
-      id: hospitals.id,
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const dbHospital = await getHospitalBySlug(hospitalSlug);
 
   if (!dbHospital) {
     notFound();
   }
+
+  // Validate cross-tenant access context
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const currentHospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!isSuperAdmin && currentHospitalId !== dbHospital.id) {
+    notFound(); // Return 404 to avoid exposing that the slug exists
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50/10 py-8 px-4 sm:px-6 lg:px-8">

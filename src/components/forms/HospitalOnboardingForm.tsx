@@ -37,7 +37,8 @@ export function HospitalOnboardingForm() {
     try {
       const result = await setupHospital(data);
       if (result.success) {
-        router.push("/login"); // Redirect to login after setup
+        // Redirect directly to the newly created hospital dashboard to eliminate post-onboarding friction
+        router.push(`/${data.slug}`);
       } else {
         setError(result.error || "Setup failed");
       }

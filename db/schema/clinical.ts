@@ -58,6 +58,7 @@ export const appointments = pgTable("appointments", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalDocDateIdx: index("app_hospital_doc_date_idx").on(table.hospitalId, table.doctorId, table.scheduledDate),
     hospitalPatIdx: index("app_hospital_pat_idx").on(table.hospitalId, table.patientId),
+    hospitalDateIdx: index("app_hospital_date_idx").on(table.hospitalId, table.scheduledDate, table.startTime),
   };
 }).enableRLS();
 
