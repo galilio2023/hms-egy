@@ -65,6 +65,7 @@ interface TelemedicineClientRoomProps {
   medications: MedicationProp[];
   hospitalSlug: string;
   locale: string;
+  secureRoomName: string;
 }
 
 interface PrescriptionItem {
@@ -85,6 +86,7 @@ export function TelemedicineClientRoom({
   medications,
   hospitalSlug,
   locale,
+  secureRoomName,
 }: TelemedicineClientRoomProps) {
   const isRtl = locale === "ar";
   const router = useRouter();
@@ -126,7 +128,7 @@ export function TelemedicineClientRoom({
   const [height, setHeight] = useState("");
 
   // Jitsi Room URL
-  const jitsiRoomName = `hms-egypt-${appointment.id}`;
+  const jitsiRoomName = secureRoomName;
   const jitsiIframeUrl = `https://meet.jit.si/${jitsiRoomName}#config.startWithAudioMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.TOOLBAR_BUTTONS=["microphone","camera","closedcaptions","desktop","fullscreen","factions","hangup","profile","chat","raisehand","videoquality","tileview"]`;
 
   // Start call timer
@@ -165,7 +167,7 @@ export function TelemedicineClientRoom({
       frequency: curFrequency,
       durationDays: curDuration,
       instructions: curInstructions,
-      price: parseFloat(med.price || "0"),
+      price: isNaN(parseFloat(med.price)) ? 0 : parseFloat(med.price),
     };
 
     setPrescriptionItems((prev) => [...prev, newItem]);
@@ -340,6 +342,7 @@ ${plan}
               <iframe
                 src={jitsiIframeUrl}
                 allow="camera; microphone; fullscreen; display-capture"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
                 className="w-full h-full border-none rounded-2xl flex-1 bg-slate-950"
               />
             ) : (
@@ -438,7 +441,7 @@ ${plan}
                     <Input
                       placeholder={isRtl ? "اكتب التشخيص الطبي الرئيسي للزيارة..." : "Enter primary clinical diagnosis..."}
                       value={diagnosis}
-                      onChange={(e: any) => setDiagnosis(e.target.value)}
+                      onChange={(e) => setDiagnosis(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-9 text-xs focus:border-accent text-slate-100 placeholder:text-slate-600"
                     />
                   </div>
@@ -451,7 +454,7 @@ ${plan}
                     <Textarea
                       placeholder={isRtl ? "وصف المريض لحالته، تاريخ الشكوى، الأعراض المسرودة..." : "Symptoms, patient's description of illness, history of present illness..."}
                       value={subjective}
-                      onChange={(e: any) => setSubjective(e.target.value)}
+                      onChange={(e) => setSubjective(e.target.value)}
                       className="bg-slate-900 border-slate-800 text-xs min-h-[75px] focus:border-accent text-slate-100 placeholder:text-slate-600"
                     />
                   </div>
@@ -464,7 +467,7 @@ ${plan}
                     <Textarea
                       placeholder={isRtl ? "الملاحظات العيادية البصرية، علامات المرض، التسمع..." : "Visual observations, general physical examinations, chest auscultation findings..."}
                       value={objective}
-                      onChange={(e: any) => setObjective(e.target.value)}
+                      onChange={(e) => setObjective(e.target.value)}
                       className="bg-slate-900 border-slate-800 text-xs min-h-[75px] focus:border-accent text-slate-100 placeholder:text-slate-600"
                     />
                   </div>
@@ -477,7 +480,7 @@ ${plan}
                     <Textarea
                       placeholder={isRtl ? "الاستنتاج الطبي، تطور الحالة مقارنة بالسابق، درجة الخطورة..." : "Medical reasoning, severity, clinical progress, differential diagnoses..."}
                       value={assessment}
-                      onChange={(e: any) => setAssessment(e.target.value)}
+                      onChange={(e) => setAssessment(e.target.value)}
                       className="bg-slate-900 border-slate-800 text-xs min-h-[75px] focus:border-accent text-slate-100 placeholder:text-slate-600"
                     />
                   </div>
@@ -490,7 +493,7 @@ ${plan}
                     <Textarea
                       placeholder={isRtl ? "التوصيات العامة، الفحوصات أو التحاليل المطلوبة، مواعيد المراجعة..." : "Next steps, laboratory/imaging referrals, lifestyle guidance, follow-up calendar..."}
                       value={plan}
-                      onChange={(e: any) => setPlan(e.target.value)}
+                      onChange={(e) => setPlan(e.target.value)}
                       className="bg-slate-900 border-slate-800 text-xs min-h-[75px] focus:border-accent text-slate-100 placeholder:text-slate-600"
                     />
                   </div>
@@ -514,10 +517,10 @@ ${plan}
                       <select
                         dir={isRtl ? "rtl" : "ltr"}
                         value={selectedMedId}
-                        onChange={(e: any) => setSelectedMedId(e.target.value)}
+                        onChange={(e) => setSelectedMedId(e.target.value)}
                         className="flex h-9 w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-1 text-xs shadow-sm transition-colors text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
                       >
-                        <option value="">{isRtl ? "ابحث عن دواء بالاسم التجاري أو العلمي..." : "Search commercial/generic drug..."}</option>
+                        <option value="" className="text-start">{isRtl ? "ابحث عن دواء بالاسم التجاري أو العلمي..." : "Search commercial/generic drug..."}</option>
                         {medications.map((med) => (
                           <option key={med.id} value={med.id}>
                             {med.nameEn} ({med.strength} - {med.form}) - {med.price} EGP
@@ -531,7 +534,7 @@ ${plan}
                         <label className="text-[10px] text-slate-400 font-bold block">{isRtl ? "الجرعة المقررة" : "Dosage"}</label>
                         <Input
                           value={curDosage}
-                          onChange={(e: any) => setCurDosage(e.target.value)}
+                          onChange={(e) => setCurDosage(e.target.value)}
                           className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                         />
                       </div>
@@ -540,7 +543,7 @@ ${plan}
                         <label className="text-[10px] text-slate-400 font-bold block">{isRtl ? "التكرار / التواتر" : "Frequency"}</label>
                         <Input
                           value={curFrequency}
-                          onChange={(e: any) => setCurFrequency(e.target.value)}
+                          onChange={(e) => setCurFrequency(e.target.value)}
                           className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                         />
                       </div>
@@ -552,7 +555,7 @@ ${plan}
                         <Input
                           type="number"
                           value={curDuration}
-                          onChange={(e: any) => setCurDuration(parseInt(e.target.value) || 1)}
+                          onChange={(e) => setCurDuration(parseInt(e.target.value) || 1)}
                           className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                         />
                       </div>
@@ -561,7 +564,7 @@ ${plan}
                         <label className="text-[10px] text-slate-400 font-bold block">{isRtl ? "إرشادات الاستخدام" : "Instructions"}</label>
                         <Input
                           value={curInstructions}
-                          onChange={(e: any) => setCurInstructions(e.target.value)}
+                          onChange={(e) => setCurInstructions(e.target.value)}
                           className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                         />
                       </div>
@@ -631,7 +634,7 @@ ${plan}
                           </div>
                           {costInfo.total > 0 && (
                             <div className="text-[10px] text-slate-500 font-bold" dir="rtl">
-                              {isRtl ? `مكتوب فقط: ${costInfo.textAr}` : `In Words: ${costInfo.textAr}`}
+                              {isRtl ? `فقط وقدره: ${costInfo.textAr} جنيه مصري لا غير` : `In Words: ${costInfo.textAr} EGP`}
                             </div>
                           )}
                         </CardContent>
@@ -647,7 +650,7 @@ ${plan}
                     <Input
                       placeholder={isRtl ? "مثال: مراجعة العيادة في حال تكرار الألم..." : "e.g. Return if symptoms worsen..."}
                       value={prescriptionNotes}
-                      onChange={(e: any) => setPrescriptionNotes(e.target.value)}
+                      onChange={(e) => setPrescriptionNotes(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-9 text-xs focus:border-accent text-slate-100 placeholder:text-slate-600"
                     />
                   </div>
@@ -678,7 +681,7 @@ ${plan}
                       type="number"
                       placeholder="120"
                       value={systolic}
-                      onChange={(e: any) => setSystolic(e.target.value)}
+                      onChange={(e) => setSystolic(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                     />
                   </div>
@@ -690,7 +693,7 @@ ${plan}
                       type="number"
                       placeholder="80"
                       value={diastolic}
-                      onChange={(e: any) => setDiastolic(e.target.value)}
+                      onChange={(e) => setDiastolic(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                     />
                   </div>
@@ -702,7 +705,7 @@ ${plan}
                       type="number"
                       placeholder="72"
                       value={heartRate}
-                      onChange={(e: any) => setHeartRate(e.target.value)}
+                      onChange={(e) => setHeartRate(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                     />
                   </div>
@@ -713,7 +716,7 @@ ${plan}
                     <Input
                       placeholder="37.0"
                       value={temperature}
-                      onChange={(e: any) => setTemperature(e.target.value)}
+                      onChange={(e) => setTemperature(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                     />
                   </div>
@@ -725,7 +728,7 @@ ${plan}
                       type="number"
                       placeholder="98"
                       value={oxygenSaturation}
-                      onChange={(e: any) => setOxygenSaturation(e.target.value)}
+                      onChange={(e) => setOxygenSaturation(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                     />
                   </div>
@@ -737,7 +740,7 @@ ${plan}
                       type="number"
                       placeholder="16"
                       value={respiratoryRate}
-                      onChange={(e: any) => setRespiratoryRate(e.target.value)}
+                      onChange={(e) => setRespiratoryRate(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                     />
                   </div>
@@ -748,7 +751,7 @@ ${plan}
                     <Input
                       placeholder="75"
                       value={weight}
-                      onChange={(e: any) => setWeight(e.target.value)}
+                      onChange={(e) => setWeight(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                     />
                   </div>
@@ -760,7 +763,7 @@ ${plan}
                       type="number"
                       placeholder="175"
                       value={height}
-                      onChange={(e: any) => setHeight(e.target.value)}
+                      onChange={(e) => setHeight(e.target.value)}
                       className="bg-slate-900 border-slate-800 h-8 text-xs text-slate-100"
                     />
                   </div>

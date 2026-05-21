@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
 import { appointments, medicalRecords, vitalsFlowsheet } from "@db/schema/clinical";
 import { prescriptions, prescriptionItems } from "@db/schema/pharmacy";
-import { hospitals } from "@db/schema/core";
-import { eq } from "drizzle-orm";
+import { hospitals, staff } from "@db/schema/core";
+import { eq, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
@@ -68,6 +68,27 @@ export async function completeTelemedicineConsultation(
 
   if (!isAuthorized) {
     return { success: false, error: "Forbidden: You do not have permission to complete outpatient encounters." };
+  }
+
+  // 3. Enforce doctor assignment ownership (only the assigned doctor or SUPER_ADMIN can finalize)
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  let isAssignedDoctor = false;
+
+  if (!isSuperAdmin) {
+    const currentStaff = await db
+      .select()
+      .from(staff)
+      .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+      .limit(1)
+      .then((res) => res[0]);
+
+    if (currentStaff && appointment.doctorId === currentStaff.id) {
+      isAssignedDoctor = true;
+    }
+  }
+
+  if (!isSuperAdmin && !isAssignedDoctor) {
+    return { success: false, error: "Forbidden: Only the assigned medical professional or a super administrator can complete this encounter." };
   }
 
   try {
