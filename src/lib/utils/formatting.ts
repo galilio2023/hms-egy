@@ -82,10 +82,39 @@ export function formatDuration(minutes: number): string {
  * Formats age from date of birth.
  * Provides high precision for clinical records (days/weeks/months/years).
  */
-export function formatAge(dob: Date): string {
+export function formatAge(dob: Date, locale: "ar" | "en" = "ar"): string {
   const now = new Date();
   const diffDays = differenceInDays(now, dob);
 
+  if (locale === "ar") {
+    if (diffDays < 7) {
+      if (diffDays === 1) return "يوم واحد";
+      if (diffDays === 2) return "يومان";
+      if (diffDays <= 10) return `${diffDays} أيام`;
+      return `${diffDays} يوماً`;
+    }
+    const weeks = differenceInWeeks(now, dob);
+    if (diffDays < 30) {
+      if (weeks === 1) return "أسبوع واحد";
+      if (weeks === 2) return "أسبوعان";
+      if (weeks <= 10) return `${weeks} أسابيع`;
+      return `${weeks} أسبوعاً`;
+    }
+    const years = differenceInYears(now, dob);
+    if (years === 0) {
+      const months = differenceInMonths(now, dob);
+      if (months === 1) return "شهر واحد";
+      if (months === 2) return "شهران";
+      if (months <= 10) return `${months} أشهر`;
+      return `${months} شهراً`;
+    }
+    if (years === 1) return "سنة واحدة";
+    if (years === 2) return "سنتان";
+    if (years <= 10) return `${years} سنوات`;
+    return `${years} سنة`;
+  }
+
+  // English fallback
   if (diffDays < 7) return `${diffDays} days`;
   if (diffDays < 30) return `${differenceInWeeks(now, dob)} weeks`;
 
