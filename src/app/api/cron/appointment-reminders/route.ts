@@ -7,6 +7,14 @@ import { staff, departments } from "@db/schema/core";
 import { sentReminders } from "@db/schema/system";
 import { toCairoTime } from "@/lib/utils/egypt";
 import { and, eq, or, sql, isNull } from "drizzle-orm";
+import { timingSafeEqual } from "crypto";
+
+const safeCompare = (a: string, b: string) => {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+};
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +29,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized: Missing server configuration" }, { status: 401 });
     }
 
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    if (!safeCompare(authHeader || "", `Bearer ${cronSecret}`)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

@@ -61,6 +61,8 @@ export async function createAppointment(data: AppointmentSchema) {
   try {
     return await withTenantContext(hospitalId, async (tx) => {
       // 0. Acquire row-level lock on the specific doctor to serialize bookings and prevent race conditions
+      // Enforce a strict 2-second timeout to prevent lock contention from halting the tenant pool
+      await tx.execute(sql`SET LOCAL lock_timeout = '2000';`);
       await tx.execute(sql`SELECT id FROM staff WHERE id = ${validatedData.doctorId} FOR UPDATE`);
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));

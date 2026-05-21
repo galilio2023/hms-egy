@@ -199,6 +199,8 @@ export async function createSurgicalCase(
   try {
     return await withTenantContext(hospitalId, async (tx) => {
       // 0. Acquire row-level lock on the specific operating room to serialize case generation for this room
+      // Enforce a strict 2-second timeout to prevent lock contention
+      await tx.execute(sql`SET LOCAL lock_timeout = '2000';`);
       await tx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId} FOR UPDATE`);
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));

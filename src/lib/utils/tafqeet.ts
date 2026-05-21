@@ -115,6 +115,23 @@ export function tafqeet(rawNum: number): string {
 
   // Apply grammatical dual and plural rules for Egyptian Pounds (جنيه مصري)
   const lastTwoDigits = num % 100;
+  
+  // Handle strict grammatical endings for 1 and 2 if the overall number is > 2
+  if (num > 2) {
+    if (lastTwoDigits === 1) {
+      // e.g. 101 -> "مائة وجنيه مصري واحد فقط لا غير"
+      // Strip trailing " وواحد"
+      const cleanText = text.replace(/ وواحد$/, "");
+      return `${cleanText} وجنيه مصري واحد فقط لا غير`;
+    }
+    if (lastTwoDigits === 2) {
+      // e.g. 102 -> "مائة وجنيهان مصريان فقط لا غير"
+      // Strip trailing " واثنان"
+      const cleanText = text.replace(/ واثنان$/, "");
+      return `${cleanText} وجنيهان مصريان فقط لا غير`;
+    }
+  }
+
   let currencySuffix = "جنيه مصري";
   
   if (lastTwoDigits >= 3 && lastTwoDigits <= 10) {
