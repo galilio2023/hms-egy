@@ -12,12 +12,11 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { revalidatePath } from "next/cache";
 import { toCairoTime } from "@/lib/utils/egypt";
+import { formatInTimeZone } from "date-fns-tz";
 
-// Helper: Formats a Date object's time to "HH:MM:SS"
+// Helper: Formats a Date object's time to "HH:MM:SS" strictly in Cairo time
 function formatTimeStr(date: Date) {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}:00`;
+  return formatInTimeZone(date, "Africa/Cairo", "HH:mm:00");
 }
 
 // Helper: Check if two time intervals overlap
@@ -335,21 +334,24 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
 /**
  * Retrieves the hospital's active waiting list queue, scoped securely per clinic.
  */
-export async function getWaitingList(departmentId?: string) {
+export async function getWaitingList(departmentId?: string, targetHospitalId?: string) {
   const session = await auth();
   if (!session) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const hospitalId = session.user.hospitalId;
-  if (!hospitalId) {
+  const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
+    ? targetHospitalId
+    : session.user.hospitalId;
+
+  if (!effectiveHospitalId) {
     return { success: false, error: "Hospital context missing" };
   }
 
   try {
-    return await withTenantContext(hospitalId, async (tx) => {
+    return await withTenantContext(effectiveHospitalId, async (tx) => {
       const queryFilters = [
-        eq(waitingList.hospitalId, hospitalId),
+        eq(waitingList.hospitalId, effectiveHospitalId),
         eq(waitingList.status, "active"),
       ];
 

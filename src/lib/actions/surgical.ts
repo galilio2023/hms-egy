@@ -13,12 +13,11 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { revalidatePath } from "next/cache";
 import { toCairoTime } from "@/lib/utils/egypt";
+import { formatInTimeZone } from "date-fns-tz";
 
-// Helper: Formats a Date object's time to "HH:MM:SS"
+// Helper: Formats a Date object's time to "HH:MM:SS" strictly in Cairo time
 function formatTimeStr(date: Date) {
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}:00`;
+  return formatInTimeZone(date, "Africa/Cairo", "HH:mm:00");
 }
 
 // Helper: Parse HH:MM:SS to minutes from midnight
@@ -223,7 +222,7 @@ export async function createSurgicalCase(
         staffIdsToLock.push(...validatedData.assistantSurgeonIds);
       }
       
-      const uniqueStaffIds = Array.from(new Set(staffIdsToLock));
+      const uniqueStaffIds = Array.from(new Set(staffIdsToLock)).sort();
       
       const inClauseStaff = sql.join(
         uniqueStaffIds.map(id => sql`${id}`),
