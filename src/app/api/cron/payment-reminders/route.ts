@@ -52,11 +52,19 @@ export async function GET(req: NextRequest) {
         })
         .from(invoices)
         .innerJoin(patients, eq(invoices.patientId, patients.id))
+        .leftJoin(
+          sentReminders,
+          and(
+            eq(sentReminders.entityId, invoices.id),
+            eq(sentReminders.reminderType, "overdue_7days")
+          )
+        )
         .where(
           and(
             inArray(invoices.status, ["unpaid", "partially_paid"]),
             eq(invoices.isArchived, false),
-            lte(invoices.dueDate, sevenDaysAgo)
+            lte(invoices.dueDate, sevenDaysAgo),
+            isNull(sentReminders.id)
           )
         )
         .limit(500);

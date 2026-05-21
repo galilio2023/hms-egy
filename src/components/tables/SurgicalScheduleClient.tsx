@@ -468,6 +468,7 @@ export function SurgicalScheduleClient({
             <div className="space-y-1">
               <label className="font-bold text-foreground block">{isRtl ? "المريض" : "Patient"}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedPatientId}
                 onChange={(e) => setSelectedPatientId(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -484,6 +485,7 @@ export function SurgicalScheduleClient({
             <div className="space-y-1">
               <label className="font-bold text-foreground block">{isRtl ? "غرفة العمليات" : "Operating Room"}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedRoomId}
                 onChange={(e) => setSelectedRoomId(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -500,6 +502,7 @@ export function SurgicalScheduleClient({
             <div className="space-y-1">
               <label className="font-bold text-foreground block">{isRtl ? "الجراح الرئيسي" : "Lead Surgeon"}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedSurgeonId}
                 onChange={(e) => setSelectedSurgeonId(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -516,6 +519,7 @@ export function SurgicalScheduleClient({
             <div className="space-y-1">
               <label className="font-bold text-foreground block">{isRtl ? "طبيب التخدير" : "Anesthesiologist"}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedAnesthesiologistId}
                 onChange={(e) => setSelectedAnesthesiologistId(e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -580,6 +584,7 @@ export function SurgicalScheduleClient({
               <div className="space-y-1 col-span-1">
                 <label className="font-bold text-foreground block">{isRtl ? "التخدير" : "Anesthesia"}</label>
                 <select
+                  dir={isRtl ? "rtl" : "ltr"}
                   value={anesthesiaType}
                   onChange={(e) => setAnesthesiaType(e.target.value)}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"

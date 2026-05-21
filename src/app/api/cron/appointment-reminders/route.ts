@@ -52,8 +52,12 @@ export async function GET(req: NextRequest) {
     console.log(`- Today Midnight: ${todayMidnight.toISOString()}`);
     console.log(`- Tomorrow Midnight: ${tomorrowMidnight.toISOString()}`);
 
+    const toISODate = (date: Date) => date.toISOString().split("T")[0];
+    const todayStr = toISODate(todayMidnight);
+    const tomorrowStr = toISODate(tomorrowMidnight);
+
     const results = await withBypassContext(async (tx) => {
-      // 3. Fetch scheduled appointments matching today or tomorrow
+      // 3. Fetch scheduled appointments matching today or tomorrow that haven't received their reminder yet
       const apps = await tx
         .select({
           id: appointments.id,
@@ -76,13 +80,30 @@ export async function GET(req: NextRequest) {
         .innerJoin(patients, eq(appointments.patientId, patients.id))
         .innerJoin(staff, eq(appointments.doctorId, staff.id))
         .innerJoin(departments, eq(appointments.departmentId, departments.id))
+        .leftJoin(
+          sentReminders,
+          and(
+            eq(sentReminders.entityId, appointments.id),
+            or(
+              and(
+                eq(appointments.scheduledDate, tomorrowMidnight),
+                eq(sentReminders.reminderType, "24h_reminder")
+              ),
+              and(
+                eq(appointments.scheduledDate, todayMidnight),
+                eq(sentReminders.reminderType, "2h_reminder")
+              )
+            )
+          )
+        )
         .where(
           and(
             eq(appointments.status, "scheduled"),
             or(
               eq(appointments.scheduledDate, todayMidnight),
               eq(appointments.scheduledDate, tomorrowMidnight)
-            )
+            ),
+            isNull(sentReminders.id)
           )
         )
         .limit(500);
@@ -94,10 +115,10 @@ export async function GET(req: NextRequest) {
 
       for (const app of apps) {
         const appDate = app.scheduledDate instanceof Date ? app.scheduledDate : new Date(app.scheduledDate);
-        const appDateStr = appDate.toDateString();
+        const appDateStr = toISODate(appDate);
 
         // 4. Handle 24h Tomorrow Reminders
-        if (appDateStr === tomorrowMidnight.toDateString()) {
+        if (appDateStr === tomorrowStr) {
           const key = `appointment_24h_${app.id}`;
           remindersToInsert.push({
             hospitalId: app.hospitalId,
@@ -113,7 +134,7 @@ export async function GET(req: NextRequest) {
         }
 
         // 5. Handle 2h Today Urgent Reminders
-        if (appDateStr === todayMidnight.toDateString()) {
+        if (appDateStr === todayStr) {
           const [sh, sm] = app.startTime.split(":").map(Number);
           const appTimeCairo = new Date(todayMidnight);
           appTimeCairo.setHours(sh, sm, 0, 0);

@@ -340,6 +340,7 @@ export function BookingWizardClient({
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground block">{t("department")}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedDept}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -361,6 +362,7 @@ export function BookingWizardClient({
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground block">{t("doctor")}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedDoctor}
                 onChange={(e) => setSelectedDoctor(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -379,6 +381,7 @@ export function BookingWizardClient({
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground block">{t("type")}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={visitType}
                 onChange={(e) => setVisitType(e.target.value as any)}
                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"

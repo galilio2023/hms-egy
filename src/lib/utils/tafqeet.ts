@@ -4,7 +4,9 @@
  * for Egyptian Pounds (EGP / جنيه مصري) in compliance with Egyptian Tax Authority (ETA) guidelines.
  */
 
-export function tafqeet(num: number): string {
+export function tafqeet(rawNum: number): string {
+  const num = Math.floor(rawNum); // Ensure decimal safety
+
   if (num === 0) return "صفر جنيه مصري فقط لا غير";
   if (num === 1) return "جنيه مصري واحد فقط لا غير";
   if (num === 2) return "جنيهان مصريان فقط لا غير";

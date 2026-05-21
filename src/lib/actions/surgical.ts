@@ -263,6 +263,33 @@ export async function createSurgicalCase(
         }
       }
 
+      // 2.5 Check overlaps for Surgeon/Anesthesiologist across all rooms
+      const staffConditions = [eq(surgicalCases.leadSurgeonId, validatedData.leadSurgeonId)];
+      if (validatedData.anesthesiologistId) {
+        staffConditions.push(eq(surgicalCases.anesthesiologistId, validatedData.anesthesiologistId));
+      }
+
+      const staffOverlap = await tx
+        .select()
+        .from(surgicalCases)
+        .where(
+          and(
+            eq(surgicalCases.hospitalId, hospitalId),
+            or(...staffConditions),
+            eq(surgicalCases.scheduledDate, scheduledDate),
+            ne(surgicalCases.status, "cancelled")
+          )
+        );
+
+      for (const sc of staffOverlap) {
+        if (doTimesOverlap(startTime, endTime, sc.scheduledStartTime, addMinutesToTimeStr(sc.scheduledStartTime, sc.estimatedDurationMinutes))) {
+          throw new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            "عذراً، الجراح الرئيسي أو طبيب التخدير لديه عملية أخرى مجدولة في هذا الوقت في غرفة مختلفة."
+          );
+        }
+      }
+
       // 3. Resolve General Surgery Department or fallback
       let [department] = await tx
         .select()
@@ -285,23 +312,11 @@ export async function createSurgicalCase(
         );
       }
 
-      // 4. Generate custom surgical case number (SC-YYYY-NNNNNN)
+      // 4. Generate custom surgical case number (SC-YYYY-NNNNNN) atomically using DB sequence
       const currentYear = new Date().getFullYear();
-      const startOfYear = new Date(currentYear, 0, 1, 0, 0, 0, 0);
-      const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
-
-      const [countResult] = await tx
-        .select({ value: sql<number>`count(*)::int` })
-        .from(surgicalCases)
-        .where(
-          and(
-            eq(surgicalCases.hospitalId, hospitalId),
-            gte(surgicalCases.createdAt, startOfYear),
-            lte(surgicalCases.createdAt, endOfYear)
-          )
-        );
-
-      const sequence = (countResult?.value || 0) + 1;
+      
+      const [{ nextval }] = await tx.execute(sql`SELECT nextval('surgical_case_seq')::int`);
+      const sequence = Number(nextval);
       const caseNumber = `SC-${currentYear}-${String(sequence).padStart(6, "0")}`;
 
       // 5. Insert surgical case record

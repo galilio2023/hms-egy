@@ -228,6 +228,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">{t("governorate")}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedGov}
                 onChange={(e) => setSelectedGov(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -245,6 +246,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">{t("gender")}</label>
               <select
+                dir={isRtl ? "rtl" : "ltr"}
                 value={selectedGender}
                 onChange={(e) => setSelectedGender(e.target.value)}
                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
