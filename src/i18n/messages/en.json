@@ -94,5 +94,26 @@
     "paymobHmacSecret": "HMAC Webhook Secret",
     "cleaningDuration": "OR/Beds Cleaning Duration (Minutes)",
     "autoHousekeeping": "Automatic housekeeping task generation upon patient discharge"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "appointments": "Appointments",
+    "clinical": "Clinical Modules",
+    "inpatient": "Inpatient Care",
+    "pharmacy": "Pharmacy",
+    "laboratory": "Laboratory",
+    "radiology": "Radiology",
+    "surgical": "Surgical Operations",
+    "orSchedule": "OR Schedule",
+    "surgicalCases": "Surgical Cases",
+    "housekeeping": "Housekeeping Queue",
+    "billing": "Billing & Finance",
+    "reports": "Reports & Analytics",
+    "portal": "Patient Portal",
+    "settings": "Hospital Settings",
+    "logout": "Logout",
+    "workstationLocked": "Terminal Locked",
+    "lockWorkstation": "Lock Terminal"
   }
 }
