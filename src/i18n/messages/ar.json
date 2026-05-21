@@ -94,5 +94,26 @@
     "paymobHmacSecret": "السر الأمني للـ Webhook (HMAC Secret)",
     "cleaningDuration": "مدة تنظيف الغرف / الأسرة (بالدقائق)",
     "autoHousekeeping": "تفعيل التوليد التلقائي لمهام التنظيف عند خروج المريض"
+  },
+  "navigation": {
+    "dashboard": "لوحة التحكم",
+    "patients": "المرضى",
+    "appointments": "المواعيد",
+    "clinical": "العيادات السريرية",
+    "inpatient": "القسم الداخلي",
+    "pharmacy": "الصيدلية",
+    "laboratory": "المختبر",
+    "radiology": "الأشعة",
+    "surgical": "العمليات الجراحية",
+    "orSchedule": "جدول العمليات",
+    "surgicalCases": "الحالات الجراحية",
+    "housekeeping": "طوابير التنظيف",
+    "billing": "الحسابات والفوترة",
+    "reports": "التقارير والإحصائيات",
+    "portal": "بوابة المرضى",
+    "settings": "إعدادات المستشفى",
+    "logout": "تسجيل الخروج",
+    "workstationLocked": "المحطة مؤمنة",
+    "lockWorkstation": "تأمين المحطة"
   }
 }

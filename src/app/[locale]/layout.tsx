@@ -5,6 +5,8 @@ import { Cairo } from "next/font/google";
 import { routing } from "@/i18n/routing";
 import { WorkstationProvider } from "@/context/WorkstationContext";
 import WorkstationLock from "@/components/layout/WorkstationLock";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import { Toaster } from "sonner";
 import "../globals.css";
 
 const cairo = Cairo({
@@ -28,7 +30,6 @@ export default async function LocaleLayout({
   }
 
   // Providing all messages to the client
-  // side is the easiest way to get started
   const messages = await getMessages();
 
   return (
@@ -36,15 +37,24 @@ export default async function LocaleLayout({
       lang={locale} 
       dir={locale === "ar" ? "rtl" : "ltr"}
       className={`${cairo.variable} h-full`}
+      suppressHydrationWarning
     >
       <body className={`${cairo.className} min-h-full antialiased`}>
-        <NextIntlClientProvider messages={messages}>
-          <WorkstationProvider>
-            {children}
-            <WorkstationLock />
-          </WorkstationProvider>
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages}>
+            <WorkstationProvider>
+              {children}
+              <WorkstationLock />
+              <Toaster 
+                position={locale === "ar" ? "top-left" : "top-right"} 
+                richColors 
+                closeButton
+              />
+            </WorkstationProvider>
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
 }
+
