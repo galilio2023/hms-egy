@@ -1,4 +1,5 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, decimal, time } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, decimal, time , pgPolicy} from "drizzle-orm/pg-core";
 import { hospitals, departments, staff } from "./core";
 import { patients } from "./patients";
 import { bedStatusEnum } from "./enums";
@@ -15,6 +16,7 @@ export const rooms = pgTable("rooms", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalRoomIdx: index("room_hospital_number_idx").on(table.hospitalId, table.roomNumber),
   };
 });
@@ -31,6 +33,7 @@ export const beds = pgTable("beds", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalStatusIdx: index("bed_hospital_status_idx").on(table.hospitalId, table.status),
   };
 });
@@ -52,6 +55,7 @@ export const appointments = pgTable("appointments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalDocDateIdx: index("app_hospital_doc_date_idx").on(table.hospitalId, table.doctorId, table.scheduledDate),
     hospitalPatIdx: index("app_hospital_pat_idx").on(table.hospitalId, table.patientId),
   };
@@ -69,6 +73,7 @@ export const waitingList = pgTable("waiting_list", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalWaitingIdx: index("wl_hospital_dept_idx").on(table.hospitalId, table.departmentId),
   };
 });
@@ -87,6 +92,7 @@ export const admissions = pgTable("admissions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalAdmissionIdx: index("adm_hospital_patient_idx").on(table.hospitalId, table.patientId),
     hospitalBedIdx: index("adm_hospital_bed_idx").on(table.hospitalId, table.bedId),
   };
@@ -104,6 +110,7 @@ export const dischargeSummaries = pgTable("discharge_summaries", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalIdIdx: index("dis_hospital_idx").on(table.hospitalId),
   };
 });
@@ -123,6 +130,7 @@ export const medicalRecords = pgTable("medical_records", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalMedicalIdx: index("med_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
 });
@@ -144,6 +152,7 @@ export const vitalsFlowsheet = pgTable("vitals_flowsheet", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalVitalsIdx: index("vit_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
 });

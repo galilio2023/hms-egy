@@ -137,9 +137,19 @@ export async function amountToArabicWords(amount: number): Promise<string> {
     // Lazy load tafgeetjs to keep initial bundle size lean
     const { default: Tafgeet } = await import("tafgeetjs");
     const tafgeet = new Tafgeet(roundedAmount, "EGP");
-    return tafgeet.convert();
+    return tafgeet.parse();
   } catch (error) {
     console.error("Tafgeet conversion failed", error);
-    return `${amount} جنيه مصري فقط لا غير`;
+    
+    const pounds = Math.floor(amount);
+    const piastres = Math.round((amount - pounds) * 100);
+    
+    let fallback = `فقط ${pounds} جنيه مصري`;
+    if (piastres > 0) {
+      fallback += ` و ${piastres} قرش`;
+    }
+    fallback += ` لا غير`;
+    
+    return fallback;
   }
 }

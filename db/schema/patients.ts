@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, unique , pgPolicy} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { hospitals } from "./core";
 import { genderEnum } from "./enums";
@@ -25,6 +25,7 @@ export const patients = pgTable("patients", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalNidUnique: unique("pat_hospital_nid_unique").on(table.hospitalId, table.nationalId),
     hospitalNumIdx: index("pat_hospital_num_idx").on(table.hospitalId, table.patientNumber),
     govIdx: index("pat_gov_idx").on(table.governorate),
@@ -46,6 +47,7 @@ export const patientConsents = pgTable("patient_consents", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalIdIdx: index("consent_hospital_idx").on(table.hospitalId),
     patientTypeIdx: index("consent_patient_type_idx").on(table.patientId, table.type),
   };

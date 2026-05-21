@@ -1,4 +1,5 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, decimal } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, decimal , pgPolicy} from "drizzle-orm/pg-core";
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 import { admissions } from "./clinical";
@@ -20,6 +21,7 @@ export const medications = pgTable("medications", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalMedIdx: index("med_hospital_name_idx").on(table.hospitalId, table.nameEn),
     barcodeIdx: index("med_barcode_idx").on(table.barcode),
   };
@@ -39,6 +41,7 @@ export const prescriptions = pgTable("prescriptions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPatIdx: index("rx_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
 });
@@ -70,6 +73,7 @@ export const stockTransactions = pgTable("stock_transactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalMedTxIdx: index("stock_hospital_med_idx").on(table.hospitalId, table.medicationId),
   };
 });

@@ -1,4 +1,5 @@
-import { pgTable, text, uuid, timestamp, varchar, index, decimal, integer, jsonb, boolean, unique } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, uuid, timestamp, varchar, index, decimal, integer, jsonb, boolean, unique , pgPolicy} from "drizzle-orm/pg-core";
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 import { onlinePaymentStatusEnum } from "./enums";
@@ -21,6 +22,7 @@ export const invoices = pgTable("invoices", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPatIdx: index("inv_hospital_patient_idx").on(table.hospitalId, table.patientId),
     hospitalInvoiceNumberUnique: unique("inv_hospital_number_unique").on(table.hospitalId, table.invoiceNumber),
   };
@@ -54,6 +56,7 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalInvoiceIdx: index("pay_hospital_invoice_idx").on(table.hospitalId, table.invoiceId),
   };
 });
@@ -74,6 +77,7 @@ export const insuranceClaims = pgTable("insurance_claims", {
   settledAt: timestamp(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalClaimIdx: index("claim_hospital_status_idx").on(table.hospitalId, table.status),
   };
 });
@@ -100,6 +104,7 @@ export const onlinePayments = pgTable("online_payments", {
   completedAt: timestamp("completed_at"),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalIdIdx: index("onp_hospital_idx").on(table.hospitalId),
     orderIdx: index("onp_order_idx").on(table.paymobOrderId),
     txIdx: index("onp_tx_idx").on(table.paymobTransactionId),
@@ -119,6 +124,7 @@ export const paymentReminders = pgTable("payment_reminders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalInvoiceIdx: index("rem_hospital_invoice_idx").on(table.hospitalId, table.invoiceId),
   };
 });

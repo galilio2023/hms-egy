@@ -106,6 +106,114 @@ export function parseNationalId(nid: string) {
 
 /**
  * Formats a unique patient number.
+import { toZonedTime } from "date-fns-tz";
+
+export const GOVERNORATES: Record<string, { code: string; ar: string; en: string }> = {
+  "01": { code: "01", ar: "القاهرة", en: "Cairo" },
+  "02": { code: "02", ar: "الإسكندرية", en: "Alexandria" },
+  "03": { code: "03", ar: "بورسعيد", en: "Port Said" },
+  "04": { code: "04", ar: "السويس", en: "Suez" },
+  "11": { code: "11", ar: "دمياط", en: "Damietta" },
+  "12": { code: "12", ar: "الدقهلية", en: "Dakahlia" },
+  "13": { code: "13", ar: "الشرقية", en: "Sharqia" },
+  "14": { code: "14", ar: "القليوبية", en: "Qalyubia" },
+  "15": { code: "15", ar: "كفر الشيخ", en: "Kafr El Sheikh" },
+  "16": { code: "16", ar: "الغربية", en: "Gharbia" },
+  "17": { code: "17", ar: "المنوفية", en: "Menofia" },
+  "18": { code: "18", ar: "البحيرة", en: "Beheira" },
+  "19": { code: "19", ar: "الإسماعيلية", en: "Ismailia" },
+  "21": { code: "21", ar: "الجيزة", en: "Giza" },
+  "22": { code: "22", ar: "بني سويف", en: "Beni Suef" },
+  "23": { code: "23", ar: "الفيوم", en: "Fayoum" },
+  "24": { code: "24", ar: "المنيا", en: "Minya" },
+  "25": { code: "25", ar: "أسيوط", en: "Asyut" },
+  "26": { code: "26", ar: "سوهاج", en: "Sohag" },
+  "27": { code: "27", ar: "قنا", en: "Qena" },
+  "28": { code: "28", ar: "أسوان", en: "Aswan" },
+  "29": { code: "29", ar: "الأقصر", en: "Luxor" },
+  "31": { code: "31", ar: "البحر الأحمر", en: "Red Sea" },
+  "32": { code: "32", ar: "الوادي الجديد", en: "New Valley" },
+  "33": { code: "33", ar: "مطروح", en: "Matrouh" },
+  "34": { code: "34", ar: "شمال سيناء", en: "North Sinai" },
+  "35": { code: "35", ar: "جنوب سيناء", en: "South Sinai" },
+  "88": { code: "88", ar: "خارج الجمهورية", en: "Outside Egypt" },
+};
+
+export const EGYPTIAN_INSURANCE_PROVIDERS = [
+  { 
+    id: "hio", 
+    nameAr: "الهيئة العامة للتأمين الصحي", 
+    nameEn: "Health Insurance Organization (HIO)", 
+    type: "government" 
+  },
+  { 
+    id: "uhis", 
+    nameAr: "التأمين الصحي الشامل", 
+    nameEn: "Universal Health Insurance System (UHIS)", 
+    type: "government",
+    rolloutGovernorates: ["03", "29", "19", "35", "04", "28"] // Port Said, Luxor, Ismailia, South Sinai, Suez, Aswan
+  },
+  { id: "axa", nameAr: "أكسا للتأمين", nameEn: "AXA Insurance", type: "private" },
+  { id: "metlife", nameAr: "متلايف", nameEn: "MetLife", type: "private" },
+  { id: "bupa", nameAr: "بوبا", nameEn: "Bupa", type: "private" },
+  { id: "misr", nameAr: "مصر للتأمين", nameEn: "Misr Insurance", type: "private" },
+  { id: "military", nameAr: "إدارة الخدمات الطبية للقوات المسلحة", nameEn: "Armed Forces Medical Service", type: "military" },
+];
+
+/**
+ * Validates the 14-digit Egyptian National ID with strict date checking.
+ * Note: Only supports patients born between 1900 and 2099 (century codes 2 and 3).
+ */
+export function validateNationalId(nid: string): boolean {
+  if (!/^\d{14}$/.test(nid)) return false;
+
+  const centuryCode = parseInt(nid[0]);
+  if (centuryCode !== 2 && centuryCode !== 3 && centuryCode !== 4) return false;
+
+  const century = centuryCode === 2 ? 1900 : centuryCode === 3 ? 2000 : 2100;
+  const year = parseInt(nid.substring(1, 3)) + century;
+  const month = parseInt(nid.substring(3, 5)) - 1; // JS months are 0-indexed
+  const day = parseInt(nid.substring(5, 7));
+
+  const dob = new Date(Date.UTC(year, month, day));
+  if (dob.getUTCFullYear() !== year || dob.getUTCMonth() !== month || dob.getUTCDate() !== day) {
+    return false;
+  }
+
+  if (dob > new Date()) {
+    return false;
+  }
+
+  const govCode = nid.substring(7, 9);
+  if (!GOVERNORATES[govCode]) return false;
+
+  return true;
+}
+
+/**
+ * Parses birth date, gender, and governorate from Egyptian National ID.
+ */
+export function parseNationalId(nid: string) {
+  if (!validateNationalId(nid)) return null;
+
+  const centuryCode = parseInt(nid[0]);
+  const century = centuryCode === 2 ? 1900 : centuryCode === 3 ? 2000 : 2100;
+  const year = parseInt(nid.substring(1, 3)) + century;
+  const month = parseInt(nid.substring(3, 5)) - 1;
+  const day = parseInt(nid.substring(5, 7));
+  const dob = new Date(Date.UTC(year, month, day));
+
+  const govCode = nid.substring(7, 9);
+  const governorate = GOVERNORATES[govCode];
+
+  const genderCode = parseInt(nid[12]);
+  const gender = genderCode % 2 === 0 ? "female" : "male";
+
+  return { dob, gender, governorate, century };
+}
+
+/**
+ * Formats a unique patient number.
  * Pattern: HMS-{HOSPITAL_CODE}-{YYYY}-{NNNNNN}
  */
 export function formatPatientNumber(hospitalCode: string, year: number, seq: number): string {
@@ -136,4 +244,30 @@ export function getPublicHolidays(year: number) {
     { date: new Date(year, 6, 23), nameAr: "عيد الثورة", nameEn: "Revolution Day", isIslamic: false },
     { date: new Date(year, 9, 6), nameAr: "عيد القوات المسلحة", nameEn: "Armed Forces Day", isIslamic: false },
   ];
+}
+
+/**
+ * Converts any date to Africa/Cairo timezone ensuring DST shifts are mitigated.
+ * Useful for ensuring server-side cron jobs run at the correct local hour.
+ */
+export function toCairoTime(date: Date | string | number): Date {
+  return toZonedTime(new Date(date), "Africa/Cairo");
+}
+
+/**
+ * Parses a Postgres TIME column (e.g. "09:30:00") into a timezone-aware Date object
+ * relative to a specific scheduled date in Cairo time.
+ * Prevents scheduling drift due to DST transitions.
+ */
+export function parseCairoTime(timeStr: string, baseDate: Date = new Date()): Date {
+  const cairoDate = toCairoTime(baseDate);
+  const [hours, minutes, seconds = "0"] = timeStr.split(":");
+  
+  // Set the hours and minutes in the local Cairo timezone
+  cairoDate.setHours(parseInt(hours, 10));
+  cairoDate.setMinutes(parseInt(minutes, 10));
+  cairoDate.setSeconds(parseInt(seconds, 10));
+  cairoDate.setMilliseconds(0);
+  
+  return cairoDate;
 }

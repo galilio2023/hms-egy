@@ -1,4 +1,5 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, jsonb, decimal, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, jsonb, decimal, uniqueIndex , pgPolicy} from "drizzle-orm/pg-core";
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 
@@ -15,6 +16,7 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalUserIdx: index("notif_hospital_user_idx").on(table.hospitalId, table.userId),
   };
 });
@@ -32,6 +34,7 @@ export const documents = pgTable("documents", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPatIdx: index("doc_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
 });
@@ -48,6 +51,7 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalActionIdx: index("audit_hospital_action_idx").on(table.hospitalId, table.action),
   };
 });
@@ -67,6 +71,7 @@ export const aiAuditLogs = pgTable("ai_audit_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalFeatureIdx: index("ai_hospital_feature_idx").on(table.hospitalId, table.featureName),
   };
 });
@@ -85,6 +90,7 @@ export const sentReminders = pgTable("sent_reminders", {
   errorMessage: text("error_message"),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     // Composite unique index to completely prevent duplicate reminder notifications
     reminderUniqueKey: uniqueIndex("reminder_unique_send_idx").on(
       table.hospitalId,
@@ -105,6 +111,7 @@ export const dataRetentionPolicies = pgTable("data_retention_policies", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalIdx: index("retention_policy_hospital_idx").on(table.hospitalId),
   };
 });
@@ -119,6 +126,7 @@ export const dataRetentionLogs = pgTable("data_retention_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalLogIdx: index("retention_log_hospital_idx").on(table.hospitalId),
   };
 });
