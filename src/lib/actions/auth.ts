@@ -13,6 +13,7 @@ export async function loginAction(
   prevState: any,
   formData: FormData
 ): Promise<{ success: boolean; error?: string; redirectTo?: string }> {
+  const startTime = Date.now();
   const email = formData.get("email")?.toString().trim().toLowerCase();
   const password = formData.get("password")?.toString();
 
@@ -96,10 +97,13 @@ export async function loginAction(
             })
             .where(eq(users.email, email));
         });
-      } else {
-        // Prevent timing attack / user enumeration by running a dummy application-layer delay with dynamic timing jitter
-        const delay = Math.floor(Math.random() * 300) + 200; // 200ms - 500ms
-        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+
+      // Prevent user enumeration and timing attacks by padding the execution to a uniform target window
+      const targetDuration = 600 + Math.floor(Math.random() * 150); // 600ms - 750ms target
+      const elapsed = Date.now() - startTime;
+      if (elapsed < targetDuration) {
+        await new Promise((resolve) => setTimeout(resolve, targetDuration - elapsed));
       }
 
       return { success: false, error: errorMessage };

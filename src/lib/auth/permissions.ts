@@ -110,11 +110,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ],
   
   ANESTHESIOLOGIST: [
-    "patients:view",             // Restricted to assigned surgical cases in hasPermission
+    "patients:view",             // View patients in their hospital
     "medical_records:view",      // Read-only
     "admissions:view",           // Read-only
-    "surgical:view",             // Restricted to assigned surgical cases
-    "surgical:anesthesia",       // Write-access for own anesthesia records
+    "surgical:view",             // View scheduled or assigned surgeries in their hospital
+    "surgical:anesthesia",       // Write-access for own anesthesia records (restricted in hasPermission)
     "ai_features:use"
   ],
   
@@ -214,7 +214,7 @@ export function hasPermission(
   // Rule C: OR Nurse Constraints
   if (userRole === "OR_NURSE") {
     // OR Nurses can update surgical checklists ONLY if assigned as scrub/circulating nurse
-    if (permission === "surgical:checklist" || permission === "surgical:view") {
+    if (permission === "surgical:checklist") {
       if (!context || (context.scrubNurseId !== user.id && context.circulatingNurseId !== user.id)) {
         return false; // Fail closed if context is missing or nurse is not assigned to the case
       }

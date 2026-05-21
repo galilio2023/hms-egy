@@ -27,28 +27,28 @@ export default function ChangePasswordPage() {
     const confirmPassword = formData.get("confirmPassword")?.toString();
 
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setError(isRtl ? "يرجى ملء جميع الحقول المطلوبة." : "Please fill in all fields.");
+      setError(t("auth.errorFieldsRequired"));
       return;
     }
 
     if (newPassword.length < 8) {
-      setError(isRtl ? "يجب أن تتكون كلمة المرور الجديدة من ٨ أحرف على الأقل." : "Password must be at least 8 characters.");
+      setError(t("auth.errorPasswordLength"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError(isRtl ? "كلمتا المرور الجديدتان غير متطابقتين." : "Passwords do not match.");
+      setError(t("auth.errorPasswordMismatch"));
       return;
     }
 
     startTransition(async () => {
       const result = await changePasswordAction(oldPassword, newPassword);
       if (result.success) {
-        toast.success(isRtl ? "تم تحديث كلمة المرور بنجاح" : "Password updated successfully");
+        toast.success(t("auth.changePasswordSuccess"));
         router.push(`/${locale}`);
         router.refresh();
       } else {
-        setError(result.error || "خطأ أثناء تحديث كلمة المرور");
+        setError(result.error || t("auth.errorGenericUpdate"));
       }
     });
   };
@@ -74,12 +74,10 @@ export default function ChangePasswordPage() {
               <ShieldAlert size={28} />
             </div>
             <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-400 font-cairo mb-2">
-              {isRtl ? "تغيير كلمة المرور الإلزامية" : "Forced Password Update"}
+              {t("auth.forcedPasswordTitle")}
             </h1>
             <p className="text-slate-400 font-cairo text-sm leading-relaxed">
-              {isRtl 
-                ? "لدواعي الأمن وحماية بيانات المرضى، يرجى تغيير كلمة المرور المؤقتة قبل متابعة العمل." 
-                : "For security compliance, please update your temporary credentials before proceeding."}
+              {t("auth.forcedPasswordSubtitle")}
             </p>
           </div>
 
@@ -99,7 +97,7 @@ export default function ChangePasswordPage() {
             {/* Old Password */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-slate-400 font-cairo uppercase tracking-wider">
-                {isRtl ? "كلمة المرور الحالية" : "Current Password"}
+                {t("auth.currentPassword")}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 start-4 flex items-center text-slate-500">
@@ -118,7 +116,7 @@ export default function ChangePasswordPage() {
             {/* New Password */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-slate-400 font-cairo uppercase tracking-wider">
-                {isRtl ? "كلمة المرور الجديدة" : "New Password"}
+                {t("auth.newPassword")}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 start-4 flex items-center text-slate-500">
@@ -137,7 +135,7 @@ export default function ChangePasswordPage() {
             {/* Confirm New Password */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-slate-400 font-cairo uppercase tracking-wider">
-                {isRtl ? "تأكيد كلمة المرور الجديدة" : "Confirm New Password"}
+                {t("auth.confirmNewPassword")}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 start-4 flex items-center text-slate-500">
@@ -162,10 +160,10 @@ export default function ChangePasswordPage() {
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
-                  <span>{isRtl ? "جاري التحديث..." : "Updating password..."}</span>
+                  <span>{t("auth.updatingPassword")}</span>
                 </>
               ) : (
-                <span>{isRtl ? "تحديث كلمة المرور ومتابعة" : "Update & Proceed"}</span>
+                <span>{t("auth.updateAndProceed")}</span>
               )}
             </button>
           </form>

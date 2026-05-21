@@ -31,7 +31,7 @@ export default function LoginPage() {
     startTransition(async () => {
       const result = await loginAction(null, formData);
       if (result.success) {
-        toast.success(isRtl ? "تم تسجيل الدخول بنجاح" : "Logged in successfully", {
+        toast.success(t("auth.loginSuccess"), {
           position: isRtl ? "bottom-left" : "bottom-right",
         });
         
@@ -39,8 +39,8 @@ export default function LoginPage() {
         router.push(`/${locale}${result.redirectTo || "/"}`);
         router.refresh();
       } else {
-        setError(result.error || "خطأ أثناء تسجيل الدخول");
-        toast.error(result.error || "خطأ أثناء تسجيل الدخول");
+        setError(result.error || t("auth.loginErrorDefault"));
+        toast.error(result.error || t("auth.loginErrorDefault"));
       }
     });
   };
@@ -79,7 +79,7 @@ export default function LoginPage() {
             <Activity className="h-6 w-6 text-teal-400 animate-pulse" />
           </div>
           <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-teal-400 to-emerald-400 tracking-wide font-cairo">
-            {isRtl ? "مستشفيات مصر" : "HMS Egypt"}
+            {t("common.title")}
           </span>
         </div>
 
@@ -111,7 +111,7 @@ export default function LoginPage() {
               {t("auth.login")}
             </h1>
             <p className="text-slate-400 font-cairo text-sm">
-              {isRtl ? "نظام إدارة المستشفى الذكي والموثق" : "Intelligent Clinical Management Platform"}
+              {t("auth.loginSubtitle")}
             </p>
           </div>
 
@@ -179,7 +179,7 @@ export default function LoginPage() {
                   className="rounded bg-slate-900 border-slate-800 text-teal-600 focus:ring-0 cursor-pointer h-4 w-4"
                 />
                 <label htmlFor="remember" className="cursor-pointer">
-                  {isRtl ? "تذكرني في هذه المحطة" : "Remember on this station"}
+                  {t("auth.rememberMe")}
                 </label>
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function LoginPage() {
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
-                  <span>{isRtl ? "جاري التحقق..." : "Authenticating..."}</span>
+                  <span>{t("auth.authenticating")}</span>
                 </>
               ) : (
                 <span>{t("auth.login")}</span>
@@ -203,20 +203,12 @@ export default function LoginPage() {
         </div>
 
         {/* Footer info links */}
-        <p className="text-center mt-6 text-slate-500 text-xs font-cairo leading-relaxed">
-          {isRtl ? (
-            <>
-              يتوافق هذا النظام بالكامل مع معايير وزارة الصحة المصرية (MOH)<br />
-              وهيئة الضرائب المصرية (ETA). جميع المعاملات مشفرة ومؤمنة بالكامل.
-            </>
-          ) : (
-            <>
-              Fully compliant with Egyptian Ministry of Health (MOH) & ETA standards.<br />
-              All patient information and transactions are encrypted and audited.
-            </>
-          )}
-        </p>
+        <p 
+          className="text-center mt-6 text-slate-500 text-xs font-cairo leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: t("auth.complianceFooter") }}
+        />
       </motion.div>
     </div>
   );
 }
+

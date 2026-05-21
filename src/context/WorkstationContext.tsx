@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useRef, useTransition, useCallback } from "react";
+import { useSession } from "@/lib/auth/client";
 import { unlockWorkstationAction } from "@/lib/actions/auth";
 import { toast } from "sonner";
 import { useLocale } from "next-intl";
@@ -17,6 +18,7 @@ const AUTO_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 export function WorkstationProvider({ children }: { children: React.ReactNode }) {
   const [isLocked, setIsLocked] = useState<boolean>(false);
+  const { data: sessionData } = useSession();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(0);
   const locale = useLocale();
@@ -30,6 +32,18 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
     }
   }, []);
 
+  // Automatically clear persistent lock state and timer on logout or when there's no active user session
+  useEffect(() => {
+    if (sessionData && !sessionData.user) {
+      setIsLocked(false);
+      localStorage.removeItem("workstation_locked");
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  }, [sessionData]);
+
   const lockStation = useCallback(() => {
     setIsLocked(true);
     localStorage.setItem("workstation_locked", "true");
@@ -40,7 +54,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
   }, [isRtl]);
 
   const resetTimer = useCallback(() => {
-    if (isLocked) return; // Don't reset if already locked
+    if (isLocked || !sessionData?.user) return; // Don't reset if already locked or unauthenticated
 
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -49,7 +63,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
     timerRef.current = setTimeout(() => {
       lockStation();
     }, AUTO_LOCK_TIMEOUT);
-  }, [isLocked, lockStation]);
+  }, [isLocked, lockStation, sessionData]);
 
   const unlockStation = async (password: string): Promise<boolean> => {
     const result = await unlockWorkstationAction(password);
@@ -73,9 +87,15 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
     }
   }, [resetTimer]);
 
-  // Monitor user activity to reset inactivity lock timer
+  // Monitor user activity to reset inactivity lock timer (only when logged in)
   useEffect(() => {
-    if (isLocked) return;
+    if (isLocked || !sessionData?.user) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
 
     const activityEvents = ["mousemove", "keydown", "click", "scroll", "touchstart"];
 
@@ -93,7 +113,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
         window.removeEventListener(event, handleActivity);
       });
     };
-  }, [isLocked, resetTimer, handleActivity]);
+  }, [isLocked, resetTimer, handleActivity, sessionData]);
 
   return (
     <WorkstationContext.Provider value={{ isLocked, lockStation, unlockStation }}>
