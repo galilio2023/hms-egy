@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getGovernorateCode } from "../utils/egypt";
 
 const EGYPT_PHONE_REGEX = /^(?:\+20|0020)?(?:0?1[0125]\d{8}|0?[2-9]\d{7,8}|0?1[5-9]\d{3})$/;
 
@@ -11,7 +12,9 @@ export const hospitalOnboardingSchema = z.object({
     message: "Invalid Egyptian phone number (mobile, landline, or hotline)",
   }),
   address: z.string().min(10),
-  governorate: z.string().min(2),
+  governorate: z.string().refine((val) => getGovernorateCode(val) !== null, {
+    message: "Invalid Egyptian governorate",
+  }),
   type: z.enum(["private", "government", "military", "ngo"]),
   
   // Modules configuration
@@ -43,7 +46,9 @@ export const hospitalSettingsSchema = z.object({
     message: "Invalid Egyptian phone number (mobile, landline, or hotline)",
   }),
   address: z.string().min(10, "Address must be at least 10 characters"),
-  governorate: z.string().min(2, "Governorate is required"),
+  governorate: z.string().refine((val) => getGovernorateCode(val) !== null, {
+    message: "Invalid Egyptian governorate",
+  }),
 
   // Module configuration
   isSurgicalEnabled: z.boolean().default(false),

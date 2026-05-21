@@ -16,7 +16,9 @@ export const patientSchema = z.object({
   nameEn: z.string().min(3, "Name in English must be at least 3 characters"),
   dob: z.coerce.date(),
   gender: z.enum(["male", "female"]),
-  governorate: z.string().min(2, "Governorate is required"),
+  governorate: z.string().refine((val) => getGovernorateCode(val) !== null, {
+    message: "Invalid Egyptian governorate",
+  }),
   phone: egyptianPhoneSchema,
   email: z.string().email().optional().or(z.literal("")),
   bloodType: z.string().optional(),

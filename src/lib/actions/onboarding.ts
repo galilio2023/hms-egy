@@ -1,9 +1,15 @@
 "use server";
 
+import { db, withBypassContext } from "@/lib/db";
+import { hospitals, hospitalSettings, staff } from "@db/schema/core";
+import { users } from "@db/schema/auth";
+import { authInstance } from "@/lib/auth";
 import { hospitalOnboardingSchema, type HospitalOnboarding } from "@/lib/validations/hospital.schema";
+import { eq } from "drizzle-orm";
 
 /**
- * Server action to handle hospital onboarding.
+ * Server action to handle hospital onboarding and administrative registration.
+ * Executes within a bypassed RLS context since a tenant session is not yet established.
  */
 export async function setupHospital(data: HospitalOnboarding): Promise<{ 
   success?: boolean; 
@@ -15,66 +21,119 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
   const validated = hospitalOnboardingSchema.safeParse(data);
   if (!validated.success) {
     return { 
-      error: "Invalid data submitted", 
+      error: "بيانات الإدخال غير صالحة.", 
       details: validated.error.format() as unknown as Record<string, unknown> 
     };
   }
 
-  // TEMPORARY GUARD: Block onboarding until Phase 6 (Auth) is implemented to prevent UX Deadlock.
-  // This ensures users don't create hospitals with no way to log in.
-  console.log(`[ONBOARDING_GUARD] Request for ${validated.data.adminEmail} blocked (Phase 6 pending)`);
-  
-  return { 
-    error: "Hospital onboarding is temporarily paused until authentication (Phase 6) is fully integrated. Please check the project roadmap." 
-  };
+  const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
 
-  /* Logic preserved for Phase 4/6:
-  // Requires: import { db } from "@/lib/db"; import { hospitals, hospitalSettings } from "@db/schema";
+  let createdUserId: string | null = null;
+
   try {
-    const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
-
-    // Execute within a transaction for atomicity
-    const result = await db.transaction(async (tx) => {
-      // 2. Create hospital
-      const [hospital] = await tx.insert(hospitals).values({
-        nameAr: hospitalData.nameAr,
-        nameEn: hospitalData.nameEn,
-        slug: hospitalData.slug,
-        contactEmail: hospitalData.contactEmail,
-        contactPhone: hospitalData.contactPhone,
-        address: hospitalData.address,
-        governorate: hospitalData.governorate,
-        type: hospitalData.type,
-      }).returning();
-
-      // 3. Create settings
-      await tx.insert(hospitalSettings).values({
-        hospitalId: hospital.id,
-        isSurgicalEnabled: modules.surgical,
-        isTelemedicineEnabled: modules.telemedicine,
-        isPatientPortalEnabled: modules.portal,
-        isOnlinePaymentsEnabled: modules.payments,
+    // 1. Create the administrative user via Better Auth Server API first with no hospitalId
+    // This will hash the password and insert the record into the 'users' and 'accounts' tables
+    try {
+      const userResult = await authInstance.api.signUpEmail({
+        body: {
+          email: adminEmail.toLowerCase().trim(),
+          password: adminPassword,
+          name: adminName,
+          role: "ADMIN",
+          // Do not assign hospitalId yet because the hospital does not exist in the database yet
+        },
       });
 
-      return hospital;
-    });
+      if (!userResult || !userResult.user) {
+        throw new Error("Failed to register the administrator account in Better Auth");
+      }
 
-    if (!result) throw new Error("Hospital creation failed");
+      createdUserId = userResult.user.id;
+    } catch (authError: any) {
+      console.error("[ONBOARDING] Better Auth signUpEmail failed", authError);
+      if (authError?.message?.includes("unique_violation") || authError?.message?.includes("already exists") || authError?.code === "23505") {
+        return { error: "البريد الإلكتروني هذا مسجل بالفعل في النظام." };
+      }
+      throw authError;
+    }
 
-    // 4. Create admin user (Placeholder - Phase 6 will implement full Better Auth integration)
-    // NOTE: In Phase 6, we will hash adminPassword and insert into the 'users' and 'staff' tables.
-    // NEVER log plain passwords or sensitive identifiers in production logs.
-    console.log(`[ONBOARDING] Admin user account placeholder established for ${adminEmail}`);
-    
-    return { success: true, hospitalId: result.id };
+    // 2. Execute all database insertions and linkage inside a single transaction with RLS bypassed
+    try {
+      const result = await withBypassContext(async (tx) => {
+        // Create the hospital
+        const [hospital] = await tx.insert(hospitals).values({
+          nameAr: hospitalData.nameAr,
+          nameEn: hospitalData.nameEn,
+          slug: hospitalData.slug,
+          contactEmail: hospitalData.contactEmail,
+          contactPhone: hospitalData.contactPhone,
+          address: hospitalData.address,
+          governorate: hospitalData.governorate,
+          type: hospitalData.type,
+        }).returning();
+
+        if (!hospital) {
+          throw new Error("Failed to insert hospital row");
+        }
+
+        // Create default hospital settings
+        await tx.insert(hospitalSettings).values({
+          hospitalId: hospital.id,
+          isSurgicalEnabled: modules.surgical,
+          isTelemedicineEnabled: modules.telemedicine,
+          isPatientPortalEnabled: modules.portal,
+          isOnlinePaymentsEnabled: modules.payments,
+          orCleaningDuration: 30,
+          autoHousekeeping: true,
+        });
+
+        // Create staff entry linked to the new hospital and user
+        await tx.insert(staff).values({
+          hospitalId: hospital.id,
+          userId: createdUserId!, // Better Auth User ID
+          nameAr: adminName,
+          nameEn: adminName,
+          role: "ADMIN",
+          email: adminEmail.toLowerCase().trim(),
+          phone: hospitalData.contactPhone,
+          isActive: true,
+        });
+
+        // Update the admin user with the newly created hospitalId
+        await tx.update(users)
+          .set({ hospitalId: hospital.id, updatedAt: new Date() })
+          .where(eq(users.id, createdUserId!));
+
+        return hospital;
+      });
+
+      if (!result) {
+        throw new Error("Hospital onboarding transaction failed");
+      }
+
+      console.log(`[ONBOARDING] Successfully established hospital ${result.nameEn} and admin account ${adminEmail}`);
+      return { success: true, hospitalId: result.id };
+
+    } catch (dbError: any) {
+      console.error("[ONBOARDING_CLEANUP] Database transaction failed. Rolling back Better Auth user...", dbError);
+      // Clean up the created Better Auth user
+      if (createdUserId) {
+        await withBypassContext(async (tx) => {
+          await tx.delete(users).where(eq(users.id, createdUserId!));
+        });
+      }
+      throw dbError;
+    }
+
   } catch (error: any) {
     if (error?.code === "23505" || error?.message?.includes("unique constraint") || error?.message?.includes("unique_violation")) {
-      return { error: "The hospital URL slug is already taken. Please choose another name." };
+      return { error: "الرابط التعريفي للمستشفى محجوز بالفعل. يرجى اختيار اسم آخر." };
     }
+    
     console.error(`[ONBOARDING_FAILURE] Slug: ${validated.data.slug}`, {
       error: error instanceof Error ? error.message : "Unknown error",
     });
-    return { error: "An unexpected error occurred during setup." };
+    
+    return { error: "حدث خطأ غير متوقع أثناء إعداد النظام. يرجى المحاولة مرة أخرى." };
   }
-  */
 }

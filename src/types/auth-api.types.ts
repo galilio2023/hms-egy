@@ -9,6 +9,7 @@ export interface User {
   role: string;
   hospitalId: string;
   departmentId?: string;
+  isPasswordExpired?: boolean;
 }
 
 export interface ApiResponse<T = unknown> {
