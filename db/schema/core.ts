@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, time } from "drizzle-orm/pg-core";
 import { hospitalTypeEnum, roleEnum } from "./enums";
 
 export const hospitals = pgTable("hospitals", {
@@ -117,8 +117,8 @@ export const orBlocks = pgTable("or_blocks", {
   departmentId: uuid("department_id").references(() => departments.id, { onDelete: "cascade" }).notNull(),
   owningDoctorId: uuid("owning_doctor_id").references(() => staff.id, { onDelete: "set null" }), // Surgeon owning block
   dayOfWeek: integer("day_of_week").notNull(), // 0-6 (Sunday to Saturday)
-  startTime: text("start_time").notNull(), // e.g. "08:00:00"
-  endTime: text("end_time").notNull(), // e.g. "14:00:00"
+  startTime: time("start_time").notNull(), // e.g. "08:00:00"
+  endTime: time("end_time").notNull(), // e.g. "14:00:00"
   blockName: text("block_name").notNull(),
   isRecurring: boolean("is_recurring").default(true).notNull(),
   effectiveFrom: timestamp("effective_from").notNull(),
@@ -139,8 +139,8 @@ export const orBlockOverrides = pgTable("or_block_overrides", {
   date: timestamp("date").notNull(),
   type: text("type").notNull(), // cancelled, modified, emergency_takeover
   reason: text("reason").notNull(),
-  newStartTime: text("new_start_time"),
-  newEndTime: text("new_end_time"),
+  newStartTime: time("new_start_time"),
+  newEndTime: time("new_end_time"),
   createdBy: uuid("created_by").references(() => staff.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {

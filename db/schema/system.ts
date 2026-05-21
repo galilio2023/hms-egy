@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, jsonb, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, jsonb, decimal, uniqueIndex } from "drizzle-orm/pg-core";
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 
@@ -86,7 +86,7 @@ export const sentReminders = pgTable("sent_reminders", {
 }, (table) => {
   return {
     // Composite unique index to completely prevent duplicate reminder notifications
-    reminderUniqueKey: index("reminder_unique_send_idx").on(
+    reminderUniqueKey: uniqueIndex("reminder_unique_send_idx").on(
       table.hospitalId,
       table.entityType,
       table.entityId,

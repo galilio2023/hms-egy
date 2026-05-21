@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, unique } from "drizzle-orm/pg-core";
 import { hospitals } from "./core";
 import { genderEnum } from "./enums";
 
@@ -24,7 +24,7 @@ export const patients = pgTable("patients", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
-    hospitalNidIdx: index("pat_hospital_nid_idx").on(table.hospitalId, table.nationalId),
+    hospitalNidUnique: unique("pat_hospital_nid_unique").on(table.hospitalId, table.nationalId),
     hospitalNumIdx: index("pat_hospital_num_idx").on(table.hospitalId, table.patientNumber),
     govIdx: index("pat_gov_idx").on(table.governorate),
   };

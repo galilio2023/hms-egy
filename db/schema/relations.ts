@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { hospitals, departments, staff, operatingRooms, orBlocks, orBlockOverrides } from "./core";
+import { hospitals, hospitalSettings, departments, staff, operatingRooms, orBlocks, orBlockOverrides } from "./core";
 import { patients, patientConsents } from "./patients";
 import { rooms, beds, appointments, waitingList, admissions, dischargeSummaries, medicalRecords, vitalsFlowsheet } from "./clinical";
 import { housekeepingTasks } from "./housekeeping";
@@ -28,7 +28,7 @@ export const hospitalsRelations = relations(hospitals, ({ one, many }) => ({
 }));
 
 // hospitalSettings Relations
-import { hospitalSettings } from "./core";
+
 export const hospitalSettingsRelations = relations(hospitalSettings, ({ one }) => ({
   hospital: one(hospitals, {
     fields: [hospitalSettings.hospitalId],

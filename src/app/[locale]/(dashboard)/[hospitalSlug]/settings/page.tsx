@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { HospitalSettingsForm } from "@/components/forms/HospitalSettingsForm";
 import { type PlanTier } from "@/types/plans.types";
-import { decryptField } from "@/lib/utils/security";
 
 export async function generateMetadata({
   params,
@@ -78,13 +77,6 @@ export default async function HospitalSettingsPage({
     notFound();
   }
 
-  // Safe decrypt helper for sensitive database credentials
-  const safeDecrypt = (val: string | null) => {
-    if (!val) return "";
-    const decrypted = decryptField(val);
-    return decrypted !== null ? decrypted : val;
-  };
-
   // Graceful fallback for values in case they are null
   const initialValues = {
     nameAr: dbHospital.nameAr,
@@ -96,11 +88,11 @@ export default async function HospitalSettingsPage({
     isTelemedicineEnabled: dbHospital.isTelemedicineEnabled ?? false,
     isPatientPortalEnabled: dbHospital.isPatientPortalEnabled ?? false,
     isOnlinePaymentsEnabled: dbHospital.isOnlinePaymentsEnabled ?? false,
-    paymobApiKey: safeDecrypt(dbHospital.paymobApiKey),
+    paymobApiKey: dbHospital.paymobApiKey ? "••••••••" : "",
     paymobCardId: dbHospital.paymobCardId || "",
     paymobWalletId: dbHospital.paymobWalletId || "",
     paymobFawryId: dbHospital.paymobFawryId || "",
-    paymobHmacSecret: safeDecrypt(dbHospital.paymobHmacSecret),
+    paymobHmacSecret: dbHospital.paymobHmacSecret ? "••••••••" : "",
     orCleaningDuration: dbHospital.orCleaningDuration ?? 30,
     autoHousekeeping: dbHospital.autoHousekeeping ?? true,
   };

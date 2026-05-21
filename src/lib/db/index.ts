@@ -12,7 +12,14 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Enable websocket support for Node / serverless environments
-neonConfig.webSocketConstructor = globalThis.WebSocket || require("ws");
+/* eslint-disable-next-line no-eval */
+neonConfig.webSocketConstructor = globalThis.WebSocket || (() => {
+  try {
+    return eval('require')("ws");
+  } catch {
+    return undefined;
+  }
+})();
 
 // Cache connection pool to prevent exhausting connection slots during serverless warm-starts/hot-reloads
 let pool: Pool;

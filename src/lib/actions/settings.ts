@@ -65,10 +65,15 @@ export async function updateHospitalSettings(
       autoHousekeeping,
     } = validated.data;
 
-    // Fetch active planTier from database to perform server-side business logic validation
+    // Fetch active planTier and existing settings from database
     const [dbHospital] = await db
-      .select({ planTier: hospitals.planTier })
+      .select({
+        planTier: hospitals.planTier,
+        paymobApiKey: hospitalSettings.paymobApiKey,
+        paymobHmacSecret: hospitalSettings.paymobHmacSecret,
+      })
       .from(hospitals)
+      .leftJoin(hospitalSettings, eq(hospitals.id, hospitalSettings.hospitalId))
       .where(eq(hospitals.id, hospitalId))
       .limit(1);
 
@@ -92,6 +97,21 @@ export async function updateHospitalSettings(
         success: false,
         error: `Forbidden: Current subscription plan (${tier}) does not support the following premium modules: ${violations.join(", ")}`,
       };
+    }
+
+    // Determine final values for sensitive Paymob secrets to prevent overwriting or exposure
+    let finalPaymobApiKey: string | null = null;
+    if (paymobApiKey === "••••••••") {
+      finalPaymobApiKey = dbHospital.paymobApiKey;
+    } else if (paymobApiKey) {
+      finalPaymobApiKey = encryptField(paymobApiKey);
+    }
+
+    let finalPaymobHmacSecret: string | null = null;
+    if (paymobHmacSecret === "••••••••") {
+      finalPaymobHmacSecret = dbHospital.paymobHmacSecret;
+    } else if (paymobHmacSecret) {
+      finalPaymobHmacSecret = encryptField(paymobHmacSecret);
     }
 
     // 2. Execute transactional atomic update
@@ -124,11 +144,11 @@ export async function updateHospitalSettings(
           isTelemedicineEnabled,
           isPatientPortalEnabled,
           isOnlinePaymentsEnabled,
-          paymobApiKey: paymobApiKey ? encryptField(paymobApiKey) : null,
+          paymobApiKey: finalPaymobApiKey,
           paymobCardId: paymobCardId || null,
           paymobWalletId: paymobWalletId || null,
           paymobFawryId: paymobFawryId || null,
-          paymobHmacSecret: paymobHmacSecret ? encryptField(paymobHmacSecret) : null,
+          paymobHmacSecret: finalPaymobHmacSecret,
           orCleaningDuration,
           autoHousekeeping,
           updatedAt: new Date(),
@@ -142,11 +162,11 @@ export async function updateHospitalSettings(
             isTelemedicineEnabled,
             isPatientPortalEnabled,
             isOnlinePaymentsEnabled,
-            paymobApiKey: paymobApiKey ? encryptField(paymobApiKey) : null,
+            paymobApiKey: finalPaymobApiKey,
             paymobCardId: paymobCardId || null,
             paymobWalletId: paymobWalletId || null,
             paymobFawryId: paymobFawryId || null,
-            paymobHmacSecret: paymobHmacSecret ? encryptField(paymobHmacSecret) : null,
+            paymobHmacSecret: finalPaymobHmacSecret,
             orCleaningDuration,
             autoHousekeeping,
             updatedAt: new Date(),

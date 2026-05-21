@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, decimal, time } from "drizzle-orm/pg-core";
 import { hospitals, departments, staff } from "./core";
 import { patients } from "./patients";
 import { bedStatusEnum } from "./enums";
@@ -42,8 +42,8 @@ export const appointments = pgTable("appointments", {
   doctorId: uuid("doctor_id").references(() => staff.id, { onDelete: "restrict" }).notNull(),
   departmentId: uuid("department_id").references(() => departments.id, { onDelete: "restrict" }).notNull(),
   scheduledDate: timestamp("scheduled_date").notNull(),
-  startTime: text("start_time").notNull(), // e.g. "09:30:00"
-  endTime: text("end_time").notNull(), // e.g. "10:00:00"
+  startTime: time("start_time").notNull(), // e.g. "09:30:00"
+  endTime: time("end_time").notNull(), // e.g. "10:00:00"
   type: varchar("type", { length: 50 }).notNull(), // checkup, consultation, follow_up, procedure
   status: varchar("status", { length: 50 }).default("scheduled").notNull(), // scheduled, completed, cancelled, no_show
   cancellationReason: text("cancellation_reason"),

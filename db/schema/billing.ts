@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, varchar, index, decimal, integer, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, varchar, index, decimal, integer, jsonb, boolean, unique } from "drizzle-orm/pg-core";
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 import { onlinePaymentStatusEnum } from "./enums";
@@ -22,7 +22,7 @@ export const invoices = pgTable("invoices", {
 }, (table) => {
   return {
     hospitalPatIdx: index("inv_hospital_patient_idx").on(table.hospitalId, table.patientId),
-    numberIdx: index("inv_number_idx").on(table.invoiceNumber),
+    hospitalInvoiceNumberUnique: unique("inv_hospital_number_unique").on(table.hospitalId, table.invoiceNumber),
   };
 });
 

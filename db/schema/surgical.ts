@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, varchar, index, integer, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, varchar, index, integer, jsonb, boolean, time } from "drizzle-orm/pg-core";
 import { hospitals, staff, departments, operatingRooms } from "./core";
 import { patients } from "./patients";
 import { admissions } from "./clinical";
@@ -24,7 +24,7 @@ export const surgicalCases = pgTable("surgical_cases", {
   anesthesiaType: anesthesiaTypeEnum("anesthesia_type").notNull(),
   asaClass: asaClassEnum("asa_class").notNull(),
   scheduledDate: timestamp("scheduled_date").notNull(),
-  scheduledStartTime: text("scheduled_start_time").notNull(), // e.g. "08:30:00"
+  scheduledStartTime: time("scheduled_start_time").notNull(), // e.g. "08:30:00"
   estimatedDurationMinutes: integer("estimated_duration_minutes").notNull(),
   status: surgicalCaseStatusEnum("status").default("scheduled").notNull(),
   orBlockId: uuid("or_block_id"), // block schedule link (optional)
