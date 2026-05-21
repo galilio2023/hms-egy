@@ -68,18 +68,22 @@ export function BookingWizardClient({
   const [isWeekendWarning, setIsWeekendWarning] = useState(false);
   const [queueToWaitingList, setQueueToWaitingList] = useState(false);
 
-  // Trigger patient lookup
+  // Trigger patient lookup with 300ms debounce
   useEffect(() => {
-    if (patientSearch.trim().length >= 2) {
-      startTransition(async () => {
-        const res = await searchPatientsAction(patientSearch);
-        if (res.success && "data" in res) {
-          setPatientSearchResults(res.data || []);
-        }
-      });
-    } else {
-      setPatientSearchResults([]);
-    }
+    const timeoutId = setTimeout(() => {
+      if (patientSearch.trim().length >= 2) {
+        startTransition(async () => {
+          const res = await searchPatientsAction(patientSearch);
+          if (res.success && "data" in res) {
+            setPatientSearchResults(res.data || []);
+          }
+        });
+      } else {
+        setPatientSearchResults([]);
+      }
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
   }, [patientSearch]);
 
   // Trigger slot availability lookup when doctor or date changes

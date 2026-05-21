@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { hospitals, departments, staff, operatingRooms } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
 import { eq, and, or } from "drizzle-orm";
+import { getHospitalBySlug } from "@/lib/db/cache";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { SurgicalScheduleClient } from "@/components/tables/SurgicalScheduleClient";
@@ -16,14 +17,7 @@ export async function generateMetadata({
   const { locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "navigation" });
 
-  const [hospital] = await db
-    .select({
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const hospital = await getHospitalBySlug(hospitalSlug);
 
   const hospitalName = hospital
     ? (locale === "ar" ? hospital.nameAr : hospital.nameEn)
@@ -48,15 +42,7 @@ export default async function SurgicalSchedulePage({
   }
 
   // 1. Fetch hospital tenant data
-  const [dbHospital] = await db
-    .select({
-      id: hospitals.id,
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const dbHospital = await getHospitalBySlug(hospitalSlug);
 
   if (!dbHospital) {
     notFound();

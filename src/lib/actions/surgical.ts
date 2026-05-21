@@ -11,6 +11,7 @@ import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { revalidatePath } from "next/cache";
+import { toCairoTime } from "@/lib/utils/egypt";
 
 // Helper: Formats a Date object's time to "HH:MM:SS"
 function formatTimeStr(date: Date) {
@@ -197,13 +198,16 @@ export async function createSurgicalCase(
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
-      const scheduledAt = new Date(validatedData.scheduledAt);
-      const scheduledDate = new Date(
+      // 0. Acquire row-level lock on the hospital tenant to serialize case generation
+      await tx.execute(sql`SELECT id FROM hospitals WHERE id = ${hospitalId} FOR UPDATE`);
+
+      const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
+      const scheduledDate = new Date(Date.UTC(
         scheduledAt.getFullYear(),
         scheduledAt.getMonth(),
         scheduledAt.getDate(),
         0, 0, 0, 0
-      );
+      ));
 
       const startTime = formatTimeStr(scheduledAt);
       const duration = validatedData.estimatedDuration;

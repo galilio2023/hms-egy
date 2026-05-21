@@ -2,7 +2,9 @@ import { db } from "@/lib/db";
 import { hospitals, departments, staff } from "@db/schema/core";
 import { appointments } from "@db/schema/clinical";
 import { patients } from "@db/schema/patients";
-import { eq, and, ne, or } from "drizzle-orm";
+import { eq, and, ne, or, gte, lte } from "drizzle-orm";
+import { getHospitalBySlug } from "@/lib/db/cache";
+import { toCairoTime } from "@/lib/utils/egypt";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { AppointmentSchedulerClient } from "@/components/tables/AppointmentSchedulerClient";
@@ -17,14 +19,7 @@ export async function generateMetadata({
   const { locale, hospitalSlug } = await params;
   const t = await getTranslations({ locale, namespace: "appointments" });
 
-  const [hospital] = await db
-    .select({
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const hospital = await getHospitalBySlug(hospitalSlug);
 
   const hospitalName = hospital
     ? (locale === "ar" ? hospital.nameAr : hospital.nameEn)
@@ -50,15 +45,7 @@ export default async function AppointmentsPage({
   }
 
   // 1. Fetch hospital tenant data
-  const [dbHospital] = await db
-    .select({
-      id: hospitals.id,
-      nameAr: hospitals.nameAr,
-      nameEn: hospitals.nameEn,
-    })
-    .from(hospitals)
-    .where(eq(hospitals.slug, hospitalSlug))
-    .limit(1);
+  const dbHospital = await getHospitalBySlug(hospitalSlug);
 
   if (!dbHospital) {
     notFound();
@@ -99,6 +86,12 @@ export default async function AppointmentsPage({
       )
     );
 
+  const nowCairo = toCairoTime(new Date());
+  const pastWindow = new Date(nowCairo);
+  pastWindow.setDate(pastWindow.getDate() - 30);
+  const futureWindow = new Date(nowCairo);
+  futureWindow.setDate(futureWindow.getDate() + 90);
+
   // 4. Fetch initial list of all active/scheduled/completed appointments
   const appList = await db
     .select({
@@ -126,8 +119,15 @@ export default async function AppointmentsPage({
     .innerJoin(patients, eq(appointments.patientId, patients.id))
     .innerJoin(staff, eq(appointments.doctorId, staff.id))
     .innerJoin(departments, eq(appointments.departmentId, departments.id))
-    .where(eq(appointments.hospitalId, hospitalId))
-    .orderBy(appointments.scheduledDate, appointments.startTime);
+    .where(
+      and(
+        eq(appointments.hospitalId, hospitalId),
+        gte(appointments.scheduledDate, pastWindow),
+        lte(appointments.scheduledDate, futureWindow)
+      )
+    )
+    .orderBy(appointments.scheduledDate, appointments.startTime)
+    .limit(500);
 
   return (
     <div className="min-h-screen bg-gray-50/10 py-8 px-4 sm:px-6 lg:px-8">

@@ -11,6 +11,7 @@ import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { revalidatePath } from "next/cache";
+import { toCairoTime } from "@/lib/utils/egypt";
 
 // Helper: Formats a Date object's time to "HH:MM:SS"
 function formatTimeStr(date: Date) {
@@ -59,15 +60,15 @@ export async function createAppointment(data: AppointmentSchema) {
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
-      const scheduledAt = new Date(validatedData.scheduledAt);
+      const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
       
-      // Normalize date to midnight (Y-M-D) to support clean index matching
-      const scheduledDate = new Date(
+      // Normalize date to UTC midnight (Y-M-D) to support clean index matching without off-by-one errors
+      const scheduledDate = new Date(Date.UTC(
         scheduledAt.getFullYear(),
         scheduledAt.getMonth(),
         scheduledAt.getDate(),
         0, 0, 0, 0
-      );
+      ));
 
       const startTime = formatTimeStr(scheduledAt);
       
@@ -232,13 +233,13 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
     return { success: false, error: "Hospital context missing" };
   }
 
-  const targetDate = new Date(date);
-  const normalizedDate = new Date(
+  const targetDate = toCairoTime(new Date(date));
+  const normalizedDate = new Date(Date.UTC(
     targetDate.getFullYear(),
     targetDate.getMonth(),
     targetDate.getDate(),
     0, 0, 0, 0
-  );
+  ));
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {

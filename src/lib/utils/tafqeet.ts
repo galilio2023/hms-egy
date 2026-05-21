@@ -83,10 +83,28 @@ export function tafqeet(num: number): string {
       const remainder = n % 1000;
       return remainder === 0 ? `${ones[thousand]} آلاف` : `${ones[thousand]} آلاف و${convert(remainder)}`;
     }
-    // Up to 999,999
-    const thousand = Math.floor(n / 1000);
-    const remainder = n % 1000;
-    return remainder === 0 ? `${convert(thousand)} ألف` : `${convert(thousand)} ألف و${convert(remainder)}`;
+    if (n < 1000000) {
+      const thousand = Math.floor(n / 1000);
+      const remainder = n % 1000;
+      return remainder === 0 ? `${convert(thousand)} ألف` : `${convert(thousand)} ألف و${convert(remainder)}`;
+    }
+    if (n < 2000000) {
+      const remainder = n % 1000000;
+      return remainder === 0 ? "مليون" : `مليون و${convert(remainder)}`;
+    }
+    if (n < 3000000) {
+      const remainder = n % 1000000;
+      return remainder === 0 ? "مليونان" : `مليونان و${convert(remainder)}`;
+    }
+    if (n < 11000000) {
+      const million = Math.floor(n / 1000000);
+      const remainder = n % 1000000;
+      return remainder === 0 ? `${ones[million]} ملايين` : `${ones[million]} ملايين و${convert(remainder)}`;
+    }
+    // Up to 999,999,999
+    const million = Math.floor(n / 1000000);
+    const remainder = n % 1000000;
+    return remainder === 0 ? `${convert(million)} مليون` : `${convert(million)} مليون و${convert(remainder)}`;
   }
 
   const text = convert(num);

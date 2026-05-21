@@ -31,22 +31,22 @@ export async function GET(req: NextRequest) {
     const nowCairo = toCairoTime(new Date());
     
     // Normalize today and tomorrow midnight to match scheduledDate normalized pattern
-    const todayMidnight = new Date(
+    const todayMidnight = new Date(Date.UTC(
       nowCairo.getFullYear(),
       nowCairo.getMonth(),
       nowCairo.getDate(),
       0, 0, 0, 0
-    );
+    ));
     
     const tomorrowCairo = new Date(nowCairo);
     tomorrowCairo.setDate(tomorrowCairo.getDate() + 1);
     
-    const tomorrowMidnight = new Date(
+    const tomorrowMidnight = new Date(Date.UTC(
       tomorrowCairo.getFullYear(),
       tomorrowCairo.getMonth(),
       tomorrowCairo.getDate(),
       0, 0, 0, 0
-    );
+    ));
 
     console.log(`- Current Cairo Time: ${nowCairo.toISOString()}`);
     console.log(`- Today Midnight: ${todayMidnight.toISOString()}`);
@@ -158,11 +158,15 @@ export async function GET(req: NextRequest) {
           if (mapped) {
             const { type, app } = mapped;
             if (type === "24h_reminder") {
+              const msg = `تذكير: موعدكم غداً في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر. لخدمتكم.`;
               console.log(`[24h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
-              console.log(`Message: تذكير: موعدكم غداً في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر. لخدمتكم.`);
+              console.log(`Message: ${msg}`);
+              // STUB: await sendEgyptianSms(app.patientPhone, msg, "VictoryLink");
             } else {
+              const msg = `تذكير عاجل: موعدكم اليوم خلال ساعتين في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر.`;
               console.log(`[2h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
-              console.log(`Message: تذكير عاجل: موعدكم اليوم خلال ساعتين في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر.`);
+              console.log(`Message: ${msg}`);
+              // STUB: await sendEgyptianSms(app.patientPhone, msg, "CEQUENS");
             }
           }
         }
