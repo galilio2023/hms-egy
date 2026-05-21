@@ -9,5 +9,37 @@
     "logout": "Logout",
     "email": "Email",
     "password": "Password"
+  },
+  "onboarding": {
+    "title": "Hospital Information",
+    "nameAr": "Arabic Name",
+    "nameEn": "English Name",
+    "slug": "URL Slug",
+    "contactEmail": "Contact Email",
+    "contactPhone": "Phone",
+    "address": "Address",
+    "governorate": "Governorate",
+    "type": "Hospital Type",
+    "modulesTitle": "Enabled Modules",
+    "adminTitle": "Admin Account",
+    "adminName": "Admin Full Name",
+    "adminEmail": "Admin Email",
+    "adminPassword": "Admin Password",
+    "submit": "Complete Setup",
+    "processing": "Processing...",
+    "placeholders": {
+      "nameAr": "مستشفى الأمل",
+      "nameEn": "Al-Amal Hospital",
+      "slug": "al-amal-hosp",
+      "phone": "01xxxxxxxxx",
+      "address": "123 Nile St, Cairo, Egypt",
+      "selectGov": "Select Governorate"
+    },
+    "types": {
+      "private": "Private",
+      "government": "Government",
+      "military": "Military",
+      "ngo": "NGO"
+    }
   }
 }

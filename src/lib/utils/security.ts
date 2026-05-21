@@ -5,18 +5,31 @@
 
 import crypto from "crypto";
 
-const rawKey = process.env.ENCRYPTION_KEY;
-if (!rawKey || rawKey.length !== 64) {
-  throw new Error(
-    "CRITICAL: ENCRYPTION_KEY must be configured as a 64-character hex string (32 bytes) in environment variables."
-  );
+let keyBuffer: Buffer | null = null;
+let hmacSecret: string | null = null;
+
+function getKeyBuffer(): Buffer {
+  if (!keyBuffer) {
+    const rawKey = process.env.ENCRYPTION_KEY;
+    if (!rawKey || rawKey.length !== 64) {
+      throw new Error(
+        "CRITICAL: ENCRYPTION_KEY must be configured as a 64-character hex string (32 bytes) in environment variables."
+      );
+    }
+    keyBuffer = Buffer.from(rawKey, "hex");
+  }
+  return keyBuffer;
 }
 
-const KEY_BUFFER = Buffer.from(rawKey, "hex");
-
-const AUDIT_HMAC_SECRET = process.env.AUDIT_HMAC_SECRET;
-if (!AUDIT_HMAC_SECRET) {
-  throw new Error("CRITICAL: AUDIT_HMAC_SECRET must be configured in environment variables.");
+function getHmacSecret(): string {
+  if (!hmacSecret) {
+    const secret = process.env.AUDIT_HMAC_SECRET;
+    if (!secret) {
+      throw new Error("CRITICAL: AUDIT_HMAC_SECRET must be configured in environment variables.");
+    }
+    hmacSecret = secret;
+  }
+  return hmacSecret;
 }
 
 /**
@@ -24,7 +37,7 @@ if (!AUDIT_HMAC_SECRET) {
  */
 export function encryptField(text: string): string {
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", KEY_BUFFER, iv);
+  const cipher = crypto.createCipheriv("aes-256-gcm", getKeyBuffer(), iv);
   const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return Buffer.concat([iv, tag, encrypted]).toString("base64");
@@ -41,7 +54,7 @@ export function decryptField(data: string): string | null {
     const iv = buffer.subarray(0, 12);
     const tag = buffer.subarray(12, 28);
     const encrypted = buffer.subarray(28);
-    const decipher = crypto.createDecipheriv("aes-256-gcm", KEY_BUFFER, iv);
+    const decipher = crypto.createDecipheriv("aes-256-gcm", getKeyBuffer(), iv);
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
   } catch (error) {
@@ -55,7 +68,7 @@ export function decryptField(data: string): string | null {
  */
 export function signAuditRecord(record: Record<string, unknown>): string {
   const data = JSON.stringify(record);
-  return crypto.createHmac("sha256", AUDIT_HMAC_SECRET as string).update(data).digest("hex");
+  return crypto.createHmac("sha256", getHmacSecret()).update(data).digest("hex");
 }
 
 /**

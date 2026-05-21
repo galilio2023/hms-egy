@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { hospitalOnboardingSchema, type HospitalOnboarding } from "@/lib/validations/hospital.schema";
 import { setupHospital } from "@/lib/actions/onboarding";
 import { useRouter } from "@/i18n/routing";
 import { GOVERNORATES } from "@/lib/utils/egypt";
 
 export function HospitalOnboardingForm() {
+  const t = useTranslations("onboarding");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -49,43 +51,43 @@ export function HospitalOnboardingForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-2xl mx-auto p-8 bg-white rounded-xl shadow-lg border border-gray-100">
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-blue-900 border-b pb-2">Hospital Information / معلومات المستشفى</h2>
+        <h2 className="text-2xl font-bold text-blue-900 border-b pb-2">{t("title")}</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Arabic Name / الاسم بالعربية</label>
+            <label className="block text-sm font-medium text-gray-700">{t("nameAr")}</label>
             <input
               {...register("nameAr")}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
-              placeholder="مستشفى الأمل"
+              placeholder={t("placeholders.nameAr")}
             />
             {errors.nameAr && <p className="text-red-500 text-xs">{errors.nameAr.message}</p>}
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">English Name / الاسم بالإنجليزية</label>
+            <label className="block text-sm font-medium text-gray-700">{t("nameEn")}</label>
             <input
               {...register("nameEn")}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
-              placeholder="Al-Amal Hospital"
+              placeholder={t("placeholders.nameEn")}
             />
             {errors.nameEn && <p className="text-red-500 text-xs">{errors.nameEn.message}</p>}
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">URL Slug / الرابط التعريفي</label>
+          <label className="block text-sm font-medium text-gray-700">{t("slug")}</label>
           <input
             {...register("slug")}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
-            placeholder="al-amal-hosp"
+            placeholder={t("placeholders.slug")}
           />
           {errors.slug && <p className="text-red-500 text-xs">{errors.slug.message}</p>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Contact Email / البريد للتواصل</label>
+            <label className="block text-sm font-medium text-gray-700">{t("contactEmail")}</label>
             <input
               {...register("contactEmail")}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
@@ -93,34 +95,34 @@ export function HospitalOnboardingForm() {
             {errors.contactEmail && <p className="text-red-500 text-xs">{errors.contactEmail.message}</p>}
           </div>
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Phone / رقم الهاتف</label>
+            <label className="block text-sm font-medium text-gray-700">{t("contactPhone")}</label>
             <input
               {...register("contactPhone")}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
-              placeholder="01xxxxxxxxx"
+              placeholder={t("placeholders.phone")}
             />
             {errors.contactPhone && <p className="text-red-500 text-xs">{errors.contactPhone.message}</p>}
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-gray-700">Address / العنوان</label>
+          <label className="block text-sm font-medium text-gray-700">{t("address")}</label>
           <input
             {...register("address")}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
-            placeholder="123 Nile St, Cairo, Egypt"
+            placeholder={t("placeholders.address")}
           />
           {errors.address && <p className="text-red-500 text-xs">{errors.address.message}</p>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Governorate / المحافظة</label>
+            <label className="block text-sm font-medium text-gray-700">{t("governorate")}</label>
             <select
               {...register("governorate")}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
             >
-              <option value="">Select Governorate</option>
+              <option value="">{t("placeholders.selectGov")}</option>
               {Object.values(GOVERNORATES).map((gov) => (
                 <option key={gov.code} value={gov.code}>
                   {gov.en} ({gov.ar})
@@ -131,15 +133,16 @@ export function HospitalOnboardingForm() {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Hospital Type / نوع المستشفى</label>
+            <label className="block text-sm font-medium text-gray-700">{t("type")}</label>
             <select
               {...register("type")}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
             >
-              <option value="private">Private (خاص)</option>
-              <option value="government">Government (حكومي)</option>
-              <option value="military">Military (عسكري)</option>
-              <option value="ngo">NGO (جمعية خيرية)</option>
+              {(["private", "government", "military", "ngo"] as const).map((type) => (
+                <option key={type} value={type}>
+                  {t(`types.${type}`)}
+                </option>
+              ))}
             </select>
             {errors.type && <p className="text-red-500 text-xs">{errors.type.message}</p>}
           </div>
@@ -147,7 +150,7 @@ export function HospitalOnboardingForm() {
       </div>
 
       <div className="space-y-4 pt-4 border-t">
-        <h2 className="text-2xl font-bold text-blue-900 border-b pb-2">Enabled Modules / تفعيل الوحدات</h2>
+        <h2 className="text-2xl font-bold text-blue-900 border-b pb-2">{t("modulesTitle")}</h2>
         <div className="grid grid-cols-2 gap-4">
           {["surgical", "telemedicine", "portal", "payments"].map((module) => (
             <label key={module} className="flex items-center gap-3 p-4 border rounded-xl hover:bg-gray-50 cursor-pointer transition">
@@ -163,28 +166,34 @@ export function HospitalOnboardingForm() {
       </div>
 
       <div className="space-y-4 pt-4 border-t">
-        <h2 className="text-2xl font-bold text-blue-900 border-b pb-2">Admin Account / حساب المسؤول</h2>
+        <h2 className="text-2xl font-bold text-blue-900 border-b pb-2">{t("adminTitle")}</h2>
         <div className="space-y-3">
-          <input
-            {...register("adminName")}
-            placeholder="Admin Full Name"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
-          />
-          {errors.adminName && <p className="text-red-500 text-xs">{errors.adminName.message}</p>}
-          <input
-            {...register("adminEmail")}
-            type="email"
-            placeholder="Admin Email"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
-          />
-          {errors.adminEmail && <p className="text-red-500 text-xs">{errors.adminEmail.message}</p>}
-          <input
-            {...register("adminPassword")}
-            type="password"
-            placeholder="Admin Password"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
-          />
-          {errors.adminPassword && <p className="text-red-500 text-xs">{errors.adminPassword.message}</p>}
+          <div className="space-y-1">
+            <input
+              {...register("adminName")}
+              placeholder={t("adminName")}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
+            />
+            {errors.adminName && <p className="text-red-500 text-xs">{errors.adminName.message}</p>}
+          </div>
+          <div className="space-y-1">
+            <input
+              {...register("adminEmail")}
+              type="email"
+              placeholder={t("adminEmail")}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
+            />
+            {errors.adminEmail && <p className="text-red-500 text-xs">{errors.adminEmail.message}</p>}
+          </div>
+          <div className="space-y-1">
+            <input
+              {...register("adminPassword")}
+              type="password"
+              placeholder={t("adminPassword")}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-start"
+            />
+            {errors.adminPassword && <p className="text-red-500 text-xs">{errors.adminPassword.message}</p>}
+          </div>
         </div>
       </div>
 
@@ -195,7 +204,7 @@ export function HospitalOnboardingForm() {
         disabled={isSubmitting}
         className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition shadow-lg shadow-blue-200"
       >
-        {isSubmitting ? "Processing..." : "Complete Setup / إتمام الإعداد"}
+        {isSubmitting ? t("processing") : t("submit")}
       </button>
     </form>
   );

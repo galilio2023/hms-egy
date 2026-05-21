@@ -47,11 +47,7 @@ export const patientSchema = z.object({
     }
     // Validate Date of Birth Match (strictly UTC comparison to prevent timezone shift bugs)
     const parsedDobStr = parsed.dob.toISOString().split("T")[0];
-    const inputDobStr = new Date(Date.UTC(
-      data.dob.getFullYear(), 
-      data.dob.getMonth(), 
-      data.dob.getDate()
-    )).toISOString().split("T")[0];
+    const inputDobStr = data.dob.toISOString().split("T")[0];
 
     if (parsedDobStr !== inputDobStr) {
       ctx.addIssue({

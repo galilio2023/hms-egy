@@ -104,7 +104,9 @@ import Tafgeet from "tafgeetjs";
  */
 export function amountToArabicWords(amount: number): string {
   try {
-    const tafgeet = new Tafgeet(amount, "EGP");
+    // Round to 2 decimal places to prevent floating point issues (e.g. 150.700000002)
+    const roundedAmount = Math.round(amount * 100) / 100;
+    const tafgeet = new Tafgeet(roundedAmount, "EGP");
     return tafgeet.convert();
   } catch (error) {
     console.error("Tafgeet conversion failed", error);
