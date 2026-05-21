@@ -719,7 +719,7 @@ export function AppointmentSchedulerClient({
                   type="date"
                   value={scheduleDate}
                   min={(() => {
-                    const tzDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
+                    const tzDate = toZonedTime(new Date(), "Africa/Cairo");
                     const yyyy = tzDate.getFullYear();
                     const mm = String(tzDate.getMonth() + 1).padStart(2, "0");
                     const dd = String(tzDate.getDate()).padStart(2, "0");

@@ -296,30 +296,37 @@ export async function createSurgicalCase(
         }
       }
 
-      // 2.5 Check overlaps for Surgeon/Anesthesiologist across all rooms
-      const staffConditions = [eq(surgicalCases.leadSurgeonId, validatedData.leadSurgeonId)];
-      if (validatedData.anesthesiologistId) {
-        staffConditions.push(eq(surgicalCases.anesthesiologistId, validatedData.anesthesiologistId));
-      }
-
-      const staffOverlap = await innerTx
+      // 2.5 Check overlaps for any involved staff member across all rooms
+      const dayCases = await innerTx
         .select()
         .from(surgicalCases)
         .where(
           and(
             eq(surgicalCases.hospitalId, hospitalId),
-            or(...staffConditions),
             eq(surgicalCases.scheduledDate, scheduledDate),
             ne(surgicalCases.status, "cancelled")
           )
         );
 
-      for (const sc of staffOverlap) {
-        if (doTimesOverlap(startTime, endTime, sc.scheduledStartTime, addMinutesToTimeStr(sc.scheduledStartTime, sc.estimatedDurationMinutes))) {
-          throw new AppError(
-            ErrorCode.VALIDATION_ERROR,
-            "عذراً، الجراح الرئيسي أو طبيب التخدير لديه عملية أخرى مجدولة في هذا الوقت في غرفة مختلفة."
-          );
+      for (const sc of dayCases) {
+        // Collect all staff involved in this scheduled case
+        const scStaff = new Set<string>();
+        if (sc.leadSurgeonId) scStaff.add(sc.leadSurgeonId);
+        if (sc.anesthesiologistId) scStaff.add(sc.anesthesiologistId);
+        if (sc.assistantSurgeonIds && Array.isArray(sc.assistantSurgeonIds)) {
+          sc.assistantSurgeonIds.forEach(id => scStaff.add(id));
+        }
+
+        // Check if there is any intersection with the new case's involved staff
+        const hasStaffOverlap = uniqueStaffIds.some(id => scStaff.has(id));
+
+        if (hasStaffOverlap) {
+          if (doTimesOverlap(startTime, endTime, sc.scheduledStartTime, addMinutesToTimeStr(sc.scheduledStartTime, sc.estimatedDurationMinutes))) {
+            throw new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              "عذراً، أحد أفراد الطاقم الطبي المختار (الجراح الرئيسي، المساعد، أو طبيب التخدير) لديه عملية أخرى متداخلة مجدولة في هذا الوقت."
+            );
+          }
         }
       }
 

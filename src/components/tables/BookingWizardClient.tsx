@@ -24,6 +24,7 @@ import {
   CalendarCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toZonedTime } from "date-fns-tz";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { createAppointment, addToWaitingList, getDoctorAvailability } from "@/lib/actions/appointments";
 
@@ -423,7 +424,7 @@ export function BookingWizardClient({
                 type="date"
                 value={selectedDate}
                 min={(() => {
-                  const tzDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
+                  const tzDate = toZonedTime(new Date(), "Africa/Cairo");
                   const yyyy = tzDate.getFullYear();
                   const mm = String(tzDate.getMonth() + 1).padStart(2, "0");
                   const dd = String(tzDate.getDate()).padStart(2, "0");

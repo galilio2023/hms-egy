@@ -147,5 +147,13 @@ export function tafqeet(rawNum: number): string {
     currencySuffix = "جنيهاً مصرياً";
   }
 
-  return `${text} ${currencySuffix} فقط لا غير`;
+  let finalResult = `${text} ${currencySuffix} فقط لا غير`;
+
+  // Apply Arabic duality mudhaf rules (dropping terminal 'ن' before counted nouns)
+  finalResult = finalResult
+    .replace(/\bألفان\s+(جنيه|ألف|مليون)/g, (match, p1) => `ألفا ${p1}`)
+    .replace(/\bمليونان\s+(جنيه|ألف|مليون)/g, (match, p1) => `مليونا ${p1}`)
+    .replace(/\bمائتان\s+(جنيه|ألف|مليون)/g, (match, p1) => `مائتا ${p1}`);
+
+  return finalResult;
 }

@@ -38,6 +38,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toZonedTime } from "date-fns-tz";
 import { getOrSchedule, createSurgicalCase } from "@/lib/actions/surgical";
 import { searchPatientsAction } from "@/lib/actions/patients";
 
@@ -62,7 +63,7 @@ export function SurgicalScheduleClient({
 
   // Selected daily timeline date
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    const tzDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
+    const tzDate = toZonedTime(new Date(), "Africa/Cairo");
     const yyyy = tzDate.getFullYear();
     const mm = String(tzDate.getMonth() + 1).padStart(2, "0");
     const dd = String(tzDate.getDate()).padStart(2, "0");

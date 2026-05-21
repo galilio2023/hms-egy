@@ -108,7 +108,7 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
         }
       }
 
-      // 2. Prevent patient double booking inside the same clinic/department on the same day
+      // 2. Prevent patient double booking inside the same clinic/department with overlapping time slots on the same day
       const patientSchedules = await innerTx
         .select()
         .from(appointments)
@@ -120,14 +120,15 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
             eq(appointments.scheduledDate, scheduledDate),
             ne(appointments.status, "cancelled")
           )
-        )
-        .limit(1);
-
-      if (patientSchedules.length > 0) {
-        throw new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          "المريض لديه بالفعل حجز موعد مسجل في هذا القسم لنفس اليوم."
         );
+
+      for (const app of patientSchedules) {
+        if (doTimesOverlap(startTime, endTime, app.startTime, app.endTime)) {
+          throw new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            "المريض لديه بالفعل حجز موعد مسجل في هذا القسم يتداخل مع هذا الوقت."
+          );
+        }
       }
 
       // 3. Insert new appointment
