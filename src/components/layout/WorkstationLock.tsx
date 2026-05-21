@@ -132,7 +132,7 @@ export default function WorkstationLock() {
                 {isRtl ? "أدخل كلمة المرور لإلغاء القفل" : "Enter Password to Unlock"}
               </label>
               <div className="relative">
-                <span className={`absolute inset-y-0 ${isRtl ? "right-4" : "left-4"} flex items-center text-slate-500`}>
+                <span className="absolute inset-y-0 start-4 flex items-center text-slate-500">
                   <KeyRound size={16} />
                 </span>
                 <input
@@ -141,7 +141,7 @@ export default function WorkstationLock() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  className={`w-full py-3.5 ${isRtl ? "pr-11 pl-4" : "pl-11 pr-4"} bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800 focus:border-rose-500/60 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-rose-500/50 text-sm font-sans`}
+                  className="w-full py-3.5 ps-11 pe-4 bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800 focus:border-rose-500/60 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-rose-500/50 text-sm font-sans"
                 />
               </div>
             </div>
