@@ -2,14 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { queryCptLocally } from "@/lib/utils/clinical-search-engine";
 import { searchLimiter } from "@/lib/utils/ratelimit";
 
-interface RequestWithIp extends NextRequest {
-  ip?: string;
-}
-
 export async function GET(request: NextRequest) {
   // Rate limiting (IP-based)
   if (searchLimiter) {
-    const ip = (request as RequestWithIp).ip ?? request.headers.get("x-real-ip") ?? "127.0.0.1";
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "127.0.0.1";
     const { success } = await searchLimiter.limit(ip);
     if (!success) {
       return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });

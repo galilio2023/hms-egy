@@ -67,8 +67,9 @@ export function decryptField(data: string): string | null {
  * Signs an audit record using HMAC-SHA256.
  */
 export function signAuditRecord(record: Record<string, unknown>): string {
-  const data = JSON.stringify(record);
-  return crypto.createHmac("sha256", getHmacSecret()).update(data).digest("hex");
+  // Sort keys to ensure deterministic JSON representation across environments.
+  const canonicalString = JSON.stringify(record, Object.keys(record).sort());
+  return crypto.createHmac("sha256", getHmacSecret()).update(canonicalString).digest("hex");
 }
 
 /**

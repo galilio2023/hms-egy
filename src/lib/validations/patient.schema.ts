@@ -46,11 +46,14 @@ export const patientSchema = z.object({
         path: ["gender"],
       });
     }
-    // Validate Date of Birth Match (strictly timezone-neutral UTC comparisons usingzoned input date)
+    // Validate Date of Birth Match
+    // parsed.dob is constructed via Date.UTC (UTC midnight), so we use getUTC* getters.
+    // data.dob is coerced from client input and may carry a timezone offset, so we
+    // project it to Cairo wall-clock time via toZonedTime and read local getters.
     const zonedInput = toZonedTime(data.dob, "Africa/Cairo");
-    const isYearMatch = parsed.dob.getUTCFullYear() === zonedInput.getUTCFullYear();
-    const isMonthMatch = parsed.dob.getUTCMonth() === zonedInput.getUTCMonth();
-    const isDayMatch = parsed.dob.getUTCDate() === zonedInput.getUTCDate();
+    const isYearMatch = parsed.dob.getUTCFullYear() === zonedInput.getFullYear();
+    const isMonthMatch = parsed.dob.getUTCMonth() === zonedInput.getMonth();
+    const isDayMatch = parsed.dob.getUTCDate() === zonedInput.getDate();
 
     if (!isYearMatch || !isMonthMatch || !isDayMatch) {
       ctx.addIssue({
