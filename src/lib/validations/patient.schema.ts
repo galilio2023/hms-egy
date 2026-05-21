@@ -21,6 +21,7 @@ export const patientSchema = z.object({
   }),
   phone: egyptianPhoneSchema,
   email: z.string().email().optional().or(z.literal("")),
+  address: z.string().min(5, "Address must be at least 5 characters"),
   bloodType: z.string().optional(),
   insuranceProviderId: z.string().optional(),
   insuranceNumber: z.string().optional(),
