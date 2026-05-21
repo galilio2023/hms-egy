@@ -75,6 +75,10 @@ export function signAuditRecord(record: Record<string, unknown>): string {
  * Verifies an audit record signature.
  */
 export function verifyAuditRecord(record: Record<string, unknown>, signature: string): boolean {
+  if (!/^[0-9a-fA-F]+$/.test(signature)) {
+    return false;
+  }
+
   const expectedSignature = signAuditRecord(record);
   
   // Use 'hex' encoding explicitly since HMAC digest is in hex

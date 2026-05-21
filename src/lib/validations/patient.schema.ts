@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatInTimeZone } from "date-fns-tz";
 import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId } from "../utils/egypt";
 
 const egyptianPhoneSchema = z
@@ -24,7 +25,7 @@ export const patientSchema = z.object({
   insuranceNumber: z.string().optional(),
   guardianName: z.string().optional(),
   guardianNid: z.string().optional(),
-  guardianPhone: egyptianPhoneSchema.optional(),
+  guardianPhone: egyptianPhoneSchema.optional().or(z.literal("")),
 }).refine((data) => {
   if (data.insuranceProviderId === "uhis") {
     const provider = EGYPTIAN_INSURANCE_PROVIDERS.find(p => p.id === "uhis");
@@ -45,9 +46,9 @@ export const patientSchema = z.object({
         path: ["gender"],
       });
     }
-    // Validate Date of Birth Match (strictly UTC comparison to prevent timezone shift bugs)
-    const parsedDobStr = parsed.dob.toISOString().split("T")[0];
-    const inputDobStr = data.dob.toISOString().split("T")[0];
+    // Validate Date of Birth Match (strictly timezone-safe comparison)
+    const parsedDobStr = formatInTimeZone(parsed.dob, "Africa/Cairo", "yyyy-MM-dd");
+    const inputDobStr = formatInTimeZone(data.dob, "Africa/Cairo", "yyyy-MM-dd");
 
     if (parsedDobStr !== inputDobStr) {
       ctx.addIssue({

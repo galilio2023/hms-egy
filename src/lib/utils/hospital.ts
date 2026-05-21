@@ -7,11 +7,13 @@
  * In production: hospital-slug.hms-egypt.com -> hospital-slug
  * In development: localhost:3000/slug -> handled via path or header
  */
+const RESERVED_SUBDOMAINS = ["www", "api", "admin", "dev", "app", "portal"];
+
 export function getHospitalSlug(hostname: string): string | null {
   const parts = hostname.split(".");
   
   // Production: [slug].hms-egypt.com
-  if (parts.length >= 3) {
+  if (parts.length >= 3 && !RESERVED_SUBDOMAINS.includes(parts[0].toLowerCase())) {
     return parts[0];
   }
 

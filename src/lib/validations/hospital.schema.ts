@@ -5,7 +5,7 @@ const EGYPT_PHONE_REGEX = /^(?:\+20|0020)?(?:0?(?:1[0125]\d{8}|[2-9]\d{7,8})|1[5
 export const hospitalOnboardingSchema = z.object({
   nameAr: z.string().min(3, "Hospital name in Arabic is required"),
   nameEn: z.string().min(3, "Hospital name in English is required"),
-  slug: z.string().min(3).regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
+  slug: z.string().min(3).max(100, "Slug cannot exceed 100 characters").regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
   contactEmail: z.string().email(),
   contactPhone: z.string().refine((val) => EGYPT_PHONE_REGEX.test(val.replace(/\s+/g, "")), {
     message: "Invalid Egyptian phone number (mobile, landline, or hotline)",
