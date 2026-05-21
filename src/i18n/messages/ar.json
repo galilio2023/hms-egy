@@ -1,0 +1,45 @@
+{
+  "common": {
+    "title": "HMS مصر",
+    "welcome": "مرحباً بك في نظام إدارة المستشفى",
+    "hospitalName": "مستشفى مصر التخصصي"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور"
+  },
+  "onboarding": {
+    "title": "معلومات المستشفى",
+    "nameAr": "الاسم بالعربية",
+    "nameEn": "الاسم بالإنجليزية",
+    "slug": "الرابط التعريفي",
+    "contactEmail": "البريد للتواصل",
+    "contactPhone": "رقم الهاتف",
+    "address": "العنوان",
+    "governorate": "المحافظة",
+    "type": "نوع المستشفى",
+    "modulesTitle": "تفعيل الوحدات",
+    "adminTitle": "حساب المسؤول",
+    "adminName": "الاسم الكامل للمسؤول",
+    "adminEmail": "البريد الإلكتروني للمسؤول",
+    "adminPassword": "كلمة المرور للمسؤول",
+    "submit": "إتمام الإعداد",
+    "processing": "جاري الإعداد...",
+    "placeholders": {
+      "nameAr": "مستشفى الأمل",
+      "nameEn": "Al-Amal Hospital",
+      "slug": "al-amal-hosp",
+      "phone": "01xxxxxxxxx",
+      "address": "١٢٣ شارع النيل، القاهرة، مصر",
+      "selectGov": "اختر المحافظة"
+    },
+    "types": {
+      "private": "خاص",
+      "government": "حكومي",
+      "military": "عسكري",
+      "ngo": "جمعية خيرية"
+    }
+  }
+}
