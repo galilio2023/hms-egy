@@ -59,3 +59,9 @@ export const PLAN_CONFIGS: Record<PlanTier, PlanConfig> = {
     },
   },
 };
+
+export const PLAN_PRICING: Record<PlanTier, number> = {
+  starter: 2500,
+  professional: 7500,
+  enterprise: 25000,
+};

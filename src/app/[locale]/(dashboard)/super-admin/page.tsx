@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import SuperAdminDashboardClient from "@/components/layout/SuperAdminDashboardClient";
 import { amountToArabicWords } from "@/lib/utils/formatting";
-import { type PlanTier } from "@/types/plans.types";
+import { type PlanTier, PLAN_PRICING } from "@/types/plans.types";
 import { auth } from "@/lib/auth";
 
 export async function generateMetadata({
@@ -58,21 +58,15 @@ export default async function SuperAdminPage({
     .from(hospitals)
     .leftJoin(hospitalSettings, eq(hospitals.id, hospitalSettings.hospitalId));
 
-  // Compute stats on the server for MRR dynamic Tafgeet words
-  const PRICING: Record<PlanTier, number> = {
-    starter: 2500,
-    professional: 7500,
-    enterprise: 25000,
-  };
-
+  // Compute stats on the server for MRR dynamic Tafgeet words using global PLAN_PRICING
   const calculatedMRR = dbHospitals
     .filter((h) => h.isActive)
     .reduce((sum, h) => {
       const tier = h.planTier as PlanTier;
-      const price = PRICING[tier];
+      const price = PLAN_PRICING[tier];
       if (price === undefined) {
         console.error(
-          `[SUPER_ADMIN] WARNING: Plan tier "${h.planTier}" for hospital "${h.nameEn}" (ID: ${h.id}) has no pricing configuration defined in PRICING map.`
+          `[SUPER_ADMIN] WARNING: Plan tier "${h.planTier}" for hospital "${h.nameEn}" (ID: ${h.id}) has no pricing configuration defined in PLAN_PRICING map.`
         );
       }
       return sum + (price || 0);

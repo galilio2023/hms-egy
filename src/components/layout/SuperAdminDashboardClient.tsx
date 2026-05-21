@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toggleHospitalActive, updateHospitalTier } from "@/lib/actions/super-admin";
-import { type PlanTier } from "@/types/plans.types";
+import { type PlanTier, PLAN_PRICING } from "@/types/plans.types";
 import { 
   Building2, 
   ShieldCheck, 
@@ -85,16 +85,9 @@ export default function SuperAdminDashboardClient({
     { starter: 0, professional: 0, enterprise: 0 }
   );
 
-  // Constants for pricing
-  const PRICING = {
-    starter: 2500,
-    professional: 7500,
-    enterprise: 25000,
-  };
-
   const calculatedMRR = hospitalsList
     .filter((h) => h.isActive)
-    .reduce((sum, h) => sum + (PRICING[h.planTier] || 0), 0);
+    .reduce((sum, h) => sum + (PLAN_PRICING[h.planTier] || 0), 0);
 
   // Filters logic
   const filteredHospitals = hospitalsList.filter((hospital) => {

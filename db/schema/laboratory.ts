@@ -1,0 +1,74 @@
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, decimal } from "drizzle-orm/pg-core";
+import { hospitals, staff } from "./core";
+import { patients } from "./patients";
+import { admissions } from "./clinical";
+
+export const labTests = pgTable("lab_tests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  nameAr: text("name_ar").notNull(),
+  nameEn: text("name_en").notNull(),
+  loincCode: varchar("loinc_code", { length: 50 }),
+  cptCode: varchar("cpt_code", { length: 50 }),
+  normalRange: text("normal_range"),
+  unit: varchar("unit", { length: 50 }),
+  price: decimal("price", { precision: 12, scale: 2 }).notNull(), // standard price in EGP
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    hospitalTestIdx: index("lab_hospital_name_idx").on(table.hospitalId, table.nameEn),
+    loincIdx: index("lab_loinc_idx").on(table.loincCode),
+  };
+});
+
+export const labOrders = pgTable("lab_orders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull(),
+  patientId: uuid("patient_id").references(() => patients.id, { onDelete: "restrict" }).notNull(),
+  doctorId: uuid("doctor_id").references(() => staff.id, { onDelete: "restrict" }).notNull(),
+  admissionId: uuid("admission_id").references(() => admissions.id, { onDelete: "set null" }),
+  priority: varchar("priority", { length: 50 }).default("routine").notNull(), // routine, urgent, stat
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, collected, processing, completed, cancelled
+  clinicalNotes: text("clinical_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    hospitalPatIdx: index("labo_hospital_patient_idx").on(table.hospitalId, table.patientId),
+  };
+});
+
+export const labOrderItems = pgTable("lab_order_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  labOrderId: uuid("lab_order_id").references(() => labOrders.id, { onDelete: "cascade" }).notNull(),
+  labTestId: uuid("lab_test_id").references(() => labTests.id, { onDelete: "restrict" }).notNull(),
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, collected, completed
+  resultValue: text("result_value"),
+  isCritical: boolean("is_critical").default(false).notNull(),
+  resultRecordedBy: uuid("result_recorded_by").references(() => staff.id, { onDelete: "set null" }),
+  resultRecordedAt: timestamp("result_recorded_at"),
+  notes: text("notes"),
+}, (table) => {
+  return {
+    labOrderIdIdx: index("laboi_order_idx").on(table.labOrderId),
+  };
+});
+
+export const criticalValueAlerts = pgTable("critical_value_alerts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  labOrderItemId: uuid("lab_order_item_id").references(() => labOrderItems.id, { onDelete: "cascade" }).notNull(),
+  patientId: uuid("patient_id").references(() => patients.id, { onDelete: "restrict" }).notNull(),
+  notifiedDoctorId: uuid("notified_doctor_id").references(() => staff.id, { onDelete: "restrict" }).notNull(),
+  notifiedAt: timestamp("notified_at").defaultNow().notNull(),
+  method: varchar("method", { length: 50 }).notNull(), // call, sms, in_app
+  acknowledgedByDoctor: boolean("acknowledged_by_doctor").default(false).notNull(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  notes: text("notes"),
+}, (table) => {
+  return {
+    hospitalAlertIdx: index("crit_hospital_ack_idx").on(table.hospitalId, table.acknowledgedByDoctor),
+  };
+});

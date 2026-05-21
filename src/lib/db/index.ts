@@ -2,24 +2,33 @@
  * HMS Egypt - Drizzle ORM + Neon PostgreSQL Connection
  */
 
-import { neon, neonConfig } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import { eq } from "drizzle-orm";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { eq, sql } from "drizzle-orm";
 import * as schema from "../../../db/schema";
-
-// Enable connection caching for serverless environments
-neonConfig.fetchConnectionCache = true;
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set");
 }
 
-const sql = neon(process.env.DATABASE_URL);
+// Enable websocket support for Node / serverless environments
+neonConfig.webSocketConstructor = globalThis.WebSocket || require("ws");
+
+// Cache connection pool to prevent exhausting connection slots during serverless warm-starts/hot-reloads
+let pool: Pool;
+if (process.env.NODE_ENV === "production") {
+  pool = new Pool({ connectionString: process.env.DATABASE_URL });
+} else {
+  if (!(global as any)._neonPool) {
+    (global as any)._neonPool = new Pool({ connectionString: process.env.DATABASE_URL });
+  }
+  pool = (global as any)._neonPool;
+}
 
 /**
- * Main database instance.
+ * Main database instance with transaction support.
  */
-export const db = drizzle(sql, { schema });
+export const db = drizzle(pool, { schema });
 
 /**
  * Scopes a query to a specific hospital.
@@ -35,10 +44,13 @@ export function scopeToHospital(hospitalId: string) {
 export async function checkDbConnection(): Promise<boolean> {
   try {
     // Basic ping
-    await sql`SELECT 1`;
+    await db.execute(sql`SELECT 1`);
     return true;
   } catch (error) {
     console.error("Database connection failed:", error);
     return false;
   }
 }
+
+export * from "./tenant";
+
