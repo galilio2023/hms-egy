@@ -133,7 +133,7 @@ export async function auth(): Promise<Session | null> {
       };
     }
 
-    const isMockAdmin = cookieStore.get("mock_tenant_admin")?.value === "true";
+    const isMockAdmin = process.env.NODE_ENV === "development" && cookieStore.get("mock_tenant_admin")?.value === "true";
     if (isMockAdmin) {
       return {
         user: {

@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getOrSchedule, createSurgicalCase } from "@/lib/actions/surgical";
+import { searchPatientsAction } from "@/lib/actions/patients";
 
 interface SurgicalScheduleClientProps {
   surgeons: { id: string; nameAr: string; nameEn: string }[];
@@ -97,6 +98,12 @@ export function SurgicalScheduleClient({
   const [selectedCase, setSelectedCase] = useState<any | null>(null);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
 
+  // Debounced Patient Search State
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [patientSearchResults, setPatientSearchResults] = useState(patients);
+  const [isSearchingPatients, setIsSearchingPatients] = useState(false);
+  const [isPatientDropdownOpen, setIsPatientDropdownOpen] = useState(false);
+
   // Time-slot calculation parameters
   const startHour = 7;
   const endHour = 22;
@@ -122,6 +129,23 @@ export function SurgicalScheduleClient({
   useEffect(() => {
     loadScheduleData();
   }, [selectedDate]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (patientSearchQuery.trim() === "") {
+        setPatientSearchResults(patients);
+        return;
+      }
+      setIsSearchingPatients(true);
+      const res = await searchPatientsAction(patientSearchQuery);
+      if (res.success && "data" in res && res.data) {
+        setPatientSearchResults(res.data as any);
+      }
+      setIsSearchingPatients(false);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [patientSearchQuery, patients]);
 
   // Position calculation helper for grid cards
   const getTimeOffsetAndWidth = (startTimeStr: string, durationMinutes: number) => {
@@ -468,22 +492,55 @@ export function SurgicalScheduleClient({
           )}
 
           <div className="space-y-4 py-3 text-xs max-h-[400px] overflow-y-auto">
-            {/* Patient Select */}
-            <div className="space-y-1">
+            {/* Patient Select (Debounced Combobox) */}
+            <div className="space-y-1 relative">
               <label className="font-bold text-foreground block">{isRtl ? "المريض" : "Patient"}</label>
-              <select
-                dir={isRtl ? "rtl" : "ltr"}
-                value={selectedPatientId}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">{isRtl ? "اختر مريضاً مسجلاً..." : "Select Patient..."}</option>
-                {patients.map((pat) => (
-                  <option key={pat.id} value={pat.id}>
-                    {isRtl ? pat.nameAr : pat.nameEn} (#{pat.patientNumber})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder={selectedPatientId ? patientSearchResults.find(p => p.id === selectedPatientId)?.nameAr || patientSearchResults.find(p => p.id === selectedPatientId)?.nameEn || selectedPatientId : (isRtl ? "ابحث بالاسم، الرقم، او الهوية..." : "Search by name, number, or ID...")}
+                  value={patientSearchQuery}
+                  onChange={(e) => {
+                    setPatientSearchQuery(e.target.value);
+                    setIsPatientDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsPatientDropdownOpen(true)}
+                  className="h-9 text-xs"
+                />
+                {isSearchingPatients && (
+                  <div className="absolute top-2.5 end-2 flex items-center justify-center">
+                    <Activity className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              
+              {isPatientDropdownOpen && patientSearchResults.length > 0 && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsPatientDropdownOpen(false)} />
+                  <div className="absolute z-50 w-full mt-1 bg-card border border-border shadow-lg rounded-xl max-h-[200px] overflow-y-auto">
+                    <div className="p-1 space-y-1">
+                      {patientSearchResults.map((pat) => (
+                        <button
+                          key={pat.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedPatientId(pat.id);
+                            setPatientSearchQuery(isRtl ? pat.nameAr : pat.nameEn);
+                            setIsPatientDropdownOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-start px-3 py-2 text-xs rounded-lg hover:bg-accent/10 transition-colors",
+                            selectedPatientId === pat.id ? "bg-accent/10 text-accent font-bold" : "text-foreground"
+                          )}
+                        >
+                          <span className="block font-bold">{isRtl ? pat.nameAr : pat.nameEn}</span>
+                          <span className="text-[10px] text-muted-foreground">#{pat.patientNumber}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="space-y-1">

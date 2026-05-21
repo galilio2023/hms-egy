@@ -65,12 +65,12 @@ export async function getOrSchedule(date: Date | string, targetHospitalId?: stri
   }
 
   const targetDate = new Date(date);
-  const normalizedDate = new Date(
-    targetDate.getFullYear(),
-    targetDate.getMonth(),
-    targetDate.getDate(),
+  const normalizedDate = new Date(Date.UTC(
+    targetDate.getUTCFullYear(),
+    targetDate.getUTCMonth(),
+    targetDate.getUTCDate(),
     0, 0, 0, 0
-  );
+  ));
 
   const dayOfWeek = targetDate.getDay(); // 0 (Sunday) to 6 (Saturday)
 
@@ -211,7 +211,7 @@ export async function createSurgicalCase(
         // 0. Acquire row-level lock on the specific operating room to serialize case generation for this room
         // Enforce a strict 2-second timeout to prevent lock contention
         await innerTx.execute(sql`SET LOCAL lock_timeout = '2000';`);
-        await innerTx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId} FOR UPDATE`);
+        await innerTx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId}`);
       
       // 0.5. Acquire row-level locks on the staff (surgeons and anesthesiologists) to prevent double-booking
       // the same medical personnel across different rooms simultaneously
@@ -231,7 +231,7 @@ export async function createSurgicalCase(
           sql`, `
         );
         
-        await innerTx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff}) FOR UPDATE`);
+        await innerTx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff})`);
       }
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));

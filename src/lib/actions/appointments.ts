@@ -309,13 +309,17 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
           );
 
           // Standard buffer: Can only book future slots if target date is today
-          const now = new Date();
+          const nowServer = new Date();
+          const nowCairo = toCairoTime(nowServer);
+
           let isFuture = true;
-          if (targetDate.toDateString() === now.toDateString()) {
+          if (targetDate.toDateString() === nowCairo.toDateString()) {
             const [sh, sm] = slotTime.split(":").map(Number);
             const slotDateTime = new Date(targetDate);
             slotDateTime.setHours(sh, sm, 0, 0);
-            isFuture = slotDateTime.getTime() > now.getTime();
+            isFuture = slotDateTime.getTime() > nowCairo.getTime();
+          } else if (targetDate < nowCairo) {
+            isFuture = false;
           }
 
           slots.push({

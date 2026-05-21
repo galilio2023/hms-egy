@@ -119,7 +119,7 @@ export function BookingWizardClient({
 
   // Helper to filter slots based on Cairo weekend rules
   const slotAvailableWithWeekendRule = (slot: { time: string; available: boolean }, isWeekend: boolean) => {
-    if (isWeekend) return false; // Hard weekend safeguards in clinical schema
+    // Note: Weekend hard-blocking is removed to support Egyptian clinic context (Saturday operations)
     return slot.available;
   };
 
