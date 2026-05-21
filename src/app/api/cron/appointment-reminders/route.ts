@@ -140,6 +140,7 @@ export async function GET(req: NextRequest) {
             isNull(sentReminders.id)
           )
         )
+        .orderBy(appointments.startTime)
         .limit(500);
 
       const apps = [...tomorrowApps, ...todayApps];

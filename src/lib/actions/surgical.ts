@@ -223,7 +223,7 @@ export async function createSurgicalCase(
         staffIdsToLock.push(...validatedData.assistantSurgeonIds);
       }
       
-      const uniqueStaffIds = Array.from(new Set(staffIdsToLock)).sort();
+      const uniqueStaffIds = Array.from(new Set(staffIdsToLock)).filter(Boolean).sort();
       
       const inClauseStaff = sql.join(
         uniqueStaffIds.map(id => sql`${id}`),
