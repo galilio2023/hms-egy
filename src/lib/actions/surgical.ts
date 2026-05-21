@@ -225,12 +225,14 @@ export async function createSurgicalCase(
       
       const uniqueStaffIds = Array.from(new Set(staffIdsToLock)).filter(Boolean).sort();
       
-      const inClauseStaff = sql.join(
-        uniqueStaffIds.map(id => sql`${id}`),
-        sql`, `
-      );
-      
-      await innerTx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff}) FOR UPDATE`);
+      if (uniqueStaffIds.length > 0) {
+        const inClauseStaff = sql.join(
+          uniqueStaffIds.map(id => sql`${id}`),
+          sql`, `
+        );
+        
+        await innerTx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff}) FOR UPDATE`);
+      }
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
       const scheduledDate = new Date(Date.UTC(
@@ -356,7 +358,7 @@ export async function createSurgicalCase(
         })
         .onConflictDoUpdate({
           target: [tenantSequenceTracker.hospitalId, tenantSequenceTracker.sequenceName],
-          set: { currentVal: sql`${tenantSequenceTracker.currentVal} + 1` },
+          set: { currentVal: sql`tenant_sequence_tracker.current_val + 1` },
         })
         .returning({ currentVal: tenantSequenceTracker.currentVal });
 

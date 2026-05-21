@@ -601,7 +601,7 @@ export function BookingWizardClient({
                 </div>
               </div>
 
-              <div className="p-3 bg-card border border-accent/15 rounded-xl text-[10px] text-accent font-black text-center shadow-2xs leading-relaxed">
+              <div className="p-3 bg-card border border-accent/15 rounded-xl text-[10px] text-accent font-black text-center shadow-2xs leading-relaxed" dir="rtl">
                 {isRtl ? `مكتوب فقط: ${estimate.textAr}` : `In Words: Five Hundred Egyptian Pounds Only`}
               </div>
             </CardContent>

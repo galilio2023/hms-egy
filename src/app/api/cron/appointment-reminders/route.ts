@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     const todayStr = toISODate(todayMidnight);
     const tomorrowStr = toISODate(tomorrowMidnight);
 
-    const results = await withBypassContext(async (tx) => {
+    const { apps } = await withBypassContext(async (tx) => {
       // 3. Fetch scheduled appointments matching today or tomorrow that haven't received their reminder yet
       const tomorrowApps = await tx
         .select({
@@ -145,10 +145,13 @@ export async function GET(req: NextRequest) {
 
       const apps = [...tomorrowApps, ...todayApps];
 
-      console.log(`Found ${apps.length} total active scheduled appointments for today/tomorrow.`);
+      return { apps };
+    });
 
-      const remindersToInsert: any[] = [];
-      const appRemindersMap = new Map<string, { type: "24h_reminder" | "2h_reminder", app: any }>();
+    console.log(`Found ${apps.length} total active scheduled appointments for today/tomorrow.`);
+
+    const remindersToInsert: any[] = [];
+    const appRemindersMap = new Map<string, { type: "24h_reminder" | "2h_reminder", app: any }>();
 
       for (const app of apps) {
         const appDate = app.scheduledDate instanceof Date ? app.scheduledDate : new Date(app.scheduledDate);
@@ -196,6 +199,7 @@ export async function GET(req: NextRequest) {
         }
       }
 
+    const results = await withBypassContext(async (tx) => {
       let remindersSent = 0;
       let duplicatesSkipped = 0;
 

@@ -87,10 +87,8 @@ export default async function AppointmentsPage({
     );
 
   const nowCairo = toCairoTime(new Date());
-  const pastWindow = new Date(nowCairo);
-  pastWindow.setDate(pastWindow.getDate() - 7);
-  const futureWindow = new Date(nowCairo);
-  futureWindow.setDate(futureWindow.getDate() + 14);
+  const pastWindow = new Date(Date.UTC(nowCairo.getFullYear(), nowCairo.getMonth(), nowCairo.getDate() - 7, 0, 0, 0, 0));
+  const futureWindow = new Date(Date.UTC(nowCairo.getFullYear(), nowCairo.getMonth(), nowCairo.getDate() + 14, 23, 59, 59, 999));
 
   // 4. Fetch initial list of all active/scheduled/completed appointments
   const appList = await db

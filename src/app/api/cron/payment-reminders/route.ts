@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     console.log(`- Current Cairo Time: ${nowCairo.toISOString()}`);
     console.log(`- Overdue Cutoff (7 Days Ago): ${sevenDaysAgo.toISOString()}`);
 
-    const results = await withBypassContext(async (tx) => {
+    const { overdueInvoices } = await withBypassContext(async (tx) => {
       // 3. Fetch unpaid or partially paid invoices that are overdue by 7+ days
       const overdueInvoices = await tx
         .select({
@@ -76,10 +76,13 @@ export async function GET(req: NextRequest) {
         )
         .limit(500);
 
-      console.log(`Found ${overdueInvoices.length} unpaid/partially paid invoices overdue by 7+ days.`);
+      return { overdueInvoices };
+    });
 
-      const remindersToInsert: any[] = [];
-      const overdueRemindersMap = new Map<string, any>();
+    console.log(`Found ${overdueInvoices.length} unpaid/partially paid invoices overdue by 7+ days.`);
+
+    const remindersToInsert: any[] = [];
+    const overdueRemindersMap = new Map<string, any>();
 
       for (const invoice of overdueInvoices) {
         const key = `invoice_overdue_7days_${invoice.id}`;
@@ -96,6 +99,7 @@ export async function GET(req: NextRequest) {
         overdueRemindersMap.set(key, invoice);
       }
 
+    const results = await withBypassContext(async (tx) => {
       let remindersSent = 0;
       let duplicatesSkipped = 0;
 
