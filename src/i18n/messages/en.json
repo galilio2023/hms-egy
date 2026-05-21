@@ -41,5 +41,40 @@
       "military": "Military",
       "ngo": "NGO"
     }
+  },
+  "superAdmin": {
+    "title": "Super Admin Dashboard",
+    "totalHospitals": "Total Hospitals",
+    "activeSubscriptions": "Active Subscriptions",
+    "globalMRR": "Global MRR",
+    "hospitalList": "Registered Hospitals",
+    "slug": "Slug",
+    "type": "Type",
+    "status": "Status",
+    "tier": "Tier",
+    "actions": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "changeTier": "Change Tier",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "settings": {
+    "title": "Hospital Settings",
+    "generalInfo": "General Details",
+    "moduleConfig": "Module Activation",
+    "paymobConfig": "Paymob Integration Gateway",
+    "surgicalConfig": "Surgical Module Settings",
+    "housekeepingConfig": "Housekeeping & Beds Settings",
+    "saveSettings": "Save Settings",
+    "success": "Settings saved successfully.",
+    "error": "Failed to save settings.",
+    "paymobApiKey": "Paymob API Key",
+    "paymobCardId": "Integration ID (Card)",
+    "paymobWalletId": "Integration ID (Wallet)",
+    "paymobFawryId": "Integration ID (Fawry)",
+    "paymobHmacSecret": "HMAC Webhook Secret",
+    "cleaningDuration": "OR/Beds Cleaning Duration (Minutes)",
+    "autoHousekeeping": "Automatic housekeeping task generation upon patient discharge"
   }
 }

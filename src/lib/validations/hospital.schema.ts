@@ -29,3 +29,39 @@ export const hospitalOnboardingSchema = z.object({
 });
 
 export type HospitalOnboarding = z.infer<typeof hospitalOnboardingSchema>;
+
+const nullableCoercedString = z.preprocess(
+  (val) => (val === "" || val === undefined || val === null ? null : String(val)),
+  z.string().nullable().optional()
+);
+
+export const hospitalSettingsSchema = z.object({
+  // Hospital basic details
+  nameAr: z.string().min(3, "Arabic name is required"),
+  nameEn: z.string().min(3, "English name is required"),
+  contactPhone: z.string().refine((val) => EGYPT_PHONE_REGEX.test(val.replace(/\s+/g, "")), {
+    message: "Invalid Egyptian phone number (mobile, landline, or hotline)",
+  }),
+  address: z.string().min(10, "Address must be at least 10 characters"),
+  governorate: z.string().min(2, "Governorate is required"),
+
+  // Module configuration
+  isSurgicalEnabled: z.boolean().default(false),
+  isTelemedicineEnabled: z.boolean().default(false),
+  isPatientPortalEnabled: z.boolean().default(false),
+  isOnlinePaymentsEnabled: z.boolean().default(false),
+
+  // Paymob configurations (optional)
+  paymobApiKey: nullableCoercedString,
+  paymobCardId: nullableCoercedString,
+  paymobWalletId: nullableCoercedString,
+  paymobFawryId: nullableCoercedString,
+  paymobHmacSecret: nullableCoercedString,
+
+  // Surgical & Housekeeping
+  orCleaningDuration: z.number().int().min(5).max(180),
+  autoHousekeeping: z.boolean().default(true),
+});
+
+export type HospitalSettingsType = z.infer<typeof hospitalSettingsSchema>;
+

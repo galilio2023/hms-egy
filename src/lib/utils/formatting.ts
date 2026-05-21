@@ -140,6 +140,16 @@ export async function amountToArabicWords(amount: number): Promise<string> {
     return tafgeet.convert();
   } catch (error) {
     console.error("Tafgeet conversion failed", error);
-    return `${amount} جنيه مصري فقط لا غير`;
+    
+    const pounds = Math.floor(amount);
+    const piastres = Math.round((amount - pounds) * 100);
+    
+    let fallback = `فقط ${pounds} جنيه مصري`;
+    if (piastres > 0) {
+      fallback += ` و ${piastres} قرش`;
+    }
+    fallback += ` لا غير`;
+    
+    return fallback;
   }
 }

@@ -31,6 +31,24 @@ export const GOVERNORATES: Record<string, { code: string; ar: string; en: string
   "88": { code: "88", ar: "خارج الجمهورية", en: "Outside Egypt" },
 };
 
+/**
+ * Resolves a governorate string (either code, Arabic name, or English name) to its 2-digit code.
+ */
+export function getGovernorateCode(input: string): string | null {
+  if (!input) return null;
+  const cleaned = input.trim();
+  if (GOVERNORATES[cleaned]) return cleaned;
+  
+  const lower = cleaned.toLowerCase();
+  for (const [code, gov] of Object.entries(GOVERNORATES)) {
+    if (gov.en.toLowerCase() === lower || gov.ar === cleaned) {
+      return code;
+    }
+  }
+  return null;
+}
+
+
 export const EGYPTIAN_INSURANCE_PROVIDERS = [
   { 
     id: "hio", 
@@ -136,4 +154,30 @@ export function getPublicHolidays(year: number) {
     { date: new Date(year, 6, 23), nameAr: "عيد الثورة", nameEn: "Revolution Day", isIslamic: false },
     { date: new Date(year, 9, 6), nameAr: "عيد القوات المسلحة", nameEn: "Armed Forces Day", isIslamic: false },
   ];
+}
+
+/**
+ * Converts any date to Africa/Cairo timezone ensuring DST shifts are mitigated.
+ * Useful for ensuring server-side cron jobs run at the correct local hour.
+ */
+export function toCairoTime(date: Date | string | number): Date {
+  return toZonedTime(new Date(date), "Africa/Cairo");
+}
+
+/**
+ * Parses a Postgres TIME column (e.g. "09:30:00") into a timezone-aware Date object
+ * relative to a specific scheduled date in Cairo time.
+ * Prevents scheduling drift due to DST transitions.
+ */
+export function parseCairoTime(timeStr: string, baseDate: Date = new Date()): Date {
+  const cairoDate = toCairoTime(baseDate);
+  const [hours, minutes, seconds = "0"] = timeStr.split(":");
+  
+  // Set the hours and minutes in the local Cairo timezone
+  cairoDate.setHours(parseInt(hours, 10));
+  cairoDate.setMinutes(parseInt(minutes, 10));
+  cairoDate.setSeconds(parseInt(seconds, 10));
+  cairoDate.setMilliseconds(0);
+  
+  return cairoDate;
 }
