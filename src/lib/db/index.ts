@@ -7,12 +7,15 @@ import { drizzle } from "drizzle-orm/neon-serverless";
 import { eq, sql } from "drizzle-orm";
 import * as schema from "../../../db/schema";
 
+declare global {
+  var _neonPool: Pool | undefined;
+}
+
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set");
 }
 
 // Enable websocket support for Node / serverless environments
-/* eslint-disable-next-line no-eval */
 neonConfig.webSocketConstructor = globalThis.WebSocket || (() => {
   try {
     return eval('require')("ws");
@@ -26,10 +29,10 @@ let pool: Pool;
 if (process.env.NODE_ENV === "production") {
   pool = new Pool({ connectionString: process.env.DATABASE_URL });
 } else {
-  if (!(global as any)._neonPool) {
-    (global as any)._neonPool = new Pool({ connectionString: process.env.DATABASE_URL });
+  if (!globalThis._neonPool) {
+    globalThis._neonPool = new Pool({ connectionString: process.env.DATABASE_URL });
   }
-  pool = (global as any)._neonPool;
+  pool = globalThis._neonPool;
 }
 
 /**

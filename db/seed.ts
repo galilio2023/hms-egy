@@ -304,9 +304,21 @@ async function seed() {
     const drugInteractionsPath = path.join(process.cwd(), "db", "clinical-data", "drug-interactions.json");
     if (fs.existsSync(drugInteractionsPath)) {
       const ddiRaw = fs.readFileSync(drugInteractionsPath, "utf-8");
-      const ddiList = JSON.parse(ddiRaw);
+      interface DrugInteractionItem {
+        drug1: string;
+        drug2: string;
+        severity: string;
+        mechanismEn: string;
+        mechanismAr: string;
+        clinicalEffectEn: string;
+        clinicalEffectAr: string;
+        managementAr: string;
+        category: string;
+      }
 
-      const ddiValues = ddiList.map((item: any) => ({
+      const ddiList = JSON.parse(ddiRaw) as DrugInteractionItem[];
+
+      const ddiValues = ddiList.map((item: DrugInteractionItem) => ({
         drug1Name: item.drug1,
         drug2Name: item.drug2,
         drug1Generic: item.drug1, // fallback to standard drug name
@@ -337,9 +349,15 @@ async function seed() {
     const loincPath = path.join(process.cwd(), "db", "clinical-data", "loinc-common.json");
     if (fs.existsSync(loincPath)) {
       const loincRaw = fs.readFileSync(loincPath, "utf-8");
-      const loincList = JSON.parse(loincRaw);
+      interface LoincItem {
+        nameAr: string;
+        nameEn: string;
+        loincCode: string;
+      }
 
-      const labTestValues = loincList.slice(0, 100).map((item: any, idx: number) => ({
+      const loincList = JSON.parse(loincRaw) as LoincItem[];
+
+      const labTestValues = loincList.slice(0, 100).map((item: LoincItem, idx: number) => ({
         hospitalId: hospital.id,
         nameAr: item.nameAr,
         nameEn: item.nameEn,
