@@ -207,10 +207,11 @@ export async function createSurgicalCase(
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
-      // 0. Acquire row-level lock on the specific operating room to serialize case generation for this room
-      // Enforce a strict 2-second timeout to prevent lock contention
-      await tx.execute(sql`SET LOCAL lock_timeout = '2000';`);
-      await tx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId} FOR UPDATE`);
+      return await tx.transaction(async (innerTx) => {
+        // 0. Acquire row-level lock on the specific operating room to serialize case generation for this room
+        // Enforce a strict 2-second timeout to prevent lock contention
+        await innerTx.execute(sql`SET LOCAL lock_timeout = '2000';`);
+        await innerTx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId} FOR UPDATE`);
       
       // 0.5. Acquire row-level locks on the staff (surgeons and anesthesiologists) to prevent double-booking
       // the same medical personnel across different rooms simultaneously
@@ -229,7 +230,7 @@ export async function createSurgicalCase(
         sql`, `
       );
       
-      await tx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff}) FOR UPDATE`);
+      await innerTx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff}) FOR UPDATE`);
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
       const scheduledDate = new Date(Date.UTC(
@@ -244,7 +245,7 @@ export async function createSurgicalCase(
       const endTime = addMinutesToTimeStr(startTime, duration);
 
       // 1. Check overlaps with existing active cases in the same OR room
-      const existingCases = await tx
+      const existingCases = await innerTx
         .select()
         .from(surgicalCases)
         .where(
@@ -272,7 +273,7 @@ export async function createSurgicalCase(
       // 2. Check overlaps with standard OR Blocks (unless bypassed)
       if (!bypassBlocks) {
         const dayOfWeek = scheduledAt.getDay();
-        const blocks = await tx
+        const blocks = await innerTx
           .select()
           .from(orBlocks)
           .where(
@@ -299,7 +300,7 @@ export async function createSurgicalCase(
         staffConditions.push(eq(surgicalCases.anesthesiologistId, validatedData.anesthesiologistId));
       }
 
-      const staffOverlap = await tx
+      const staffOverlap = await innerTx
         .select()
         .from(surgicalCases)
         .where(
@@ -321,14 +322,14 @@ export async function createSurgicalCase(
       }
 
       // 3. Resolve General Surgery Department or fallback
-      let [department] = await tx
+      let [department] = await innerTx
         .select()
         .from(departments)
         .where(and(eq(departments.hospitalId, hospitalId), eq(departments.code, "SURG")))
         .limit(1);
 
       if (!department) {
-        [department] = await tx
+        [department] = await innerTx
           .select()
           .from(departments)
           .where(eq(departments.hospitalId, hospitalId))
@@ -343,9 +344,10 @@ export async function createSurgicalCase(
       }
 
       // 4. Generate custom surgical case number (SC-YYYY-NNNNNN) atomically using DB sequence
+      // 3. Generate Sequential Case Number explicitly bound to this tenant using our new tracker
       const currentYear = new Date().getFullYear();
       
-      const [seqResult] = await tx
+      const [seqResult] = await innerTx
         .insert(tenantSequenceTracker)
         .values({
           hospitalId,
@@ -361,8 +363,8 @@ export async function createSurgicalCase(
       const sequence = seqResult.currentVal;
       const caseNumber = `SC-${currentYear}-${String(sequence).padStart(6, "0")}`;
 
-      // 5. Insert surgical case record
-      const [newCase] = await tx
+      // 4. Create the actual surgical case record
+      const [newCase] = await innerTx
         .insert(surgicalCases)
         .values({
           hospitalId,
@@ -390,15 +392,16 @@ export async function createSurgicalCase(
         throw new AppError(ErrorCode.INTERNAL_ERROR, "فشل حفظ بيانات الحالة الجراحية الجديدة.");
       }
 
-      const [hospital] = await tx
+      const [hospital] = await innerTx
         .select({ slug: hospitals.slug })
         .from(hospitals)
         .where(eq(hospitals.id, hospitalId))
         .limit(1);
       const hospitalSlug = hospital?.slug || hospitalId;
 
-      revalidatePath(`/[locale]/${hospitalSlug}/surgical/schedule`, "page");
-      return { success: true, caseId: newCase.id, caseNumber };
+      revalidatePath(`/[locale]/${hospitalSlug}/surgical`, "layout");
+      return { success: true, surgicalCaseId: newCase.id, caseNumber };
+    });
     });
   } catch (error: any) {
     console.error("[SURGICAL_ACTION] createSurgicalCase failed:", error);

@@ -7,6 +7,9 @@
 export function tafqeet(rawNum: number): string {
   const num = Math.round(rawNum); // Fallback gracefully to nearest integer
 
+  if (num < 0) return "قيمة سالبة غير صالحة";
+  if (num >= 1_000_000_000) return "القيمة تتجاوز الحد الأقصى للتفقيط";
+
 
   if (num === 0) return "صفر جنيه مصري فقط لا غير";
   if (num === 1) return "جنيه مصري واحد فقط لا غير";

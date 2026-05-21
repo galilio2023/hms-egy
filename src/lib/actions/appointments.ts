@@ -63,10 +63,11 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
-      // 0. Acquire row-level lock on the specific doctor to serialize bookings and prevent race conditions
-      // Enforce a strict 2-second timeout to prevent lock contention from halting the tenant pool
-      await tx.execute(sql`SET LOCAL lock_timeout = '2000';`);
-      await tx.execute(sql`SELECT id FROM staff WHERE id = ${validatedData.doctorId} FOR UPDATE`);
+      return await tx.transaction(async (innerTx) => {
+        // 0. Acquire row-level lock on the specific doctor to serialize bookings and prevent race conditions
+        // Enforce a strict 2-second timeout to prevent lock contention from halting the tenant pool
+        await innerTx.execute(sql`SET LOCAL lock_timeout = '2000';`);
+        await innerTx.execute(sql`SELECT id FROM staff WHERE id = ${validatedData.doctorId} FOR UPDATE`);
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
       
@@ -86,7 +87,7 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
       const endTime = formatTimeStr(endAt);
 
       // 1. Verify doctor availability & check scheduling overlaps
-      const doctorSchedules = await tx
+      const doctorSchedules = await innerTx
         .select()
         .from(appointments)
         .where(
@@ -108,7 +109,7 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
       }
 
       // 2. Prevent patient double booking inside the same clinic/department on the same day
-      const patientSchedules = await tx
+      const patientSchedules = await innerTx
         .select()
         .from(appointments)
         .where(
@@ -130,7 +131,7 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
       }
 
       // 3. Insert new appointment
-      const [newApp] = await tx
+      const [newApp] = await innerTx
         .insert(appointments)
         .values({
           hospitalId,
@@ -150,7 +151,7 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
         throw new AppError(ErrorCode.INTERNAL_ERROR, "فشل حفظ بيانات الموعد الجديد.");
       }
 
-      const [hospital] = await tx
+      const [hospital] = await innerTx
         .select({ slug: hospitals.slug })
         .from(hospitals)
         .where(eq(hospitals.id, hospitalId))
@@ -159,6 +160,7 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
 
       revalidatePath(`/[locale]/${hospitalSlug}/appointments`, "page");
       return { success: true, appointmentId: newApp.id };
+    });
     });
   } catch (error: any) {
     console.error("[APPOINTMENTS_ACTION] createAppointment failed:", error);
