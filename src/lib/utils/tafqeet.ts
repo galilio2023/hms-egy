@@ -6,6 +6,8 @@
 
 export function tafqeet(num: number): string {
   if (num === 0) return "صفر جنيه مصري فقط لا غير";
+  if (num === 1) return "جنيه مصري واحد فقط لا غير";
+  if (num === 2) return "جنيهان مصريان فقط لا غير";
 
   const ones = [
     "",

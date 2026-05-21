@@ -84,7 +84,8 @@ export async function GET(req: NextRequest) {
               eq(appointments.scheduledDate, tomorrowMidnight)
             )
           )
-        );
+        )
+        .limit(500);
 
       console.log(`Found ${apps.length} total active scheduled appointments for today/tomorrow.`);
 
@@ -150,30 +151,32 @@ export async function GET(req: NextRequest) {
 
         remindersSent = insertedLogs.length;
         duplicatesSkipped = remindersToInsert.length - remindersSent;
-
-        // Log the printed simulated outcomes of successfully inserted ones
-        for (const log of insertedLogs) {
-          const key = `${log.entityType}_${log.reminderType === "24h_reminder" ? "24h" : "2h"}_${log.entityId}`;
-          const mapped = appRemindersMap.get(key);
-          if (mapped) {
-            const { type, app } = mapped;
-            if (type === "24h_reminder") {
-              const msg = `تذكير: موعدكم غداً في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر. لخدمتكم.`;
-              console.log(`[24h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
-              console.log(`Message: ${msg}`);
-              // STUB: await sendEgyptianSms(app.patientPhone, msg, "VictoryLink");
-            } else {
-              const msg = `تذكير عاجل: موعدكم اليوم خلال ساعتين في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر.`;
-              console.log(`[2h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
-              console.log(`Message: ${msg}`);
-              // STUB: await sendEgyptianSms(app.patientPhone, msg, "CEQUENS");
-            }
-          }
-        }
+        
+        return { remindersSent, duplicatesSkipped, insertedLogs, appRemindersMap };
       }
 
-      return { remindersSent, duplicatesSkipped };
+      return { remindersSent, duplicatesSkipped, insertedLogs: [], appRemindersMap };
     });
+
+    // 6. Safely perform simulated network I/O (SMS Gateway) outside the database transaction block
+    for (const log of results.insertedLogs) {
+      const key = `${log.entityType}_${log.reminderType === "24h_reminder" ? "24h" : "2h"}_${log.entityId}`;
+      const mapped = results.appRemindersMap.get(key);
+      if (mapped) {
+        const { type, app } = mapped;
+        if (type === "24h_reminder") {
+          const msg = `تذكير: موعدكم غداً في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر. لخدمتكم.`;
+          console.log(`[24h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
+          console.log(`Message: ${msg}`);
+          // STUB: await sendEgyptianSms(app.patientPhone, msg, "VictoryLink");
+        } else {
+          const msg = `تذكير عاجل: موعدكم اليوم خلال ساعتين في عيادة ${app.departmentNameAr} مع د. ${app.doctorNameAr} الساعة ${app.startTime.substring(0, 5)} في HMS مصر.`;
+          console.log(`[2h SMS SENT] To: ${app.patientPhone || "N/A"} (${app.patientNameAr || app.patientNameEn})`);
+          console.log(`Message: ${msg}`);
+          // STUB: await sendEgyptianSms(app.patientPhone, msg, "CEQUENS");
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,

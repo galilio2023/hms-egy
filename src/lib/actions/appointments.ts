@@ -60,6 +60,9 @@ export async function createAppointment(data: AppointmentSchema) {
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
+      // 0. Acquire row-level lock on the specific doctor to serialize bookings and prevent race conditions
+      await tx.execute(sql`SELECT id FROM staff WHERE id = ${validatedData.doctorId} FOR UPDATE`);
+
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
       
       // Normalize date to UTC midnight (Y-M-D) to support clean index matching without off-by-one errors

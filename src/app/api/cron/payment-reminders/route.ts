@@ -58,7 +58,8 @@ export async function GET(req: NextRequest) {
             eq(invoices.isArchived, false),
             lte(invoices.dueDate, sevenDaysAgo)
           )
-        );
+        )
+        .limit(500);
 
       console.log(`Found ${overdueInvoices.length} unpaid/partially paid invoices overdue by 7+ days.`);
 
@@ -93,23 +94,26 @@ export async function GET(req: NextRequest) {
         remindersSent = insertedLogs.length;
         duplicatesSkipped = remindersToInsert.length - remindersSent;
 
-        // Log the printed simulated outcomes of successfully inserted ones
-        for (const log of insertedLogs) {
-          const key = `${log.entityType}_overdue_7days_${log.entityId}`;
-          const invoice = overdueRemindersMap.get(key);
-          if (invoice) {
-            const rawAmount = parseFloat(invoice.totalAmount);
-            const formattedAmount = formatEGP(rawAmount, { arabic: false });
-
-            // Log/Simulate SMS Gateway Delivery
-            console.log(`[OVERDUE SMS SENT] To: ${invoice.patientPhone || "N/A"} (${invoice.patientNameAr || invoice.patientNameEn})`);
-            console.log(`Message: تذكير بالدفع: نود تذكيركم بوجود فاتورة مستحقة برقم ${invoice.invoiceNumber} بمبلغ ${formattedAmount} ج.م في HMS مصر. يرجى السداد في أقرب وقت.`);
-          }
-        }
+        return { remindersSent, duplicatesSkipped, insertedLogs, overdueRemindersMap };
       }
 
-      return { remindersSent, duplicatesSkipped };
+      return { remindersSent, duplicatesSkipped, insertedLogs: [], overdueRemindersMap };
     });
+
+    // 4. Safely perform simulated network I/O (SMS Gateway) outside the database transaction block
+    for (const log of results.insertedLogs) {
+      const key = `${log.entityType}_overdue_7days_${log.entityId}`;
+      const invoice = results.overdueRemindersMap.get(key);
+      if (invoice) {
+        const rawAmount = parseFloat(invoice.totalAmount);
+        const formattedAmount = formatEGP(rawAmount, { arabic: false });
+
+        // Log/Simulate SMS Gateway Delivery
+        console.log(`[OVERDUE SMS SENT] To: ${invoice.patientPhone || "N/A"} (${invoice.patientNameAr || invoice.patientNameEn})`);
+        console.log(`Message: تذكير بالدفع: نود تذكيركم بوجود فاتورة مستحقة برقم ${invoice.invoiceNumber} بمبلغ ${formattedAmount} ج.م في HMS مصر. يرجى السداد في أقرب وقت.`);
+        // STUB: await sendEgyptianSms(invoice.patientPhone, msg, "VictoryLink");
+      }
+    }
 
     return NextResponse.json({
       success: true,

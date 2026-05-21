@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { tafqeet } from "@/lib/utils/tafqeet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -340,14 +339,14 @@ export function BookingWizardClient({
             {/* Department */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground block">{t("department")}</label>
-              <Select
+              <select
                 value={selectedDept}
                 onChange={(e) => {
                   const val = e.target.value;
                   setSelectedDept(val);
                   setSelectedDoctor(""); // Reset doctor on clinic shift
                 }}
-                className="w-full h-10 text-xs"
+                className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{isRtl ? "اختر العيادة التخصصية..." : "Choose clinic..."}</option>
                 {departments.map((dept) => (
@@ -355,16 +354,16 @@ export function BookingWizardClient({
                     {isRtl ? dept.nameAr : dept.nameEn}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
 
             {/* Doctor */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground block">{t("doctor")}</label>
-              <Select
+              <select
                 value={selectedDoctor}
                 onChange={(e) => setSelectedDoctor(e.target.value)}
-                className="w-full h-10 text-xs"
+                className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!selectedDept}
               >
                 <option value="">{isRtl ? "اختر الطبيب المتوفر..." : "Choose doctor..."}</option>
@@ -373,22 +372,22 @@ export function BookingWizardClient({
                     {isRtl ? doc.nameAr : doc.nameEn}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
 
             {/* Visit Type */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground block">{t("type")}</label>
-              <Select
+              <select
                 value={visitType}
                 onChange={(e) => setVisitType(e.target.value as any)}
-                className="w-full h-10 text-xs"
+                className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="checkup">{t("checkup")}</option>
                 <option value="follow_up">{t("follow_up")}</option>
                 <option value="procedure">{t("procedure")}</option>
                 <option value="telemedicine">{t("telemedicine")}</option>
-              </Select>
+              </select>
             </div>
 
             {/* Notes */}

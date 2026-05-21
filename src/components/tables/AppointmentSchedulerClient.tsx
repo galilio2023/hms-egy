@@ -8,7 +8,6 @@ import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -85,8 +84,6 @@ export function AppointmentSchedulerClient({
   const [targetWeekStart, setTargetWeekStart] = useState<Date>(() => {
     const d = new Date();
     const day = d.getDay();
-    // In Egypt/Islamic cultures, Saturday or Sunday is start of week. 
-    // Let's set week start relative to today.
     const diff = d.getDate() - day; 
     return new Date(d.setDate(diff));
   });
@@ -205,7 +202,6 @@ export function AppointmentSchedulerClient({
 
   // Local filter calculations
   const filteredAppointments = appointments.filter((app) => {
-    // 1. Search Query (matches patient name, phone, file number, or doctor name)
     if (searchQuery.trim() !== "") {
       const q = searchQuery.toLowerCase();
       const matchPatientAr = app.patientNameAr?.toLowerCase().includes(q);
@@ -220,19 +216,13 @@ export function AppointmentSchedulerClient({
       }
     }
 
-    // 2. Department filter
     if (selectedDept && app.departmentId !== selectedDept) return false;
-
-    // 3. Doctor filter
     if (selectedDoctor && app.doctorId !== selectedDoctor) return false;
-
-    // 4. Status filter
     if (selectedStatus && app.status !== selectedStatus) return false;
 
     return true;
   });
 
-  // Weeks calendar slots calculation
   const getWeekDates = (start: Date) => {
     const dates = [];
     const curr = new Date(start);
@@ -275,7 +265,6 @@ export function AppointmentSchedulerClient({
     setIsDetailDrawerOpen(true);
   };
 
-  // Status Badge Helper
   const renderStatusBadge = (status: string) => {
     switch (status) {
       case "scheduled":
@@ -291,7 +280,6 @@ export function AppointmentSchedulerClient({
     }
   };
 
-  // Type Badge Helper
   const renderTypeBadge = (type: string) => {
     switch (type) {
       case "checkup":
@@ -308,7 +296,6 @@ export function AppointmentSchedulerClient({
     }
   };
 
-  // List columns for DataTable
   const columns: ColumnDef<any>[] = [
     {
       accessorKey: "scheduledDate",
@@ -337,7 +324,6 @@ export function AppointmentSchedulerClient({
       header: t("patient"),
       cell: ({ row }) => {
         const name = isRtl ? row.original.patientNameAr : row.original.patientNameEn;
-        const subName = isRtl ? row.original.patientNameEn : row.original.patientNameAr;
         return (
           <div className="flex flex-col text-start">
             <span className="font-black text-foreground text-sm">{name}</span>
@@ -394,11 +380,8 @@ export function AppointmentSchedulerClient({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Dynamic Action & Filter Panel */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card p-4 rounded-2xl border border-border/40 shadow-xs">
-        {/* Filters Panel */}
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* Global query input */}
           <div className="relative w-full max-w-xs">
             <Search className="absolute top-[11px] start-3.5 h-3.5 w-3.5 text-muted-foreground/60" />
             <Input
@@ -409,39 +392,34 @@ export function AppointmentSchedulerClient({
             />
           </div>
 
-          {/* Department selector */}
-          <Select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
+          <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
             <option value="">{isRtl ? "جميع العيادات" : "All Clinics"}</option>
             {departments.map((dept) => (
               <option key={dept.id} value={dept.id}>
                 {isRtl ? dept.nameAr : dept.nameEn}
               </option>
             ))}
-          </Select>
+          </select>
 
-          {/* Doctor selector */}
-          <Select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)}>
+          <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)}>
             <option value="">{isRtl ? "جميع الأطباء" : "All Doctors"}</option>
             {doctors.map((doc) => (
               <option key={doc.id} value={doc.id}>
                 {isRtl ? doc.nameAr : doc.nameEn}
               </option>
             ))}
-          </Select>
+          </select>
 
-          {/* Status selector */}
-          <Select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+          <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
             <option value="">{isRtl ? "كل الحالات" : "All Statuses"}</option>
             <option value="scheduled">{isRtl ? "مؤكد" : "Scheduled"}</option>
             <option value="completed">{isRtl ? "مكتمل" : "Completed"}</option>
             <option value="cancelled">{isRtl ? "ملغي" : "Cancelled"}</option>
             <option value="no_show">{isRtl ? "غائب" : "No Show"}</option>
-          </Select>
+          </select>
         </div>
 
-        {/* View toggles and action triggers */}
         <div className="flex items-center gap-2 self-stretch md:self-auto justify-end w-full md:w-auto">
-          {/* Waiting list button */}
           <Button
             variant="outline"
             size="sm"
@@ -460,7 +438,6 @@ export function AppointmentSchedulerClient({
             )}
           </Button>
 
-          {/* View toggle */}
           <div className="border border-border/40 p-0.5 rounded-lg flex gap-0.5 bg-muted/40">
             <Button
               variant={viewMode === "week" ? "secondary" : "ghost"}
@@ -482,7 +459,6 @@ export function AppointmentSchedulerClient({
             </Button>
           </div>
 
-          {/* New Book wizard button */}
           <Button
             size="sm"
             onClick={() => router.push(`/${hospitalSlug}/appointments/new`)}
@@ -494,9 +470,7 @@ export function AppointmentSchedulerClient({
         </div>
       </div>
 
-      {/* Main Workspace Layout (Supports collapsible sidebar for Waiting List) */}
       <div className="flex gap-6 items-start">
-        {/* Active Scheduler Space */}
         <div className="flex-1 min-w-0">
           {viewMode === "list" ? (
             <Card className="rounded-2xl border border-border/30 overflow-hidden shadow-xs">
@@ -512,7 +486,6 @@ export function AppointmentSchedulerClient({
             </Card>
           ) : (
             <div className="space-y-4">
-              {/* Week Calendar Controller */}
               <div className="flex justify-between items-center bg-card p-4 rounded-xl border border-border/40 shadow-xs">
                 <Button variant="outline" size="sm" onClick={handlePrevWeek} className="h-8 px-2.5">
                   {isRtl ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -525,12 +498,11 @@ export function AppointmentSchedulerClient({
                 </Button>
               </div>
 
-              {/* Weekly Calendar Columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                 {weekDates.map((date, idx) => {
                   const dayApps = getAppointmentsForDate(date);
                   const isToday = new Date().toDateString() === date.toDateString();
-                  const isWeekend = date.getDay() === 5 || date.getDay() === 6; // Friday & Saturday in Cairo
+                  const isWeekend = date.getDay() === 5 || date.getDay() === 6;
 
                   return (
                     <div 
@@ -541,7 +513,6 @@ export function AppointmentSchedulerClient({
                         isWeekend && "bg-gray-50/20"
                       )}
                     >
-                      {/* Day Header */}
                       <div 
                         className={cn(
                           "p-3 border-b border-border/30 flex flex-col items-start gap-0.5",
@@ -556,7 +527,6 @@ export function AppointmentSchedulerClient({
                         </span>
                       </div>
 
-                      {/* Day Appointments Slots List */}
                       <div className="p-2 flex-1 flex flex-col gap-2 overflow-y-auto scrollbar-thin">
                         {dayApps.length === 0 ? (
                           <div className="flex-1 flex items-center justify-center p-4">
@@ -604,7 +574,6 @@ export function AppointmentSchedulerClient({
           )}
         </div>
 
-        {/* Collapsible Waiting List Sidebar */}
         {showWaitingList && (
           <aside className="w-80 border border-border/40 rounded-2xl bg-card p-4 flex flex-col gap-4 shadow-sm shrink-0 self-stretch text-start max-h-[800px] overflow-y-auto">
             <header className="border-b border-border/30 pb-3 flex justify-between items-center">
@@ -613,16 +582,12 @@ export function AppointmentSchedulerClient({
                   <AlertCircle className="h-4 w-4 text-amber-500" />
                   {t("waitingList")}
                 </h3>
-                <p className="text-[10px] text-muted-foreground">
-                  {isRtl ? "المرضى المنتظرون للتسكين" : "Active clinical waiting queue"}
-                </p>
               </div>
               <Badge className="bg-amber-500 text-white border-none font-bold text-[10px] h-5 px-1.5">
                 {waitingList.length}
               </Badge>
             </header>
 
-            {/* Waiting Items Queue */}
             <div className="flex flex-col gap-3 flex-1 overflow-y-auto scrollbar-thin">
               {waitingList.length === 0 ? (
                 <div className="p-8 text-center text-xs text-muted-foreground/70 italic">
@@ -636,36 +601,7 @@ export function AppointmentSchedulerClient({
                         <span className="font-black text-xs text-foreground">
                           {isRtl ? entry.patientNameAr : entry.patientNameEn}
                         </span>
-                        <Badge 
-                          className={cn(
-                            "text-[8px] font-bold py-0 h-4 shadow-none border-none",
-                            entry.priority === "emergency" ? "bg-red-500 text-white" :
-                            entry.priority === "urgent" ? "bg-amber-500 text-white" : "bg-blue-500 text-white"
-                          )}
-                        >
-                          {entry.priority}
-                        </Badge>
                       </div>
-
-                      <div className="text-[10px] text-muted-foreground space-y-0.5">
-                        <div>
-                          <span className="font-bold text-foreground/80">{isRtl ? "العيادة: " : "Clinic: "}</span>
-                          {isRtl ? entry.departmentNameAr : entry.departmentNameEn}
-                        </div>
-                        {entry.doctorNameAr && (
-                          <div>
-                            <span className="font-bold text-foreground/80">{isRtl ? "الطبيب: " : "Doctor: "}</span>
-                            {isRtl ? entry.doctorNameAr : entry.doctorNameEn}
-                          </div>
-                        )}
-                        {entry.notes && (
-                          <div className="italic text-[9px] bg-background p-1.5 rounded-sm border border-border/20 mt-1 w-full">
-                            "{entry.notes}"
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Convert scheduling trigger */}
                       <Button
                         size="xs"
                         className="w-full text-[10px] font-black mt-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
@@ -686,7 +622,6 @@ export function AppointmentSchedulerClient({
         )}
       </div>
 
-      {/* Appointment Detail Sheet/Drawer */}
       <Drawer isOpen={isDetailDrawerOpen} onClose={() => setIsDetailDrawerOpen(false)}>
         <DrawerContent className="text-start">
           <div className="mx-auto w-full max-w-lg p-6">
@@ -698,109 +633,33 @@ export function AppointmentSchedulerClient({
                       <DrawerTitle className="text-lg font-black text-foreground">
                         {isRtl ? selectedAppointment.patientNameAr : selectedAppointment.patientNameEn}
                       </DrawerTitle>
-                      <DrawerDescription className="text-xs text-muted-foreground mt-0.5 font-mono">
-                        #{selectedAppointment.patientNumber} • {selectedAppointment.patientPhone}
-                      </DrawerDescription>
                     </div>
                     {renderStatusBadge(selectedAppointment.status)}
                   </div>
                 </DrawerHeader>
 
-                {/* Detail Summary Content */}
                 <div className="py-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div className="bg-muted/35 p-3 rounded-xl border border-border/10">
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-1">
-                        {t("doctor")}
-                      </span>
-                      <span className="font-black text-foreground">
-                        د. {isRtl ? selectedAppointment.doctorNameAr : selectedAppointment.doctorNameEn}
-                      </span>
-                    </div>
-
-                    <div className="bg-muted/35 p-3 rounded-xl border border-border/10">
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-1">
-                        {t("department")}
-                      </span>
-                      <span className="font-black text-foreground">
-                        {isRtl ? selectedAppointment.departmentNameAr : selectedAppointment.departmentNameEn}
-                      </span>
-                    </div>
-
-                    <div className="bg-muted/35 p-3 rounded-xl border border-border/10">
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-1">
-                        {t("scheduledDate")}
-                      </span>
-                      <span className="font-black text-foreground">
-                        {new Date(selectedAppointment.scheduledDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </span>
-                    </div>
-
-                    <div className="bg-muted/35 p-3 rounded-xl border border-border/10">
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-1">
-                        {t("startTime")}
-                      </span>
-                      <span className="font-mono font-black text-foreground">
-                        {selectedAppointment.startTime.substring(0, 5)} - {selectedAppointment.endTime.substring(0, 5)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {selectedAppointment.notes && (
-                    <div className="bg-amber-500/5 p-3.5 rounded-xl border border-amber-500/10 text-xs">
-                      <span className="text-[10px] text-amber-700 font-bold uppercase block mb-1">
-                        {t("notes")}
-                      </span>
-                      <p className="text-muted-foreground font-semibold italic">
-                        "{selectedAppointment.notes}"
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedAppointment.cancellationReason && (
-                    <div className="bg-rose-500/5 p-3.5 rounded-xl border border-rose-500/10 text-xs">
-                      <span className="text-[10px] text-rose-700 font-bold uppercase block mb-1">
-                        سبب الإلغاء
-                      </span>
-                      <p className="text-rose-800 font-bold italic">
-                        "{selectedAppointment.cancellationReason}"
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Actions Area */}
                   {selectedAppointment.status === "scheduled" && (
                     <div className="space-y-4 pt-4 border-t border-border/30">
-                      <div className="flex flex-col gap-2">
-                        <span className="text-xs font-black text-foreground mb-1">
-                          {isRtl ? "إجراءات التحكم السريعة" : "Quick controls"}
-                        </span>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => handleStatusChange("completed")}
-                            className="flex-1 text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 h-10"
-                            disabled={isPending}
-                          >
-                            <CheckCircle2 className="h-4 w-4 me-1.5" />
-                            {isRtl ? "إتمام وتوثيق الكشف" : "Complete Visit"}
-                          </Button>
-
-                          <Button
-                            onClick={() => handleStatusChange("no_show")}
-                            variant="outline"
-                            className="flex-1 text-xs font-black border-amber-500/20 hover:bg-amber-500/5 text-amber-600 h-10"
-                            disabled={isPending}
-                          >
-                            <AlertCircle className="h-4 w-4 me-1.5" />
-                            {isRtl ? "تسجيل غياب المريض" : "Mark No Show"}
-                          </Button>
-                        </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-foreground block">
+                          {isRtl ? "تعديل حالة الحجز" : "Update Appointment Status"}
+                        </label>
+                        <select
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={selectedAppointment.status}
+                          onChange={(e) => handleStatusChange(e.target.value)}
+                        >
+                          <option value="scheduled">{isRtl ? "مؤكد" : "Scheduled"}</option>
+                          <option value="completed">{isRtl ? "مكتمل" : "Completed"}</option>
+                          <option value="no_show">{isRtl ? "غائب" : "No Show"}</option>
+                          <option value="cancelled">{isRtl ? "ملغي" : "Cancelled"}</option>
+                        </select>
                       </div>
 
-                      {/* Cancellation Form */}
                       <div className="space-y-2 pt-2">
                         <label className="text-[11px] font-black text-rose-700 block">
-                          {isRtl ? "إلغاء الحجز بشكل نهائي (يرجى كتابة السبب)" : "Cancel Appointment (Reason Required)"}
+                          {isRtl ? "إلغاء الحجز (يرجى كتابة السبب)" : "Cancel Appointment (Reason Required)"}
                         </label>
                         <div className="flex gap-2">
                           <Input
@@ -809,15 +668,6 @@ export function AppointmentSchedulerClient({
                             onChange={(e) => setCancelReason(e.target.value)}
                             className="h-9 text-xs border-rose-200 focus:border-rose-400"
                           />
-                          <Button
-                            variant="destructive"
-                            onClick={() => handleStatusChange("cancelled")}
-                            className="text-xs font-black bg-rose-600 hover:bg-rose-700 h-9 shrink-0 px-4"
-                            disabled={isPending || cancelReason.trim().length < 3}
-                          >
-                            <XCircle className="h-4 w-4 me-1" />
-                            {isRtl ? "إلغاء الموعد" : "Cancel"}
-                          </Button>
                         </div>
                       </div>
                     </div>
@@ -833,29 +683,22 @@ export function AppointmentSchedulerClient({
         </DrawerContent>
       </Drawer>
 
-      {/* Waiting List Scheduler Converter Dialog */}
       <Dialog isOpen={!!selectedWaitingEntry} onClose={() => setSelectedWaitingEntry(null)}>
         <DialogContent className="sm:max-w-md text-start">
           <DialogHeader className="text-start">
             <DialogTitle className="text-lg font-black text-foreground">
               {isRtl ? "تسكين موعد من قائمة الانتظار" : "Schedule Waiting List Entry"}
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-1">
-              {isRtl 
-                ? `تحديد طبيب وتاريخ كشف لحجز ملف المريض: ${selectedWaitingEntry ? (isRtl ? selectedWaitingEntry.patientNameAr : selectedWaitingEntry.patientNameEn) : ""}`
-                : `Choose doctor, date and slot to elevate patient: ${selectedWaitingEntry ? (isRtl ? selectedWaitingEntry.patientNameAr : selectedWaitingEntry.patientNameEn) : ""}`}
-            </DialogDescription>
           </DialogHeader>
 
           {selectedWaitingEntry && (
             <div className="space-y-4 py-4 text-xs">
-              {/* Doctor picker */}
               <div className="space-y-1">
                 <label className="font-bold text-foreground block">{t("doctor")}</label>
-                <Select
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   value={scheduleDoctorId}
                   onChange={(e) => setScheduleDoctorId(e.target.value)}
-                  className="w-full"
                 >
                   <option value="">{isRtl ? "اختر طبيباً عيادياً..." : "Select doctor..."}</option>
                   {doctors.map((doc) => (
@@ -863,7 +706,7 @@ export function AppointmentSchedulerClient({
                       {isRtl ? doc.nameAr : doc.nameEn}
                     </option>
                   ))}
-                </Select>
+                </select>
               </div>
 
               {/* Date picker */}

@@ -5,7 +5,7 @@ import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -467,10 +467,10 @@ export function SurgicalScheduleClient({
             {/* Patient Select */}
             <div className="space-y-1">
               <label className="font-bold text-foreground block">{isRtl ? "المريض" : "Patient"}</label>
-              <Select
+              <select
                 value={selectedPatientId}
                 onChange={(e) => setSelectedPatientId(e.target.value)}
-                className="w-full"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{isRtl ? "اختر مريضاً مسجلاً..." : "Select Patient..."}</option>
                 {patients.map((pat) => (
@@ -478,15 +478,15 @@ export function SurgicalScheduleClient({
                     {isRtl ? pat.nameAr : pat.nameEn} (#{pat.patientNumber})
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
 
             <div className="space-y-1">
               <label className="font-bold text-foreground block">{isRtl ? "غرفة العمليات" : "Operating Room"}</label>
-              <Select
+              <select
                 value={selectedRoomId}
                 onChange={(e) => setSelectedRoomId(e.target.value)}
-                className="w-full"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{isRtl ? "اختر غرفة..." : "Select room..."}</option>
                 {rooms.map((rm) => (
@@ -494,15 +494,15 @@ export function SurgicalScheduleClient({
                     {isRtl ? rm.nameAr : rm.nameEn}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
 
             <div className="space-y-1">
               <label className="font-bold text-foreground block">{isRtl ? "الجراح الرئيسي" : "Lead Surgeon"}</label>
-              <Select
+              <select
                 value={selectedSurgeonId}
                 onChange={(e) => setSelectedSurgeonId(e.target.value)}
-                className="w-full"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{isRtl ? "اختر الطبيب الجراح..." : "Select Surgeon..."}</option>
                 {surgeons.map((doc) => (
@@ -510,15 +510,15 @@ export function SurgicalScheduleClient({
                     {isRtl ? doc.nameAr : doc.nameEn}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
 
             <div className="space-y-1">
               <label className="font-bold text-foreground block">{isRtl ? "طبيب التخدير" : "Anesthesiologist"}</label>
-              <Select
+              <select
                 value={selectedAnesthesiologistId}
                 onChange={(e) => setSelectedAnesthesiologistId(e.target.value)}
-                className="w-full"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{isRtl ? "اختر طبيب التخدير المتواجد..." : "Select Anesthesiologist..."}</option>
                 {anesthesiologists.map((doc) => (
@@ -526,7 +526,7 @@ export function SurgicalScheduleClient({
                     {isRtl ? doc.nameAr : doc.nameEn}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
 
             {/* Procedure Arabic & English */}
@@ -579,17 +579,17 @@ export function SurgicalScheduleClient({
 
               <div className="space-y-1 col-span-1">
                 <label className="font-bold text-foreground block">{isRtl ? "التخدير" : "Anesthesia"}</label>
-                <Select
+                <select
                   value={anesthesiaType}
                   onChange={(e) => setAnesthesiaType(e.target.value)}
-                  className="h-9 text-xs"
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="general">{isRtl ? "عام" : "General"}</option>
                   <option value="regional">{isRtl ? "ناحي" : "Regional"}</option>
                   <option value="local">{isRtl ? "موضعي" : "Local"}</option>
                   <option value="sedation">{isRtl ? "مهدئ" : "Sedation"}</option>
                   <option value="spinal">{isRtl ? "نخاعي" : "Spinal"}</option>
-                </Select>
+                </select>
               </div>
             </div>
 

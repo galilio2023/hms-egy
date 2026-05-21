@@ -198,8 +198,8 @@ export async function createSurgicalCase(
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
-      // 0. Acquire row-level lock on the hospital tenant to serialize case generation
-      await tx.execute(sql`SELECT id FROM hospitals WHERE id = ${hospitalId} FOR UPDATE`);
+      // 0. Acquire row-level lock on the specific operating room to serialize case generation for this room
+      await tx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId} FOR UPDATE`);
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
       const scheduledDate = new Date(Date.UTC(
