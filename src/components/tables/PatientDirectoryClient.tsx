@@ -179,7 +179,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push(`/patients/${row.original.id}`)}
+          onClick={() => router.push(`/${hospitalSlug}/patients/${row.original.id}`)}
           className="gap-1.5 h-8 text-xs font-bold"
         >
           <Eye className="w-3.5 h-3.5" />
@@ -214,7 +214,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
 
             <Button
               variant="accent"
-              onClick={() => router.push("/patients/new")}
+              onClick={() => router.push(`/${hospitalSlug}/patients/new`)}
               className="gap-2 h-11 px-5 shadow-lg shadow-accent/15 shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[3px]" />
@@ -281,7 +281,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
         <DataTable
           columns={columns}
           data={filteredPatients}
-          onRowClick={(row) => router.push(`/patients/${row.id}`)}
+          onRowClick={(row) => router.push(`/${hospitalSlug}/patients/${row.id}`)}
         />
       </div>
     </div>
