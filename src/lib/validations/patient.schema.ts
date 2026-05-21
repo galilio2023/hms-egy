@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toZonedTime } from "date-fns-tz";
 import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId } from "../utils/egypt";
 
 const egyptianPhoneSchema = z
@@ -45,10 +46,11 @@ export const patientSchema = z.object({
         path: ["gender"],
       });
     }
-    // Validate Date of Birth Match (strictly timezone-neutral UTC comparisons)
-    const isYearMatch = parsed.dob.getUTCFullYear() === data.dob.getUTCFullYear();
-    const isMonthMatch = parsed.dob.getUTCMonth() === data.dob.getUTCMonth();
-    const isDayMatch = parsed.dob.getUTCDate() === data.dob.getUTCDate();
+    // Validate Date of Birth Match (strictly timezone-neutral UTC comparisons usingzoned input date)
+    const zonedInput = toZonedTime(data.dob, "Africa/Cairo");
+    const isYearMatch = parsed.dob.getUTCFullYear() === zonedInput.getUTCFullYear();
+    const isMonthMatch = parsed.dob.getUTCMonth() === zonedInput.getUTCMonth();
+    const isDayMatch = parsed.dob.getUTCDate() === zonedInput.getUTCDate();
 
     if (!isYearMatch || !isMonthMatch || !isDayMatch) {
       ctx.addIssue({

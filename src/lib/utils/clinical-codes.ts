@@ -28,7 +28,7 @@ export async function searchIcd10(query: string): Promise<Icd10Code[]> {
     return queryIcd10Locally(query);
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const baseUrl = typeof window === "undefined" ? (process.env.NEXT_PUBLIC_APP_URL || "") : "";
   const response = await fetch(`${baseUrl}/api/clinical/search-icd10?q=${encodeURIComponent(query)}`);
   const { data } = await response.json();
   return data;
@@ -43,7 +43,7 @@ export async function searchCptCodes(query: string): Promise<CptCode[]> {
     return queryCptLocally(query);
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
+  const baseUrl = typeof window === "undefined" ? (process.env.NEXT_PUBLIC_APP_URL || "") : "";
   const response = await fetch(`${baseUrl}/api/clinical/search-cpt?q=${encodeURIComponent(query)}`);
   const { data } = await response.json();
   return data;

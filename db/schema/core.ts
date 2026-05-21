@@ -25,7 +25,7 @@ export const hospitals = pgTable("hospitals", {
 
 export const hospitalSettings = pgTable("hospital_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
-  hospitalId: uuid("hospital_id").references(() => hospitals.id).notNull().unique(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull().unique(),
   
   // Enabled Modules
   isSurgicalEnabled: boolean("is_surgical_enabled").default(false),
