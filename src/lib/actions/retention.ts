@@ -9,7 +9,7 @@
 import { withTenantContext } from "../db/tenant";
 import * as schema from "../../../db/schema";
 import { eq, sql } from "drizzle-orm";
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
+import { subYears } from "date-fns";
 
 export interface ArchivingJobResult {
   success: boolean;
@@ -57,38 +57,11 @@ export async function runDataArchivingJob(
     }
 
     const now = new Date();
-    const nowCairo = toZonedTime(now, "Africa/Cairo");
     
-    // Calculate cutoff dates based on configured years in Cairo time
-    const clinicalCutoffCairo = new Date(
-      nowCairo.getFullYear() - policy.clinicalRetentionYears,
-      nowCairo.getMonth(),
-      nowCairo.getDate(),
-      nowCairo.getHours(),
-      nowCairo.getMinutes(),
-      nowCairo.getSeconds()
-    );
-    const financialCutoffCairo = new Date(
-      nowCairo.getFullYear() - policy.financialRetentionYears,
-      nowCairo.getMonth(),
-      nowCairo.getDate(),
-      nowCairo.getHours(),
-      nowCairo.getMinutes(),
-      nowCairo.getSeconds()
-    );
-    // Transient logs (SMS reminders, AI logs, audit trials) cleaned up if older than 1 year
-    const logsCutoffCairo = new Date(
-      nowCairo.getFullYear() - 1,
-      nowCairo.getMonth(),
-      nowCairo.getDate(),
-      nowCairo.getHours(),
-      nowCairo.getMinutes(),
-      nowCairo.getSeconds()
-    );
-
-    const clinicalCutoff = fromZonedTime(clinicalCutoffCairo, "Africa/Cairo");
-    const financialCutoff = fromZonedTime(financialCutoffCairo, "Africa/Cairo");
-    const logsCutoff = fromZonedTime(logsCutoffCairo, "Africa/Cairo");
+    // Calculate timezone-independent absolute compliance cutoff timestamps
+    const clinicalCutoff = subYears(now, policy.clinicalRetentionYears);
+    const financialCutoff = subYears(now, policy.financialRetentionYears);
+    const logsCutoff = subYears(now, 1);
 
     console.log(`- Clinical Cutoff (MOH): ${clinicalCutoff.toISOString()}`);
     console.log(`- Financial Cutoff (ETA): ${financialCutoff.toISOString()}`);

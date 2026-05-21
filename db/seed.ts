@@ -301,7 +301,7 @@ async function seed() {
 
     // 9. Drug-Drug Interactions (DDI)
     console.log("💊 Seeding Drug-Drug Interactions from JSON dataset...");
-    const drugInteractionsPath = path.join(__dirname, "clinical-data", "drug-interactions.json");
+    const drugInteractionsPath = path.join(process.cwd(), "db", "clinical-data", "drug-interactions.json");
     if (fs.existsSync(drugInteractionsPath)) {
       const ddiRaw = fs.readFileSync(drugInteractionsPath, "utf-8");
       const ddiList = JSON.parse(ddiRaw);
@@ -334,7 +334,7 @@ async function seed() {
 
     // 10. Lab tests with LOINC and CPT codes
     console.log("🔬 Seeding Lab Tests catalog with LOINC codes...");
-    const loincPath = path.join(__dirname, "clinical-data", "loinc-common.json");
+    const loincPath = path.join(process.cwd(), "db", "clinical-data", "loinc-common.json");
     if (fs.existsSync(loincPath)) {
       const loincRaw = fs.readFileSync(loincPath, "utf-8");
       const loincList = JSON.parse(loincRaw);
