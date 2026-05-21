@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toZonedTime } from "date-fns-tz";
 import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId } from "../utils/egypt";
 
 const egyptianPhoneSchema = z
@@ -46,16 +45,18 @@ export const patientSchema = z.object({
         path: ["gender"],
       });
     }
-    // Validate Date of Birth Match
-    // parsed.dob is constructed via Date.UTC (UTC midnight), so we use getUTC* getters.
-    // data.dob is coerced from client input and may carry a timezone offset, so we
-    // project it to Cairo wall-clock time via toZonedTime and read local getters.
-    const zonedInput = toZonedTime(data.dob, "Africa/Cairo");
-    const isYearMatch = parsed.dob.getUTCFullYear() === zonedInput.getFullYear();
-    const isMonthMatch = parsed.dob.getUTCMonth() === zonedInput.getMonth();
-    const isDayMatch = parsed.dob.getUTCDate() === zonedInput.getDate();
+    // Validate Date of Birth Match (strictly timezone-resilient comparison)
+    const formatToISODate = (date: Date) => {
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(date.getUTCDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    };
 
-    if (!isYearMatch || !isMonthMatch || !isDayMatch) {
+    const parsedIso = formatToISODate(parsed.dob);
+    const inputIso = formatToISODate(data.dob);
+
+    if (parsedIso !== inputIso) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Date of birth does not match National ID",

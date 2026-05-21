@@ -26,17 +26,21 @@ export const hospitals = pgTable("hospitals", {
 export const hospitalSettings = pgTable("hospital_settings", {
   id: uuid("id").primaryKey().defaultRandom(),
   hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull().unique(),
-  
+
   // Enabled Modules
   isSurgicalEnabled: boolean("is_surgical_enabled").default(false),
   isTelemedicineEnabled: boolean("is_telemedicine_enabled").default(false),
   isPatientPortalEnabled: boolean("is_patient_portal_enabled").default(false),
   isOnlinePaymentsEnabled: boolean("is_online_payments_enabled").default(false),
-  
+
   // Regional settings
   timezone: text("timezone").default("Africa/Cairo"),
   currency: text("currency").default("EGP"),
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    hospitalIdIdx: index("hospital_settings_hospital_id_idx").on(table.hospitalId),
+  };
 });

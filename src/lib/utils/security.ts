@@ -4,6 +4,7 @@
  */
 
 import crypto from "crypto";
+import stringify from "fast-json-stable-stringify";
 
 let keyBuffer: Buffer | null = null;
 let hmacSecret: string | null = null;
@@ -67,8 +68,7 @@ export function decryptField(data: string): string | null {
  * Signs an audit record using HMAC-SHA256.
  */
 export function signAuditRecord(record: Record<string, unknown>): string {
-  // Sort keys to ensure deterministic JSON representation across environments.
-  const canonicalString = JSON.stringify(record, Object.keys(record).sort());
+  const canonicalString = stringify(record);
   return crypto.createHmac("sha256", getHmacSecret()).update(canonicalString).digest("hex");
 }
 
