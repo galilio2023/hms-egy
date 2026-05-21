@@ -45,6 +45,7 @@ export const labOrders = pgTable("lab_orders", {
 
 export const labOrderItems = pgTable("lab_order_items", {
   id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull().default(sql`'00000000-0000-0000-0000-000000000000'::uuid`),
   labOrderId: uuid("lab_order_id").references(() => labOrders.id, { onDelete: "cascade" }).notNull(),
   labTestId: uuid("lab_test_id").references(() => labTests.id, { onDelete: "restrict" }).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, collected, completed
@@ -55,17 +56,9 @@ export const labOrderItems = pgTable("lab_order_items", {
   notes: text("notes"),
 }, (table) => {
   return {
-    tenantIsolation: pgPolicy("tenant_isolation_policy", {
-      for: "all",
-      to: "public",
-      using: sql`EXISTS (
-        SELECT 1 FROM lab_orders 
-        WHERE lab_orders.id = lab_order_id 
-          AND (current_setting('app.bypass_rls', true) = 'true' 
-               OR lab_orders.hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)
-      )`
-    }),
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     labOrderIdIdx: index("laboi_order_idx").on(table.labOrderId),
+    hospitalIdx: index("laboi_hospital_idx").on(table.hospitalId),
   };
 }).enableRLS();
 

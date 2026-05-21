@@ -31,6 +31,7 @@ export const invoices = pgTable("invoices", {
 
 export const invoiceItems = pgTable("invoice_items", {
   id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull().default(sql`'00000000-0000-0000-0000-000000000000'::uuid`),
   invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "cascade" }).notNull(),
   descriptionAr: text("description_ar").notNull(),
   descriptionEn: text("description_en").notNull(),
@@ -40,17 +41,9 @@ export const invoiceItems = pgTable("invoice_items", {
   type: varchar("type", { length: 50 }).notNull(), // consultation, lab, radiology, pharmacy, surgical_room, accommodation
 }, (table) => {
   return {
-    tenantIsolation: pgPolicy("tenant_isolation_policy", {
-      for: "all",
-      to: "public",
-      using: sql`EXISTS (
-        SELECT 1 FROM invoices 
-        WHERE invoices.id = invoice_id 
-          AND (current_setting('app.bypass_rls', true) = 'true' 
-               OR invoices.hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)
-      )`
-    }),
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     invoiceIdIdx: index("invi_invoice_idx").on(table.invoiceId),
+    hospitalIdx: index("invi_hospital_idx").on(table.hospitalId),
   };
 }).enableRLS();
 

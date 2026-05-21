@@ -18,6 +18,7 @@ export const notifications = pgTable("notifications", {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalUserIdx: index("notif_hospital_user_idx").on(table.hospitalId, table.userId),
+    notifRetentionIdx: index("notif_retention_idx").on(table.hospitalId, table.createdAt),
   };
 }).enableRLS();
 
@@ -99,6 +100,7 @@ export const sentReminders = pgTable("sent_reminders", {
       table.reminderType,
       table.channel
     ),
+    reminderRetentionIdx: index("reminder_retention_idx").on(table.hospitalId, table.sentAt),
   };
 }).enableRLS();
 

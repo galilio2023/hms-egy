@@ -71,7 +71,9 @@ export async function runDataArchivingJob(
 
   // 2. Archive medical records (MOH Audits) - Independent Batched Loops
   let clinicalCount = 0;
-  while (true) {
+  let clinicalIterations = 0;
+  while (clinicalIterations < 5) {
+    clinicalIterations++;
     const batchCount = await withTenantContext(hospitalId, async (tx) => {
       const result = await tx.execute(sql`
         WITH batch AS (
@@ -97,7 +99,9 @@ export async function runDataArchivingJob(
 
   // 3. Archive financial invoices (ETA Compliance) - Independent Batched Loops
   let financialCount = 0;
-  while (true) {
+  let financialIterations = 0;
+  while (financialIterations < 5) {
+    financialIterations++;
     const batchCount = await withTenantContext(hospitalId, async (tx) => {
       const result = await tx.execute(sql`
         WITH batch AS (
@@ -123,7 +127,9 @@ export async function runDataArchivingJob(
 
   // 4. Prune transient logs (Reminders & Notifications older than 1 year) - Independent Batched Loops
   let remindersCount = 0;
-  while (true) {
+  let remindersIterations = 0;
+  while (remindersIterations < 5) {
+    remindersIterations++;
     const batchCount = await withTenantContext(hospitalId, async (tx) => {
       const result = await tx.execute(sql`
         WITH batch AS (
@@ -146,7 +152,9 @@ export async function runDataArchivingJob(
   }
     
   let notificationsCount = 0;
-  while (true) {
+  let notificationsIterations = 0;
+  while (notificationsIterations < 5) {
+    notificationsIterations++;
     const batchCount = await withTenantContext(hospitalId, async (tx) => {
       const result = await tx.execute(sql`
         WITH batch AS (

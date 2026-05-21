@@ -31,6 +31,24 @@ export const GOVERNORATES: Record<string, { code: string; ar: string; en: string
   "88": { code: "88", ar: "خارج الجمهورية", en: "Outside Egypt" },
 };
 
+/**
+ * Resolves a governorate string (either code, Arabic name, or English name) to its 2-digit code.
+ */
+export function getGovernorateCode(input: string): string | null {
+  if (!input) return null;
+  const cleaned = input.trim();
+  if (GOVERNORATES[cleaned]) return cleaned;
+  
+  const lower = cleaned.toLowerCase();
+  for (const [code, gov] of Object.entries(GOVERNORATES)) {
+    if (gov.en.toLowerCase() === lower || gov.ar === cleaned) {
+      return code;
+    }
+  }
+  return null;
+}
+
+
 export const EGYPTIAN_INSURANCE_PROVIDERS = [
   { 
     id: "hio", 

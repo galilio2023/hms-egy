@@ -9,7 +9,8 @@ export const patients = pgTable("patients", {
   patientNumber: varchar("patient_number", { length: 50 }).notNull(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en").notNull(),
-  nationalId: varchar("national_id", { length: 14 }).notNull(),
+  nationalId: varchar("national_id", { length: 14 }),
+  passportNumber: varchar("passport_number", { length: 50 }),
   dob: timestamp("dob").notNull(),
   gender: genderEnum("gender").notNull(),
   contactPhone: text("contact_phone").notNull(),
@@ -27,10 +28,14 @@ export const patients = pgTable("patients", {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalNidUnique: unique("pat_hospital_nid_unique").on(table.hospitalId, table.nationalId),
+    hospitalPassportUnique: unique("pat_hospital_passport_unique").on(table.hospitalId, table.passportNumber),
     hospitalNumIdx: index("pat_hospital_num_idx").on(table.hospitalId, table.patientNumber),
     govIdx: index("pat_gov_idx").on(table.governorate),
     nationalIdNumericCheck: sql`CHECK (
-      national_id ~ '^[23][0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])(0[1-4]|1[1-9]|2[1-9]|3[1-5]|88)[0-9]{4}[0-9]$'
+      national_id IS NULL OR national_id ~ '^[23][0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])(0[1-4]|1[1-9]|2[1-9]|3[1-5]|88)[0-9]{4}[0-9]$'
+    )`,
+    nationalIdOrPassportCheck: sql`CHECK (
+      national_id IS NOT NULL OR passport_number IS NOT NULL
     )`,
   };
 }).enableRLS();

@@ -1,6 +1,6 @@
 {
-  "id": "c7e966d5-ce13-4291-bed7-2ec56c8d4e9c",
-  "prevId": "09261e76-2c1d-4f61-aead-23aad69fc7ad",
+  "id": "c3f77263-ca59-4f41-b097-389bad41fd79",
+  "prevId": "c7e966d5-ce13-4291-bed7-2ec56c8d4e9c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -73,9 +73,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "dept_code_idx": {
           "name": "dept_code_idx",
@@ -88,24 +88,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "departments_hospital_id_hospitals_id_fk": {
           "name": "departments_hospital_id_hospitals_id_fk",
           "tableFrom": "departments",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -247,25 +247,25 @@
         "hospital_settings_hospital_id_hospitals_id_fk": {
           "name": "hospital_settings_hospital_id_hospitals_id_fk",
           "tableFrom": "hospital_settings",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "hospital_settings_hospital_id_unique": {
           "name": "hospital_settings_hospital_id_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "hospital_id"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {
@@ -389,9 +389,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "active_idx": {
           "name": "active_idx",
@@ -404,9 +404,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -414,10 +414,10 @@
       "uniqueConstraints": {
         "hospitals_slug_unique": {
           "name": "hospitals_slug_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "slug"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {},
@@ -536,24 +536,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "operating_rooms_hospital_id_hospitals_id_fk": {
           "name": "operating_rooms_hospital_id_hospitals_id_fk",
           "tableFrom": "operating_rooms",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -663,50 +663,50 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "or_block_overrides_hospital_id_hospitals_id_fk": {
           "name": "or_block_overrides_hospital_id_hospitals_id_fk",
           "tableFrom": "or_block_overrides",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "or_block_overrides_or_block_id_or_blocks_id_fk": {
           "name": "or_block_overrides_or_block_id_or_blocks_id_fk",
           "tableFrom": "or_block_overrides",
+          "tableTo": "or_blocks",
           "columnsFrom": [
             "or_block_id"
           ],
-          "tableTo": "or_blocks",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "or_block_overrides_created_by_staff_id_fk": {
           "name": "or_block_overrides_created_by_staff_id_fk",
           "tableFrom": "or_block_overrides",
+          "tableTo": "staff",
           "columnsFrom": [
             "created_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -835,9 +835,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "orb_day_time_idx": {
           "name": "orb_day_time_idx",
@@ -856,63 +856,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "or_blocks_hospital_id_hospitals_id_fk": {
           "name": "or_blocks_hospital_id_hospitals_id_fk",
           "tableFrom": "or_blocks",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "or_blocks_or_room_id_operating_rooms_id_fk": {
           "name": "or_blocks_or_room_id_operating_rooms_id_fk",
           "tableFrom": "or_blocks",
+          "tableTo": "operating_rooms",
           "columnsFrom": [
             "or_room_id"
           ],
-          "tableTo": "operating_rooms",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "or_blocks_department_id_departments_id_fk": {
           "name": "or_blocks_department_id_departments_id_fk",
           "tableFrom": "or_blocks",
+          "tableTo": "departments",
           "columnsFrom": [
             "department_id"
           ],
-          "tableTo": "departments",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "or_blocks_owning_doctor_id_staff_id_fk": {
           "name": "or_blocks_owning_doctor_id_staff_id_fk",
           "tableFrom": "or_blocks",
+          "tableTo": "staff",
           "columnsFrom": [
             "owning_doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1025,9 +1025,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "staff_email_idx": {
           "name": "staff_email_idx",
@@ -1040,9 +1040,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "staff_role_idx": {
           "name": "staff_role_idx",
@@ -1055,24 +1055,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "staff_hospital_id_hospitals_id_fk": {
           "name": "staff_hospital_id_hospitals_id_fk",
           "tableFrom": "staff",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1178,9 +1178,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "consent_patient_type_idx": {
           "name": "consent_patient_type_idx",
@@ -1199,37 +1199,37 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "patient_consents_hospital_id_hospitals_id_fk": {
           "name": "patient_consents_hospital_id_hospitals_id_fk",
           "tableFrom": "patient_consents",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "patient_consents_patient_id_patients_id_fk": {
           "name": "patient_consents_patient_id_patients_id_fk",
           "tableFrom": "patient_consents",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1287,7 +1287,13 @@
           "name": "national_id",
           "type": "varchar(14)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "passport_number": {
+          "name": "passport_number",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
         },
         "dob": {
           "name": "dob",
@@ -1390,9 +1396,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "pat_gov_idx": {
           "name": "pat_gov_idx",
@@ -1405,35 +1411,43 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "patients_hospital_id_hospitals_id_fk": {
           "name": "patients_hospital_id_hospitals_id_fk",
           "tableFrom": "patients",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "pat_hospital_nid_unique": {
           "name": "pat_hospital_nid_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "hospital_id",
             "national_id"
-          ],
-          "nullsNotDistinct": false
+          ]
+        },
+        "pat_hospital_passport_unique": {
+          "name": "pat_hospital_passport_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "hospital_id",
+            "passport_number"
+          ]
         }
       },
       "policies": {
@@ -1543,9 +1557,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "adm_hospital_bed_idx": {
           "name": "adm_hospital_bed_idx",
@@ -1564,63 +1578,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "admissions_hospital_id_hospitals_id_fk": {
           "name": "admissions_hospital_id_hospitals_id_fk",
           "tableFrom": "admissions",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "admissions_patient_id_patients_id_fk": {
           "name": "admissions_patient_id_patients_id_fk",
           "tableFrom": "admissions",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "admissions_bed_id_beds_id_fk": {
           "name": "admissions_bed_id_beds_id_fk",
           "tableFrom": "admissions",
+          "tableTo": "beds",
           "columnsFrom": [
             "bed_id"
           ],
-          "tableTo": "beds",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         },
         "admissions_admitting_doctor_id_staff_id_fk": {
           "name": "admissions_admitting_doctor_id_staff_id_fk",
           "tableFrom": "admissions",
+          "tableTo": "staff",
           "columnsFrom": [
             "admitting_doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1756,9 +1770,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "app_hospital_pat_idx": {
           "name": "app_hospital_pat_idx",
@@ -1777,63 +1791,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "appointments_hospital_id_hospitals_id_fk": {
           "name": "appointments_hospital_id_hospitals_id_fk",
           "tableFrom": "appointments",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "appointments_patient_id_patients_id_fk": {
           "name": "appointments_patient_id_patients_id_fk",
           "tableFrom": "appointments",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "appointments_doctor_id_staff_id_fk": {
           "name": "appointments_doctor_id_staff_id_fk",
           "tableFrom": "appointments",
+          "tableTo": "staff",
           "columnsFrom": [
             "doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "appointments_department_id_departments_id_fk": {
           "name": "appointments_department_id_departments_id_fk",
           "tableFrom": "appointments",
+          "tableTo": "departments",
           "columnsFrom": [
             "department_id"
           ],
-          "tableTo": "departments",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1934,37 +1948,37 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "beds_hospital_id_hospitals_id_fk": {
           "name": "beds_hospital_id_hospitals_id_fk",
           "tableFrom": "beds",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "beds_room_id_rooms_id_fk": {
           "name": "beds_room_id_rooms_id_fk",
           "tableFrom": "beds",
+          "tableTo": "rooms",
           "columnsFrom": [
             "room_id"
           ],
-          "tableTo": "rooms",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2056,60 +2070,60 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "discharge_summaries_hospital_id_hospitals_id_fk": {
           "name": "discharge_summaries_hospital_id_hospitals_id_fk",
           "tableFrom": "discharge_summaries",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "discharge_summaries_admission_id_admissions_id_fk": {
           "name": "discharge_summaries_admission_id_admissions_id_fk",
           "tableFrom": "discharge_summaries",
+          "tableTo": "admissions",
           "columnsFrom": [
             "admission_id"
           ],
-          "tableTo": "admissions",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "discharge_summaries_discharging_doctor_id_staff_id_fk": {
           "name": "discharge_summaries_discharging_doctor_id_staff_id_fk",
           "tableFrom": "discharge_summaries",
+          "tableTo": "staff",
           "columnsFrom": [
             "discharging_doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "discharge_summaries_admission_id_unique": {
           "name": "discharge_summaries_admission_id_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "admission_id"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {
@@ -2225,9 +2239,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "med_archiving_idx": {
           "name": "med_archiving_idx",
@@ -2252,50 +2266,50 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "medical_records_hospital_id_hospitals_id_fk": {
           "name": "medical_records_hospital_id_hospitals_id_fk",
           "tableFrom": "medical_records",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "medical_records_patient_id_patients_id_fk": {
           "name": "medical_records_patient_id_patients_id_fk",
           "tableFrom": "medical_records",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "medical_records_doctor_id_staff_id_fk": {
           "name": "medical_records_doctor_id_staff_id_fk",
           "tableFrom": "medical_records",
+          "tableTo": "staff",
           "columnsFrom": [
             "doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2395,24 +2409,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "rooms_hospital_id_hospitals_id_fk": {
           "name": "rooms_hospital_id_hospitals_id_fk",
           "tableFrom": "rooms",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2540,50 +2554,50 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "vitals_flowsheet_hospital_id_hospitals_id_fk": {
           "name": "vitals_flowsheet_hospital_id_hospitals_id_fk",
           "tableFrom": "vitals_flowsheet",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "vitals_flowsheet_patient_id_patients_id_fk": {
           "name": "vitals_flowsheet_patient_id_patients_id_fk",
           "tableFrom": "vitals_flowsheet",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "vitals_flowsheet_recorded_by_staff_id_fk": {
           "name": "vitals_flowsheet_recorded_by_staff_id_fk",
           "tableFrom": "vitals_flowsheet",
+          "tableTo": "staff",
           "columnsFrom": [
             "recorded_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2683,63 +2697,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "waiting_list_hospital_id_hospitals_id_fk": {
           "name": "waiting_list_hospital_id_hospitals_id_fk",
           "tableFrom": "waiting_list",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "waiting_list_patient_id_patients_id_fk": {
           "name": "waiting_list_patient_id_patients_id_fk",
           "tableFrom": "waiting_list",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "waiting_list_department_id_departments_id_fk": {
           "name": "waiting_list_department_id_departments_id_fk",
           "tableFrom": "waiting_list",
+          "tableTo": "departments",
           "columnsFrom": [
             "department_id"
           ],
-          "tableTo": "departments",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "waiting_list_preferred_doctor_id_staff_id_fk": {
           "name": "waiting_list_preferred_doctor_id_staff_id_fk",
           "tableFrom": "waiting_list",
+          "tableTo": "staff",
           "columnsFrom": [
             "preferred_doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2883,76 +2897,76 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "housekeeping_tasks_hospital_id_hospitals_id_fk": {
           "name": "housekeeping_tasks_hospital_id_hospitals_id_fk",
           "tableFrom": "housekeeping_tasks",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "housekeeping_tasks_bed_id_beds_id_fk": {
           "name": "housekeeping_tasks_bed_id_beds_id_fk",
           "tableFrom": "housekeeping_tasks",
+          "tableTo": "beds",
           "columnsFrom": [
             "bed_id"
           ],
-          "tableTo": "beds",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "housekeeping_tasks_room_id_rooms_id_fk": {
           "name": "housekeeping_tasks_room_id_rooms_id_fk",
           "tableFrom": "housekeeping_tasks",
+          "tableTo": "rooms",
           "columnsFrom": [
             "room_id"
           ],
-          "tableTo": "rooms",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "housekeeping_tasks_assigned_to_staff_id_fk": {
           "name": "housekeeping_tasks_assigned_to_staff_id_fk",
           "tableFrom": "housekeeping_tasks",
+          "tableTo": "staff",
           "columnsFrom": [
             "assigned_to"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         },
         "housekeeping_tasks_requested_by_staff_id_fk": {
           "name": "housekeeping_tasks_requested_by_staff_id_fk",
           "tableFrom": "housekeeping_tasks",
+          "tableTo": "staff",
           "columnsFrom": [
             "requested_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3026,9 +3040,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -3147,9 +3161,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "ddi_generic_drugs_idx": {
           "name": "ddi_generic_drugs_idx",
@@ -3168,9 +3182,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -3293,9 +3307,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "med_barcode_idx": {
           "name": "med_barcode_idx",
@@ -3308,24 +3322,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "medications_hospital_id_hospitals_id_fk": {
           "name": "medications_hospital_id_hospitals_id_fk",
           "tableFrom": "medications",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3354,6 +3368,13 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
+        },
+        "hospital_id": {
+          "name": "hospital_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'00000000-0000-0000-0000-000000000000'::uuid"
         },
         "prescription_id": {
           "name": "prescription_id",
@@ -3418,44 +3439,82 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
+        },
+        "rxi_hospital_idx": {
+          "name": "rxi_hospital_idx",
+          "columns": [
+            {
+              "expression": "hospital_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "prescription_items_prescription_id_prescriptions_id_fk": {
-          "name": "prescription_items_prescription_id_prescriptions_id_fk",
+        "prescription_items_hospital_id_hospitals_id_fk": {
+          "name": "prescription_items_hospital_id_hospitals_id_fk",
           "tableFrom": "prescription_items",
+          "tableTo": "hospitals",
           "columnsFrom": [
-            "prescription_id"
+            "hospital_id"
           ],
-          "tableTo": "prescriptions",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "prescription_items_prescription_id_prescriptions_id_fk": {
+          "name": "prescription_items_prescription_id_prescriptions_id_fk",
+          "tableFrom": "prescription_items",
+          "tableTo": "prescriptions",
+          "columnsFrom": [
+            "prescription_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "prescription_items_medication_id_medications_id_fk": {
           "name": "prescription_items_medication_id_medications_id_fk",
           "tableFrom": "prescription_items",
+          "tableTo": "medications",
           "columnsFrom": [
             "medication_id"
           ],
-          "tableTo": "medications",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
+      "policies": {
+        "tenant_isolation_policy": {
+          "name": "tenant_isolation_policy",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)"
+        }
+      },
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.prescriptions": {
       "name": "prescriptions",
@@ -3551,63 +3610,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "prescriptions_hospital_id_hospitals_id_fk": {
           "name": "prescriptions_hospital_id_hospitals_id_fk",
           "tableFrom": "prescriptions",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "prescriptions_patient_id_patients_id_fk": {
           "name": "prescriptions_patient_id_patients_id_fk",
           "tableFrom": "prescriptions",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "prescriptions_doctor_id_staff_id_fk": {
           "name": "prescriptions_doctor_id_staff_id_fk",
           "tableFrom": "prescriptions",
+          "tableTo": "staff",
           "columnsFrom": [
             "doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "prescriptions_admission_id_admissions_id_fk": {
           "name": "prescriptions_admission_id_admissions_id_fk",
           "tableFrom": "prescriptions",
+          "tableTo": "admissions",
           "columnsFrom": [
             "admission_id"
           ],
-          "tableTo": "admissions",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3699,50 +3758,50 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "stock_transactions_hospital_id_hospitals_id_fk": {
           "name": "stock_transactions_hospital_id_hospitals_id_fk",
           "tableFrom": "stock_transactions",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "stock_transactions_medication_id_medications_id_fk": {
           "name": "stock_transactions_medication_id_medications_id_fk",
           "tableFrom": "stock_transactions",
+          "tableTo": "medications",
           "columnsFrom": [
             "medication_id"
           ],
-          "tableTo": "medications",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "stock_transactions_performed_by_staff_id_fk": {
           "name": "stock_transactions_performed_by_staff_id_fk",
           "tableFrom": "stock_transactions",
+          "tableTo": "staff",
           "columnsFrom": [
             "performed_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3847,63 +3906,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "critical_value_alerts_hospital_id_hospitals_id_fk": {
           "name": "critical_value_alerts_hospital_id_hospitals_id_fk",
           "tableFrom": "critical_value_alerts",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "critical_value_alerts_lab_order_item_id_lab_order_items_id_fk": {
           "name": "critical_value_alerts_lab_order_item_id_lab_order_items_id_fk",
           "tableFrom": "critical_value_alerts",
+          "tableTo": "lab_order_items",
           "columnsFrom": [
             "lab_order_item_id"
           ],
-          "tableTo": "lab_order_items",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "critical_value_alerts_patient_id_patients_id_fk": {
           "name": "critical_value_alerts_patient_id_patients_id_fk",
           "tableFrom": "critical_value_alerts",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "critical_value_alerts_notified_doctor_id_staff_id_fk": {
           "name": "critical_value_alerts_notified_doctor_id_staff_id_fk",
           "tableFrom": "critical_value_alerts",
+          "tableTo": "staff",
           "columnsFrom": [
             "notified_doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3932,6 +3991,13 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
+        },
+        "hospital_id": {
+          "name": "hospital_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'00000000-0000-0000-0000-000000000000'::uuid"
         },
         "lab_order_id": {
           "name": "lab_order_id",
@@ -3996,57 +4062,95 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
+        },
+        "laboi_hospital_idx": {
+          "name": "laboi_hospital_idx",
+          "columns": [
+            {
+              "expression": "hospital_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "lab_order_items_lab_order_id_lab_orders_id_fk": {
-          "name": "lab_order_items_lab_order_id_lab_orders_id_fk",
+        "lab_order_items_hospital_id_hospitals_id_fk": {
+          "name": "lab_order_items_hospital_id_hospitals_id_fk",
           "tableFrom": "lab_order_items",
+          "tableTo": "hospitals",
           "columnsFrom": [
-            "lab_order_id"
+            "hospital_id"
           ],
-          "tableTo": "lab_orders",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "lab_order_items_lab_order_id_lab_orders_id_fk": {
+          "name": "lab_order_items_lab_order_id_lab_orders_id_fk",
+          "tableFrom": "lab_order_items",
+          "tableTo": "lab_orders",
+          "columnsFrom": [
+            "lab_order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "lab_order_items_lab_test_id_lab_tests_id_fk": {
           "name": "lab_order_items_lab_test_id_lab_tests_id_fk",
           "tableFrom": "lab_order_items",
+          "tableTo": "lab_tests",
           "columnsFrom": [
             "lab_test_id"
           ],
-          "tableTo": "lab_tests",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "lab_order_items_result_recorded_by_staff_id_fk": {
           "name": "lab_order_items_result_recorded_by_staff_id_fk",
           "tableFrom": "lab_order_items",
+          "tableTo": "staff",
           "columnsFrom": [
             "result_recorded_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
+      "policies": {
+        "tenant_isolation_policy": {
+          "name": "tenant_isolation_policy",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)"
+        }
+      },
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.lab_orders": {
       "name": "lab_orders",
@@ -4136,63 +4240,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "lab_orders_hospital_id_hospitals_id_fk": {
           "name": "lab_orders_hospital_id_hospitals_id_fk",
           "tableFrom": "lab_orders",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "lab_orders_patient_id_patients_id_fk": {
           "name": "lab_orders_patient_id_patients_id_fk",
           "tableFrom": "lab_orders",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "lab_orders_doctor_id_staff_id_fk": {
           "name": "lab_orders_doctor_id_staff_id_fk",
           "tableFrom": "lab_orders",
+          "tableTo": "staff",
           "columnsFrom": [
             "doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "lab_orders_admission_id_admissions_id_fk": {
           "name": "lab_orders_admission_id_admissions_id_fk",
           "tableFrom": "lab_orders",
+          "tableTo": "admissions",
           "columnsFrom": [
             "admission_id"
           ],
-          "tableTo": "admissions",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -4310,9 +4414,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "lab_loinc_idx": {
           "name": "lab_loinc_idx",
@@ -4325,24 +4429,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "lab_tests_hospital_id_hospitals_id_fk": {
           "name": "lab_tests_hospital_id_hospitals_id_fk",
           "tableFrom": "lab_tests",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -4473,63 +4577,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "radiology_orders_hospital_id_hospitals_id_fk": {
           "name": "radiology_orders_hospital_id_hospitals_id_fk",
           "tableFrom": "radiology_orders",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "radiology_orders_patient_id_patients_id_fk": {
           "name": "radiology_orders_patient_id_patients_id_fk",
           "tableFrom": "radiology_orders",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "radiology_orders_doctor_id_staff_id_fk": {
           "name": "radiology_orders_doctor_id_staff_id_fk",
           "tableFrom": "radiology_orders",
+          "tableTo": "staff",
           "columnsFrom": [
             "doctor_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "radiology_orders_admission_id_admissions_id_fk": {
           "name": "radiology_orders_admission_id_admissions_id_fk",
           "tableFrom": "radiology_orders",
+          "tableTo": "admissions",
           "columnsFrom": [
             "admission_id"
           ],
-          "tableTo": "admissions",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -4653,73 +4757,73 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "radiology_reports_hospital_id_hospitals_id_fk": {
           "name": "radiology_reports_hospital_id_hospitals_id_fk",
           "tableFrom": "radiology_reports",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "radiology_reports_radiology_order_id_radiology_orders_id_fk": {
           "name": "radiology_reports_radiology_order_id_radiology_orders_id_fk",
           "tableFrom": "radiology_reports",
+          "tableTo": "radiology_orders",
           "columnsFrom": [
             "radiology_order_id"
           ],
-          "tableTo": "radiology_orders",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "radiology_reports_patient_id_patients_id_fk": {
           "name": "radiology_reports_patient_id_patients_id_fk",
           "tableFrom": "radiology_reports",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "radiology_reports_radiologist_id_staff_id_fk": {
           "name": "radiology_reports_radiologist_id_staff_id_fk",
           "tableFrom": "radiology_reports",
+          "tableTo": "staff",
           "columnsFrom": [
             "radiologist_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "radiology_reports_radiology_order_id_unique": {
           "name": "radiology_reports_radiology_order_id_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "radiology_order_id"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {
@@ -4840,50 +4944,50 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "insurance_claims_hospital_id_hospitals_id_fk": {
           "name": "insurance_claims_hospital_id_hospitals_id_fk",
           "tableFrom": "insurance_claims",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "insurance_claims_invoice_id_invoices_id_fk": {
           "name": "insurance_claims_invoice_id_invoices_id_fk",
           "tableFrom": "insurance_claims",
+          "tableTo": "invoices",
           "columnsFrom": [
             "invoice_id"
           ],
-          "tableTo": "invoices",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "insurance_claims_patient_id_patients_id_fk": {
           "name": "insurance_claims_patient_id_patients_id_fk",
           "tableFrom": "insurance_claims",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -4912,6 +5016,13 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
+        },
+        "hospital_id": {
+          "name": "hospital_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'00000000-0000-0000-0000-000000000000'::uuid"
         },
         "invoice_id": {
           "name": "invoice_id",
@@ -4968,31 +5079,69 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
+        },
+        "invi_hospital_idx": {
+          "name": "invi_hospital_idx",
+          "columns": [
+            {
+              "expression": "hospital_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "invoice_items_invoice_id_invoices_id_fk": {
-          "name": "invoice_items_invoice_id_invoices_id_fk",
+        "invoice_items_hospital_id_hospitals_id_fk": {
+          "name": "invoice_items_hospital_id_hospitals_id_fk",
           "tableFrom": "invoice_items",
+          "tableTo": "hospitals",
           "columnsFrom": [
-            "invoice_id"
+            "hospital_id"
           ],
-          "tableTo": "invoices",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "invoice_items_invoice_id_invoices_id_fk": {
+          "name": "invoice_items_invoice_id_invoices_id_fk",
+          "tableFrom": "invoice_items",
+          "tableTo": "invoices",
+          "columnsFrom": [
+            "invoice_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
+      "policies": {
+        "tenant_isolation_policy": {
+          "name": "tenant_isolation_policy",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "public"
+          ],
+          "using": "(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)"
+        }
+      },
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.invoices": {
       "name": "invoices",
@@ -5115,9 +5264,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "inv_archiving_idx": {
           "name": "inv_archiving_idx",
@@ -5142,48 +5291,48 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "invoices_hospital_id_hospitals_id_fk": {
           "name": "invoices_hospital_id_hospitals_id_fk",
           "tableFrom": "invoices",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "invoices_patient_id_patients_id_fk": {
           "name": "invoices_patient_id_patients_id_fk",
           "tableFrom": "invoices",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "inv_hospital_number_unique": {
           "name": "inv_hospital_number_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "hospital_id",
             "invoice_number"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {
@@ -5336,9 +5485,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "onp_order_idx": {
           "name": "onp_order_idx",
@@ -5351,9 +5500,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "onp_tx_idx": {
           "name": "onp_tx_idx",
@@ -5366,9 +5515,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "onp_invoice_idx": {
           "name": "onp_invoice_idx",
@@ -5381,9 +5530,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "onp_status_idx": {
           "name": "onp_status_idx",
@@ -5396,67 +5545,67 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "online_payments_hospital_id_hospitals_id_fk": {
           "name": "online_payments_hospital_id_hospitals_id_fk",
           "tableFrom": "online_payments",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "online_payments_invoice_id_invoices_id_fk": {
           "name": "online_payments_invoice_id_invoices_id_fk",
           "tableFrom": "online_payments",
+          "tableTo": "invoices",
           "columnsFrom": [
             "invoice_id"
           ],
-          "tableTo": "invoices",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "online_payments_patient_id_patients_id_fk": {
           "name": "online_payments_patient_id_patients_id_fk",
           "tableFrom": "online_payments",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "online_payments_paymob_order_id_unique": {
           "name": "online_payments_paymob_order_id_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "paymob_order_id"
-          ],
-          "nullsNotDistinct": false
+          ]
         },
         "online_payments_paymob_transaction_id_unique": {
           "name": "online_payments_paymob_transaction_id_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "paymob_transaction_id"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {
@@ -5547,50 +5696,50 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "payment_reminders_hospital_id_hospitals_id_fk": {
           "name": "payment_reminders_hospital_id_hospitals_id_fk",
           "tableFrom": "payment_reminders",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "payment_reminders_invoice_id_invoices_id_fk": {
           "name": "payment_reminders_invoice_id_invoices_id_fk",
           "tableFrom": "payment_reminders",
+          "tableTo": "invoices",
           "columnsFrom": [
             "invoice_id"
           ],
-          "tableTo": "invoices",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "payment_reminders_patient_id_patients_id_fk": {
           "name": "payment_reminders_patient_id_patients_id_fk",
           "tableFrom": "payment_reminders",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -5694,63 +5843,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "payments_hospital_id_hospitals_id_fk": {
           "name": "payments_hospital_id_hospitals_id_fk",
           "tableFrom": "payments",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "payments_invoice_id_invoices_id_fk": {
           "name": "payments_invoice_id_invoices_id_fk",
           "tableFrom": "payments",
+          "tableTo": "invoices",
           "columnsFrom": [
             "invoice_id"
           ],
-          "tableTo": "invoices",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "payments_patient_id_patients_id_fk": {
           "name": "payments_patient_id_patients_id_fk",
           "tableFrom": "payments",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "payments_received_by_staff_id_fk": {
           "name": "payments_received_by_staff_id_fk",
           "tableFrom": "payments",
+          "tableTo": "staff",
           "columnsFrom": [
             "received_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -5952,73 +6101,73 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "anesthesia_records_surgical_case_id_surgical_cases_id_fk": {
           "name": "anesthesia_records_surgical_case_id_surgical_cases_id_fk",
           "tableFrom": "anesthesia_records",
+          "tableTo": "surgical_cases",
           "columnsFrom": [
             "surgical_case_id"
           ],
-          "tableTo": "surgical_cases",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "anesthesia_records_hospital_id_hospitals_id_fk": {
           "name": "anesthesia_records_hospital_id_hospitals_id_fk",
           "tableFrom": "anesthesia_records",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "anesthesia_records_anesthesiologist_id_staff_id_fk": {
           "name": "anesthesia_records_anesthesiologist_id_staff_id_fk",
           "tableFrom": "anesthesia_records",
+          "tableTo": "staff",
           "columnsFrom": [
             "anesthesiologist_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "anesthesia_records_patient_id_patients_id_fk": {
           "name": "anesthesia_records_patient_id_patients_id_fk",
           "tableFrom": "anesthesia_records",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "anesthesia_records_surgical_case_id_unique": {
           "name": "anesthesia_records_surgical_case_id_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "surgical_case_id"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {
@@ -6281,9 +6430,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "sc_hospital_surg_date_idx": {
           "name": "sc_hospital_surg_date_idx",
@@ -6308,9 +6457,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "sc_hospital_patient_idx": {
           "name": "sc_hospital_patient_idx",
@@ -6329,151 +6478,151 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "surgical_cases_hospital_id_hospitals_id_fk": {
           "name": "surgical_cases_hospital_id_hospitals_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "surgical_cases_patient_id_patients_id_fk": {
           "name": "surgical_cases_patient_id_patients_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "surgical_cases_admission_id_admissions_id_fk": {
           "name": "surgical_cases_admission_id_admissions_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "admissions",
           "columnsFrom": [
             "admission_id"
           ],
-          "tableTo": "admissions",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         },
         "surgical_cases_or_room_id_operating_rooms_id_fk": {
           "name": "surgical_cases_or_room_id_operating_rooms_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "operating_rooms",
           "columnsFrom": [
             "or_room_id"
           ],
-          "tableTo": "operating_rooms",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "surgical_cases_lead_surgeon_id_staff_id_fk": {
           "name": "surgical_cases_lead_surgeon_id_staff_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "staff",
           "columnsFrom": [
             "lead_surgeon_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "surgical_cases_anesthesiologist_id_staff_id_fk": {
           "name": "surgical_cases_anesthesiologist_id_staff_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "staff",
           "columnsFrom": [
             "anesthesiologist_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "surgical_cases_scrub_nurse_id_staff_id_fk": {
           "name": "surgical_cases_scrub_nurse_id_staff_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "staff",
           "columnsFrom": [
             "scrub_nurse_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         },
         "surgical_cases_circulating_nurse_id_staff_id_fk": {
           "name": "surgical_cases_circulating_nurse_id_staff_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "staff",
           "columnsFrom": [
             "circulating_nurse_id"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         },
         "surgical_cases_department_id_departments_id_fk": {
           "name": "surgical_cases_department_id_departments_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "departments",
           "columnsFrom": [
             "department_id"
           ],
-          "tableTo": "departments",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "surgical_cases_created_by_staff_id_fk": {
           "name": "surgical_cases_created_by_staff_id_fk",
           "tableFrom": "surgical_cases",
+          "tableTo": "staff",
           "columnsFrom": [
             "created_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "surgical_cases_case_number_unique": {
           "name": "surgical_cases_case_number_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "case_number"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {
@@ -6570,37 +6719,37 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "surgical_checklist_templates_hospital_id_hospitals_id_fk": {
           "name": "surgical_checklist_templates_hospital_id_hospitals_id_fk",
           "tableFrom": "surgical_checklist_templates",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "surgical_checklist_templates_created_by_staff_id_fk": {
           "name": "surgical_checklist_templates_created_by_staff_id_fk",
           "tableFrom": "surgical_checklist_templates",
+          "tableTo": "staff",
           "columnsFrom": [
             "created_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -6700,9 +6849,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "scl_case_phase_idx": {
           "name": "scl_case_phase_idx",
@@ -6721,63 +6870,63 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "surgical_checklists_surgical_case_id_surgical_cases_id_fk": {
           "name": "surgical_checklists_surgical_case_id_surgical_cases_id_fk",
           "tableFrom": "surgical_checklists",
+          "tableTo": "surgical_cases",
           "columnsFrom": [
             "surgical_case_id"
           ],
-          "tableTo": "surgical_cases",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "surgical_checklists_hospital_id_hospitals_id_fk": {
           "name": "surgical_checklists_hospital_id_hospitals_id_fk",
           "tableFrom": "surgical_checklists",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "surgical_checklists_template_id_surgical_checklist_templates_id_fk": {
           "name": "surgical_checklists_template_id_surgical_checklist_templates_id_fk",
           "tableFrom": "surgical_checklists",
+          "tableTo": "surgical_checklist_templates",
           "columnsFrom": [
             "template_id"
           ],
-          "tableTo": "surgical_checklist_templates",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "surgical_checklists_completed_by_staff_id_fk": {
           "name": "surgical_checklists_completed_by_staff_id_fk",
           "tableFrom": "surgical_checklists",
+          "tableTo": "staff",
           "columnsFrom": [
             "completed_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -6894,24 +7043,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "ai_audit_logs_hospital_id_hospitals_id_fk": {
           "name": "ai_audit_logs_hospital_id_hospitals_id_fk",
           "tableFrom": "ai_audit_logs",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -7009,24 +7158,24 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "audit_logs_hospital_id_hospitals_id_fk": {
           "name": "audit_logs_hospital_id_hospitals_id_fk",
           "tableFrom": "audit_logs",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -7106,37 +7255,37 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "data_retention_logs_hospital_id_hospitals_id_fk": {
           "name": "data_retention_logs_hospital_id_hospitals_id_fk",
           "tableFrom": "data_retention_logs",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "data_retention_logs_performed_by_staff_id_fk": {
           "name": "data_retention_logs_performed_by_staff_id_fk",
           "tableFrom": "data_retention_logs",
+          "tableTo": "staff",
           "columnsFrom": [
             "performed_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -7213,34 +7362,34 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "data_retention_policies_hospital_id_hospitals_id_fk": {
           "name": "data_retention_policies_hospital_id_hospitals_id_fk",
           "tableFrom": "data_retention_policies",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "data_retention_policies_hospital_id_unique": {
           "name": "data_retention_policies_hospital_id_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "hospital_id"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       },
       "policies": {
@@ -7342,50 +7491,50 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "documents_hospital_id_hospitals_id_fk": {
           "name": "documents_hospital_id_hospitals_id_fk",
           "tableFrom": "documents",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "documents_patient_id_patients_id_fk": {
           "name": "documents_patient_id_patients_id_fk",
           "tableFrom": "documents",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "documents_uploaded_by_staff_id_fk": {
           "name": "documents_uploaded_by_staff_id_fk",
           "tableFrom": "documents",
+          "tableTo": "staff",
           "columnsFrom": [
             "uploaded_by"
           ],
-          "tableTo": "staff",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -7491,24 +7640,45 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
+        },
+        "notif_retention_idx": {
+          "name": "notif_retention_idx",
+          "columns": [
+            {
+              "expression": "hospital_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
         "notifications_hospital_id_hospitals_id_fk": {
           "name": "notifications_hospital_id_hospitals_id_fk",
           "tableFrom": "notifications",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -7637,37 +7807,58 @@
             }
           ],
           "isUnique": true,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
+        },
+        "reminder_retention_idx": {
+          "name": "reminder_retention_idx",
+          "columns": [
+            {
+              "expression": "hospital_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sent_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
         "sent_reminders_hospital_id_hospitals_id_fk": {
           "name": "sent_reminders_hospital_id_hospitals_id_fk",
           "tableFrom": "sent_reminders",
+          "tableTo": "hospitals",
           "columnsFrom": [
             "hospital_id"
           ],
-          "tableTo": "hospitals",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "sent_reminders_patient_id_patients_id_fk": {
           "name": "sent_reminders_patient_id_patients_id_fk",
           "tableFrom": "sent_reminders",
+          "tableTo": "patients",
           "columnsFrom": [
             "patient_id"
           ],
-          "tableTo": "patients",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -7805,10 +7996,10 @@
     }
   },
   "schemas": {},
-  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
+  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

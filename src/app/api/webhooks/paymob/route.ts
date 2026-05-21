@@ -14,11 +14,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Empty request body" }, { status: 400 });
     }
 
+    // Protect against database lookup flooding by limiting request payload size
+    if (rawBody.length > 500 * 1024) {
+      return NextResponse.json({ error: "Payload too large" }, { status: 400 });
+    }
+
     let body: any;
     try {
       body = JSON.parse(rawBody);
     } catch (e) {
       return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
+
+    // DoS Protection: Ensure HMAC is present before doing any database queries
+    const receivedHmac = req.nextUrl.searchParams.get("hmac") || body.hmac;
+    if (!receivedHmac) {
+      return NextResponse.json({ error: "Missing HMAC signature" }, { status: 401 });
     }
 
     // Paymob webhooks can be of different types. We only handle TRANSACTION.
@@ -35,6 +46,11 @@ export async function POST(req: NextRequest) {
     const paymobOrderId = typeof obj.order === "object" && obj.order !== null ? obj.order.id : obj.order;
     if (!paymobOrderId) {
       return NextResponse.json({ error: "Missing Paymob Order ID" }, { status: 400 });
+    }
+
+    // Sanitize and validate that paymobOrderId is a positive integer to block SQL/NoSQL probing before DB lookup
+    if (!/^\d+$/.test(String(paymobOrderId))) {
+      return NextResponse.json({ error: "Invalid Paymob Order ID format" }, { status: 400 });
     }
 
     // Bypass RLS to fetch the online payment record and determine the associated hospital ID
@@ -117,11 +133,6 @@ export async function POST(req: NextRequest) {
       .update(stringToHash)
       .digest("hex");
 
-    const receivedHmac = req.nextUrl.searchParams.get("hmac") || body.hmac;
-    if (!receivedHmac) {
-      return NextResponse.json({ error: "Missing HMAC signature" }, { status: 401 });
-    }
-
     const calculatedBuf = Buffer.from(calculatedHmac, "hex");
     const receivedBuf = Buffer.from(receivedHmac, "hex");
 
@@ -148,7 +159,7 @@ export async function POST(req: NextRequest) {
           })
           .where(eq(onlinePayments.id, paymentRecord.id));
 
-        // 2. Fetch invoice and verify outstanding balance
+        // 2. Fetch invoice with pessimistic lock (FOR UPDATE) to prevent concurrency race conditions
         const [invoice] = await tx
           .select({
             id: invoices.id,
@@ -157,7 +168,7 @@ export async function POST(req: NextRequest) {
           })
           .from(invoices)
           .where(eq(invoices.id, paymentRecord.invoiceId))
-          .limit(1);
+          .for("update");
 
         if (invoice) {
           // 3. Register payment row
@@ -172,13 +183,15 @@ export async function POST(req: NextRequest) {
             createdAt: new Date(),
           });
 
-          // 4. Calculate aggregate paid volume and transition invoice status
-          const currentPaid = parseFloat(invoice.amountPaid);
-          const paymentAmt = parseFloat(paymentRecord.amount);
-          const totalAmt = parseFloat(invoice.totalAmount);
-          const newPaid = Math.min(totalAmt, currentPaid + paymentAmt).toFixed(2);
+          // 4. Calculate aggregate paid volume and transition invoice status using integer cents math to avoid floating-point loss
+          const currentPaidCents = Math.round(parseFloat(invoice.amountPaid) * 100);
+          const paymentAmtCents = Math.round(parseFloat(paymentRecord.amount) * 100);
+          const totalAmtCents = Math.round(parseFloat(invoice.totalAmount) * 100);
           
-          const invoiceStatus = parseFloat(newPaid) >= totalAmt ? "paid" : "partially_paid";
+          const newPaidCents = Math.min(totalAmtCents, currentPaidCents + paymentAmtCents);
+          const newPaid = (newPaidCents / 100).toFixed(2);
+          
+          const invoiceStatus = newPaidCents >= totalAmtCents ? "paid" : "partially_paid";
 
           await tx
             .update(invoices)

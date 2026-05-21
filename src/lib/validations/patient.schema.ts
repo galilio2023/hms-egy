@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId } from "../utils/egypt";
+import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId, getGovernorateCode } from "../utils/egypt";
 import { toZonedTime } from "date-fns-tz";
 
 const egyptianPhoneSchema = z
@@ -10,9 +10,8 @@ const egyptianPhoneSchema = z
   });
 
 export const patientSchema = z.object({
-  nationalId: z.string().refine(validateNationalId, {
-    message: "Invalid Egyptian National ID",
-  }),
+  nationalId: z.string().optional().or(z.literal("")),
+  passportNumber: z.string().optional().or(z.literal("")),
   nameAr: z.string().min(3, "Name in Arabic must be at least 3 characters"),
   nameEn: z.string().min(3, "Name in English must be at least 3 characters"),
   dob: z.coerce.date(),
@@ -28,45 +27,67 @@ export const patientSchema = z.object({
   guardianPhone: egyptianPhoneSchema.optional().or(z.literal("")),
 }).refine((data) => {
   if (data.insuranceProviderId === "uhis") {
-    const parsed = parseNationalId(data.nationalId);
-    if (!parsed) return true; // Let National ID validator handle invalid format
-    const birthGovCode = parsed.governorate?.code;
+    const govCode = getGovernorateCode(data.governorate);
     const provider = EGYPTIAN_INSURANCE_PROVIDERS.find(p => p.id === "uhis");
-    return !!(birthGovCode && provider?.rolloutGovernorates?.includes(birthGovCode));
+    return !!(govCode && provider?.rolloutGovernorates?.includes(govCode));
   }
   return true;
 }, {
-  message: "UHIS is not yet rolled out in the patient's birth governorate encoded in their National ID.",
+  message: "UHIS is not yet rolled out in the patient's current residence/registration governorate.",
   path: ["insuranceProviderId"]
 }).superRefine((data, ctx) => {
-  const parsed = parseNationalId(data.nationalId);
-  if (parsed) {
-    // Validate Gender Match
-    if (parsed.gender !== data.gender) {
+  const hasNid = !!(data.nationalId && data.nationalId.trim() !== "");
+  const hasPassport = !!(data.passportNumber && data.passportNumber.trim() !== "");
+
+  if (!hasNid && !hasPassport) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Either National ID or Passport Number is required for patient registration.",
+      path: ["nationalId"],
+    });
+    return;
+  }
+
+  if (hasNid) {
+    const isValidNid = validateNationalId(data.nationalId!);
+    if (!isValidNid) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Gender does not match National ID",
-        path: ["gender"],
+        message: "Invalid Egyptian National ID format or check digits.",
+        path: ["nationalId"],
       });
+      return;
     }
-    // Validate Date of Birth Match (strictly timezone-neutral comparison in Africa/Cairo)
-    const formatToISODate = (date: Date) => {
-      const zoned = toZonedTime(date, "Africa/Cairo");
-      const year = zoned.getFullYear();
-      const month = String(zoned.getMonth() + 1).padStart(2, "0");
-      const day = String(zoned.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
 
-    const parsedIso = formatToISODate(parsed.dob);
-    const inputIso = formatToISODate(data.dob);
+    const parsed = parseNationalId(data.nationalId!);
+    if (parsed) {
+      // Validate Gender Match
+      if (parsed.gender !== data.gender) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Gender does not match National ID",
+          path: ["gender"],
+        });
+      }
+      // Validate Date of Birth Match (strictly timezone-neutral comparison in Africa/Cairo)
+      const formatToISODate = (date: Date) => {
+        const zoned = toZonedTime(date, "Africa/Cairo");
+        const year = zoned.getFullYear();
+        const month = String(zoned.getMonth() + 1).padStart(2, "0");
+        const day = String(zoned.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
 
-    if (parsedIso !== inputIso) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Date of birth does not match National ID",
-        path: ["dob"],
-      });
+      const parsedIso = formatToISODate(parsed.dob);
+      const inputIso = formatToISODate(data.dob);
+
+      if (parsedIso !== inputIso) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Date of birth does not match National ID",
+          path: ["dob"],
+        });
+      }
     }
   }
 });
