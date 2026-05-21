@@ -3,6 +3,8 @@ import icd10Data from "@db/clinical-data/icd10-ar.json";
 import cptData from "@db/clinical-data/cpt-egypt.json";
 import type { Icd10Code, CptCode } from "./clinical-codes";
 
+// NOTE: Offload fuzzy search to the database using PostgreSQL Trigram Indexes (pg_trgm) 
+// or Full-Text Search once datasets grow past prototype size to prevent serverless cold-start bottlenecks.
 let icdFuse: Fuse<Icd10Code> | null = null;
 let cptFuse: Fuse<CptCode> | null = null;
 

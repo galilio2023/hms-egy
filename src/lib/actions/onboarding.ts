@@ -67,7 +67,10 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
     console.log(`[ONBOARDING] Admin user account placeholder established for ${adminEmail}`);
     
     return { success: true, hospitalId: result.id };
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "23505" || error?.message?.includes("unique constraint") || error?.message?.includes("unique_violation")) {
+      return { error: "The hospital URL slug is already taken. Please choose another name." };
+    }
     console.error(`[ONBOARDING_FAILURE] Slug: ${validated.data.slug}`, {
       error: error instanceof Error ? error.message : "Unknown error",
     });

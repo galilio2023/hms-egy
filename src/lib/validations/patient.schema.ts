@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { formatInTimeZone } from "date-fns-tz";
 import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId } from "../utils/egypt";
 
 const egyptianPhoneSchema = z
@@ -46,11 +45,12 @@ export const patientSchema = z.object({
         path: ["gender"],
       });
     }
-    // Validate Date of Birth Match (strictly timezone-safe comparison)
-    const parsedDobStr = formatInTimeZone(parsed.dob, "Africa/Cairo", "yyyy-MM-dd");
-    const inputDobStr = formatInTimeZone(data.dob, "Africa/Cairo", "yyyy-MM-dd");
+    // Validate Date of Birth Match (strictly timezone-neutral UTC comparisons)
+    const isYearMatch = parsed.dob.getUTCFullYear() === data.dob.getUTCFullYear();
+    const isMonthMatch = parsed.dob.getUTCMonth() === data.dob.getUTCMonth();
+    const isDayMatch = parsed.dob.getUTCDate() === data.dob.getUTCDate();
 
-    if (parsedDobStr !== inputDobStr) {
+    if (!isYearMatch || !isMonthMatch || !isDayMatch) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Date of birth does not match National ID",

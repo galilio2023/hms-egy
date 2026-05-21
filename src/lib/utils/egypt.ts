@@ -54,6 +54,7 @@ export const EGYPTIAN_INSURANCE_PROVIDERS = [
 
 /**
  * Validates the 14-digit Egyptian National ID with strict date checking.
+ * Note: Only supports patients born between 1900 and 2099 (century codes 2 and 3).
  */
 export function validateNationalId(nid: string): boolean {
   if (!/^\d{14}$/.test(nid)) return false;

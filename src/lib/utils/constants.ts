@@ -40,7 +40,8 @@ export const APPOINTMENT_STATUSES = [
   { id: "no_show", ar: "لم يحضر", en: "No Show" },
 ];
 
-export const VAT_RATE = 0.14; // 14% Egyptian VAT
+export const VAT_RATE = 0.14; // 14% Standard VAT (applicable to cosmetics/retail OTC pharmacy)
+export const MEDICAL_VAT_RATE = 0.0; // Baseline medical services are exempt from VAT under Egyptian VAT Law No. 67 of 2016
 export const STAMP_TAX_RATE = 0.005; // 0.5% Stamp Tax
 
 export const MAX_DAILY_SMS_PER_PATIENT = 3;
