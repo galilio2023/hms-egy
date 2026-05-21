@@ -446,9 +446,10 @@ export function HospitalSettingsForm({
                 <div className="space-y-1.5">
                   <label className="block text-sm font-semibold text-gray-700 text-start">{t("paymobHmacSecret")}</label>
                   <input
+                    type="password"
                     {...register("paymobHmacSecret")}
                     className="w-full px-4 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none text-start bg-white"
-                    placeholder="e.g. 29a8f27..."
+                    placeholder="••••••••••••••••••••••••••••••••"
                   />
                   <p className="text-[10px] text-gray-400 mt-1 text-start">
                     {locale === "ar" 

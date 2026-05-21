@@ -5,11 +5,16 @@ import { hospitals } from "@db/schema/core";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { type PlanTier } from "@/types/plans.types";
+import { auth } from "@/lib/auth";
 
 /**
  * Toggles a hospital's active/inactive status.
  */
 export async function toggleHospitalActive(hospitalId: string, isActive: boolean) {
+  const session = await auth();
+  if (!session || session.user.role !== "SUPER_ADMIN") {
+    return { success: false, error: "Forbidden: Super-admin role required" };
+  }
   try {
     await db
       .update(hospitals)
@@ -31,6 +36,10 @@ export async function toggleHospitalActive(hospitalId: string, isActive: boolean
  * Updates a hospital's subscription tier.
  */
 export async function updateHospitalTier(hospitalId: string, planTier: PlanTier) {
+  const session = await auth();
+  if (!session || session.user.role !== "SUPER_ADMIN") {
+    return { success: false, error: "Forbidden: Super-admin role required" };
+  }
   try {
     await db
       .update(hospitals)

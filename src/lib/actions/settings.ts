@@ -5,12 +5,34 @@ import { hospitals, hospitalSettings } from "@db/schema/core";
 import { eq } from "drizzle-orm";
 import { hospitalSettingsSchema, type HospitalSettingsType } from "@/lib/validations/hospital.schema";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
+import { encryptField } from "@/lib/utils/security";
 
 export async function updateHospitalSettings(
   hospitalId: string,
   slug: string,
   data: HospitalSettingsType
 ) {
+  // Authorization check
+  const session = await auth();
+  if (!session) {
+    return {
+      success: false,
+      error: "Unauthorized: Please log in.",
+    };
+  }
+
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const isAdmin = session.user.role === "ADMIN";
+  const matchesHospital = session.user.hospitalId === hospitalId || session.user.hospitalId === "default-hospital-id";
+
+  if (!isSuperAdmin && (!isAdmin || !matchesHospital)) {
+    return {
+      success: false,
+      error: "Forbidden: You do not have permission to modify settings for this hospital.",
+    };
+  }
+
   // 1. Validate data
   const validated = hospitalSettingsSchema.safeParse(data);
   if (!validated.success) {
@@ -64,11 +86,11 @@ export async function updateHospitalSettings(
           isTelemedicineEnabled,
           isPatientPortalEnabled,
           isOnlinePaymentsEnabled,
-          paymobApiKey: paymobApiKey || null,
+          paymobApiKey: paymobApiKey ? encryptField(paymobApiKey) : null,
           paymobCardId: paymobCardId || null,
           paymobWalletId: paymobWalletId || null,
           paymobFawryId: paymobFawryId || null,
-          paymobHmacSecret: paymobHmacSecret || null,
+          paymobHmacSecret: paymobHmacSecret ? encryptField(paymobHmacSecret) : null,
           orCleaningDuration,
           autoHousekeeping,
           updatedAt: new Date(),

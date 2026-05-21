@@ -30,6 +30,11 @@ export const hospitalOnboardingSchema = z.object({
 
 export type HospitalOnboarding = z.infer<typeof hospitalOnboardingSchema>;
 
+const nullableCoercedString = z.preprocess(
+  (val) => (val === "" || val === undefined || val === null ? null : String(val)),
+  z.string().nullable().optional()
+);
+
 export const hospitalSettingsSchema = z.object({
   // Hospital basic details
   nameAr: z.string().min(3, "Arabic name is required"),
@@ -47,11 +52,11 @@ export const hospitalSettingsSchema = z.object({
   isOnlinePaymentsEnabled: z.boolean().default(false),
 
   // Paymob configurations (optional)
-  paymobApiKey: z.string().nullable().optional(),
-  paymobCardId: z.string().nullable().optional(),
-  paymobWalletId: z.string().nullable().optional(),
-  paymobFawryId: z.string().nullable().optional(),
-  paymobHmacSecret: z.string().nullable().optional(),
+  paymobApiKey: nullableCoercedString,
+  paymobCardId: nullableCoercedString,
+  paymobWalletId: nullableCoercedString,
+  paymobFawryId: nullableCoercedString,
+  paymobHmacSecret: nullableCoercedString,
 
   // Surgical & Housekeeping
   orCleaningDuration: z.number().int().min(5).max(180),

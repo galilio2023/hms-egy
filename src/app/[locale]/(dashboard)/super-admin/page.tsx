@@ -2,9 +2,11 @@ import { db } from "@/lib/db";
 import { hospitals, hospitalSettings } from "@db/schema/core";
 import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
 import SuperAdminDashboardClient from "@/components/layout/SuperAdminDashboardClient";
 import { amountToArabicWords } from "@/lib/utils/formatting";
 import { type PlanTier } from "@/types/plans.types";
+import { auth } from "@/lib/auth";
 
 export async function generateMetadata({
   params,
@@ -25,6 +27,12 @@ export default async function SuperAdminPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+
+  // Protect the route - role check guard
+  const session = await auth();
+  if (!session || session.user.role !== "SUPER_ADMIN") {
+    notFound();
+  }
 
   // Fetch all hospitals joined with their settings from PostgreSQL
   const dbHospitals = await db
@@ -59,7 +67,16 @@ export default async function SuperAdminPage({
 
   const calculatedMRR = dbHospitals
     .filter((h) => h.isActive)
-    .reduce((sum, h) => sum + (PRICING[h.planTier as PlanTier] || 0), 0);
+    .reduce((sum, h) => {
+      const tier = h.planTier as PlanTier;
+      const price = PRICING[tier];
+      if (price === undefined) {
+        console.error(
+          `[SUPER_ADMIN] WARNING: Plan tier "${h.planTier}" for hospital "${h.nameEn}" (ID: ${h.id}) has no pricing configuration defined in PRICING map.`
+        );
+      }
+      return sum + (price || 0);
+    }, 0);
 
   // Convert MRR to Arabic words (Tafgeet)
   const mrrWordsAr = await amountToArabicWords(calculatedMRR);
