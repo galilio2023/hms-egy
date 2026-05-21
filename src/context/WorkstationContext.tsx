@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useRef, useTransition } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useTransition, useCallback } from "react";
 import { unlockWorkstationAction } from "@/lib/actions/auth";
 import { toast } from "sonner";
 import { useLocale } from "next-intl";
@@ -18,6 +18,7 @@ const AUTO_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 export function WorkstationProvider({ children }: { children: React.ReactNode }) {
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(0);
   const locale = useLocale();
   const isRtl = locale === "ar";
 
@@ -29,14 +30,26 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
     }
   }, []);
 
-  const lockStation = () => {
+  const lockStation = useCallback(() => {
     setIsLocked(true);
     localStorage.setItem("workstation_locked", "true");
     toast.warning(
       isRtl ? "تم قفل محطة العمل نظراً لعدم النشاط" : "Workstation locked due to inactivity",
       { id: "workstation-lock-toast" }
     );
-  };
+  }, [isRtl]);
+
+  const resetTimer = useCallback(() => {
+    if (isLocked) return; // Don't reset if already locked
+
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(() => {
+      lockStation();
+    }, AUTO_LOCK_TIMEOUT);
+  }, [isLocked, lockStation]);
 
   const unlockStation = async (password: string): Promise<boolean> => {
     const result = await unlockWorkstationAction(password);
@@ -52,27 +65,19 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
     }
   };
 
-  const resetTimer = () => {
-    if (isLocked) return; // Don't reset if already locked
-
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
+  const handleActivity = useCallback(() => {
+    const now = Date.now();
+    if (now - lastActivityRef.current > 5000) { // Throttle execution to once every 5 seconds to prevent UI thread saturation
+      lastActivityRef.current = now;
+      resetTimer();
     }
-
-    timerRef.current = setTimeout(() => {
-      lockStation();
-    }, AUTO_LOCK_TIMEOUT);
-  };
+  }, [resetTimer]);
 
   // Monitor user activity to reset inactivity lock timer
   useEffect(() => {
     if (isLocked) return;
 
     const activityEvents = ["mousemove", "keydown", "click", "scroll", "touchstart"];
-
-    const handleActivity = () => {
-      resetTimer();
-    };
 
     // Initialize timer on load
     resetTimer();
@@ -88,7 +93,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
         window.removeEventListener(event, handleActivity);
       });
     };
-  }, [isLocked]);
+  }, [isLocked, resetTimer, handleActivity]);
 
   return (
     <WorkstationContext.Provider value={{ isLocked, lockStation, unlockStation }}>

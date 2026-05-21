@@ -203,8 +203,8 @@ export function hasPermission(
 
   // Rule B: Anesthesiologist Constraints
   if (userRole === "ANESTHESIOLOGIST") {
-    // Anesthesiologists can read/update clinical files ONLY for surgical cases they are assigned to
-    if (permission === "patients:view" || permission === "surgical:view" || permission === "surgical:anesthesia") {
+    // Anesthesiologists can view patients and surgeries in their hospital, but can only edit anesthesia details if assigned to the case
+    if (permission === "surgical:anesthesia") {
       if (!context?.anesthesiologistId || context.anesthesiologistId !== user.id) {
         return false; // Fail closed if context or anesthesiologistId is missing or mismatching
       }

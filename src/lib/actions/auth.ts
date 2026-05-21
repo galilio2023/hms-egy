@@ -2,7 +2,7 @@
 
 import { db, withBypassContext } from "@/lib/db";
 import { users } from "@db/schema/auth";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { authInstance } from "@/lib/auth";
 
 /**
@@ -97,10 +97,9 @@ export async function loginAction(
             .where(eq(users.email, email));
         });
       } else {
-        // Prevent timing attack / user enumeration by running a dummy DB query & artificial sleep
-        await withBypassContext(async (tx) => {
-          await tx.execute(sql`SELECT pg_sleep(0.05)`);
-        });
+        // Prevent timing attack / user enumeration by running a dummy application-layer delay with dynamic timing jitter
+        const delay = Math.floor(Math.random() * 300) + 200; // 200ms - 500ms
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
       return { success: false, error: errorMessage };

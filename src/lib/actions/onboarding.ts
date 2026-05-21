@@ -28,83 +28,69 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
 
   const { modules, adminEmail, adminPassword, adminName, ...hospitalData } = validated.data;
 
-  let createdHospitalId: string | null = null;
   let createdUserId: string | null = null;
 
   try {
-    // Execute hospital creation and initial setup within a single transaction with RLS bypassed
-    const result = await withBypassContext(async (tx) => {
-      // 2. Create the hospital
-      const [hospital] = await tx.insert(hospitals).values({
-        nameAr: hospitalData.nameAr,
-        nameEn: hospitalData.nameEn,
-        slug: hospitalData.slug,
-        contactEmail: hospitalData.contactEmail,
-        contactPhone: hospitalData.contactPhone,
-        address: hospitalData.address,
-        governorate: hospitalData.governorate,
-        type: hospitalData.type,
-      }).returning();
-
-      if (!hospital) {
-        throw new Error("Failed to insert hospital row");
-      }
-
-      // 3. Create default hospital settings
-      await tx.insert(hospitalSettings).values({
-        hospitalId: hospital.id,
-        isSurgicalEnabled: modules.surgical,
-        isTelemedicineEnabled: modules.telemedicine,
-        isPatientPortalEnabled: modules.portal,
-        isOnlinePaymentsEnabled: modules.payments,
-        orCleaningDuration: 30,
-        autoHousekeeping: true,
-      });
-
-      return hospital;
-    });
-
-    if (!result) {
-      throw new Error("Hospital onboarding transaction failed");
-    }
-
-    createdHospitalId = result.id;
-
-    // 4. Create the administrative user via Better Auth Server API
+    // 1. Create the administrative user via Better Auth Server API first with no hospitalId
     // This will hash the password and insert the record into the 'users' and 'accounts' tables
-    let userResult;
     try {
-      userResult = await authInstance.api.signUpEmail({
+      const userResult = await authInstance.api.signUpEmail({
         body: {
           email: adminEmail.toLowerCase().trim(),
           password: adminPassword,
           name: adminName,
           role: "ADMIN",
-          hospitalId: result.id,
+          // Do not assign hospitalId yet because the hospital does not exist in the database yet
         },
       });
 
       if (!userResult || !userResult.user) {
         throw new Error("Failed to register the administrator account in Better Auth");
       }
-      
+
       createdUserId = userResult.user.id;
     } catch (authError: any) {
-      console.error("[ONBOARDING_CLEANUP] Better Auth signUpEmail failed. Triggering rollback...");
-      // Cleanup the created hospital and settings
-      await withBypassContext(async (tx) => {
-        await tx.delete(hospitalSettings).where(eq(hospitalSettings.hospitalId, result.id));
-        await tx.delete(hospitals).where(eq(hospitals.id, result.id));
-      });
+      console.error("[ONBOARDING] Better Auth signUpEmail failed", authError);
+      if (authError?.message?.includes("unique_violation") || authError?.message?.includes("already exists") || authError?.code === "23505") {
+        return { error: "البريد الإلكتروني هذا مسجل بالفعل في النظام." };
+      }
       throw authError;
     }
 
-    // 5. Create the staff entry linked to the new authenticated user
+    // 2. Execute all database insertions and linkage inside a single transaction with RLS bypassed
     try {
-      await withBypassContext(async (tx) => {
+      const result = await withBypassContext(async (tx) => {
+        // Create the hospital
+        const [hospital] = await tx.insert(hospitals).values({
+          nameAr: hospitalData.nameAr,
+          nameEn: hospitalData.nameEn,
+          slug: hospitalData.slug,
+          contactEmail: hospitalData.contactEmail,
+          contactPhone: hospitalData.contactPhone,
+          address: hospitalData.address,
+          governorate: hospitalData.governorate,
+          type: hospitalData.type,
+        }).returning();
+
+        if (!hospital) {
+          throw new Error("Failed to insert hospital row");
+        }
+
+        // Create default hospital settings
+        await tx.insert(hospitalSettings).values({
+          hospitalId: hospital.id,
+          isSurgicalEnabled: modules.surgical,
+          isTelemedicineEnabled: modules.telemedicine,
+          isPatientPortalEnabled: modules.portal,
+          isOnlinePaymentsEnabled: modules.payments,
+          orCleaningDuration: 30,
+          autoHousekeeping: true,
+        });
+
+        // Create staff entry linked to the new hospital and user
         await tx.insert(staff).values({
-          hospitalId: result.id,
-          userId: userResult.user.id, // Better Auth User ID
+          hospitalId: hospital.id,
+          userId: createdUserId!, // Better Auth User ID
           nameAr: adminName,
           nameEn: adminName,
           role: "ADMIN",
@@ -112,22 +98,32 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
           phone: hospitalData.contactPhone,
           isActive: true,
         });
-      });
-    } catch (staffError: any) {
-      console.error("[ONBOARDING_CLEANUP] Staff table insertion failed. Triggering rollback...");
-      // Cleanup created user, hospital, and settings
-      await withBypassContext(async (tx) => {
-        if (createdUserId) {
-          await tx.delete(users).where(eq(users.id, createdUserId));
-        }
-        await tx.delete(hospitalSettings).where(eq(hospitalSettings.hospitalId, result.id));
-        await tx.delete(hospitals).where(eq(hospitals.id, result.id));
-      });
-      throw staffError;
-    }
 
-    console.log(`[ONBOARDING] Successfully established hospital ${result.nameEn} and admin account ${adminEmail}`);
-    return { success: true, hospitalId: result.id };
+        // Update the admin user with the newly created hospitalId
+        await tx.update(users)
+          .set({ hospitalId: hospital.id, updatedAt: new Date() })
+          .where(eq(users.id, createdUserId!));
+
+        return hospital;
+      });
+
+      if (!result) {
+        throw new Error("Hospital onboarding transaction failed");
+      }
+
+      console.log(`[ONBOARDING] Successfully established hospital ${result.nameEn} and admin account ${adminEmail}`);
+      return { success: true, hospitalId: result.id };
+
+    } catch (dbError: any) {
+      console.error("[ONBOARDING_CLEANUP] Database transaction failed. Rolling back Better Auth user...", dbError);
+      // Clean up the created Better Auth user
+      if (createdUserId) {
+        await withBypassContext(async (tx) => {
+          await tx.delete(users).where(eq(users.id, createdUserId!));
+        });
+      }
+      throw dbError;
+    }
 
   } catch (error: any) {
     if (error?.code === "23505" || error?.message?.includes("unique constraint") || error?.message?.includes("unique_violation")) {

@@ -175,6 +175,7 @@ export default function LoginPage() {
                 <input
                   type="checkbox"
                   id="remember"
+                  name="remember"
                   className="rounded bg-slate-900 border-slate-800 text-teal-600 focus:ring-0 cursor-pointer h-4 w-4"
                 />
                 <label htmlFor="remember" className="cursor-pointer">
