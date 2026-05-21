@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId } from "../utils/egypt";
+import { toZonedTime } from "date-fns-tz";
 
 const egyptianPhoneSchema = z
   .string()
@@ -45,13 +46,13 @@ export const patientSchema = z.object({
         path: ["gender"],
       });
     }
-    // Validate Date of Birth Match (strictly timezone-resilient comparison)
+    // Validate Date of Birth Match (strictly timezone-neutral comparison in Africa/Cairo)
     const formatToISODate = (date: Date) => {
-      // If the date was parsed locally (e.g. via Zod coercion), shift it by the 
-      // timezone offset to ensure we compare the intended calendar date in UTC.
-      const offset = date.getTimezoneOffset();
-      const normalized = new Date(date.getTime() - offset * 60 * 1000);
-      return normalized.toISOString().split("T")[0];
+      const zoned = toZonedTime(date, "Africa/Cairo");
+      const year = zoned.getFullYear();
+      const month = String(zoned.getMonth() + 1).padStart(2, "0");
+      const day = String(zoned.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     };
 
     const parsedIso = formatToISODate(parsed.dob);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const EGYPT_PHONE_REGEX = /^(?:\+20|0020)?(?:0?(?:1[0125]\d{8}|[2-9]\d{7,8})|1[5-9]\d{3})$/;
+const EGYPT_PHONE_REGEX = /^(?:\+20|0020)?(?:0?1[0125]\d{8}|0?[2-9]\d{7,8}|0?1[5-9]\d{3})$/;
 
 export const hospitalOnboardingSchema = z.object({
   nameAr: z.string().min(3, "Hospital name in Arabic is required"),

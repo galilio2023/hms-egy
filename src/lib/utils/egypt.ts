@@ -60,9 +60,10 @@ export function validateNationalId(nid: string): boolean {
   if (!/^\d{14}$/.test(nid)) return false;
 
   const centuryCode = parseInt(nid[0]);
-  if (centuryCode !== 2 && centuryCode !== 3) return false;
+  if (centuryCode !== 2 && centuryCode !== 3 && centuryCode !== 4) return false;
 
-  const year = parseInt(nid.substring(1, 3)) + (centuryCode === 2 ? 1900 : 2000);
+  const century = centuryCode === 2 ? 1900 : centuryCode === 3 ? 2000 : 2100;
+  const year = parseInt(nid.substring(1, 3)) + century;
   const month = parseInt(nid.substring(3, 5)) - 1; // JS months are 0-indexed
   const day = parseInt(nid.substring(5, 7));
 
@@ -88,7 +89,7 @@ export function parseNationalId(nid: string) {
   if (!validateNationalId(nid)) return null;
 
   const centuryCode = parseInt(nid[0]);
-  const century = centuryCode === 2 ? 1900 : 2000;
+  const century = centuryCode === 2 ? 1900 : centuryCode === 3 ? 2000 : 2100;
   const year = parseInt(nid.substring(1, 3)) + century;
   const month = parseInt(nid.substring(3, 5)) - 1;
   const day = parseInt(nid.substring(5, 7));
