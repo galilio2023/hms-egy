@@ -24,7 +24,7 @@ export const radiologyOrders = pgTable("radiology_orders", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPatIdx: index("rado_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
-});
+}).enableRLS();
 
 export const radiologyReports = pgTable("radiology_reports", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -45,4 +45,4 @@ export const radiologyReports = pgTable("radiology_reports", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalReportIdx: index("radr_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
-});
+}).enableRLS();

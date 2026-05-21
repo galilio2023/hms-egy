@@ -45,7 +45,7 @@ files.forEach(file => {
         // Insert policy right after the `{` of the third arg return object
         // Wait, the third arg usually returns an object: `return { ... };`
         let returnMatch = part.match(/return \{/);
-        if (returnMatch) {
+        if (returnMatch && !part.includes('tenantIsolation:')) {
            parts[i] = part.replace(/return \{/, 'return {' + policyStr);
         }
       } else {
@@ -54,8 +54,15 @@ files.forEach(file => {
         // Since we split by `export const`, the part ends where the next starts or EOF.
         // We look for the last `});` in this part.
         let lastIndex = part.lastIndexOf('});');
-        if (lastIndex !== -1) {
+        if (lastIndex !== -1 && !part.includes('tenantIsolation:')) {
           parts[i] = part.substring(0, lastIndex) + `}, (table) => {\n  return {${policyStr}\n  };\n});` + part.substring(lastIndex + 3);
+        }
+      }
+      
+      if (!parts[i].includes('.enableRLS()')) {
+        let finalIndex = parts[i].lastIndexOf('});');
+        if (finalIndex !== -1) {
+          parts[i] = parts[i].substring(0, finalIndex) + '}).enableRLS();' + parts[i].substring(finalIndex + 3);
         }
       }
     }

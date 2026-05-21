@@ -31,7 +31,7 @@ export const patients = pgTable("patients", {
     govIdx: index("pat_gov_idx").on(table.governorate),
     nationalIdNumericCheck: sql`CHECK (national_id ~ '^[0-9]{14}$')`,
   };
-});
+}).enableRLS();
 
 export const patientConsents = pgTable("patient_consents", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -51,4 +51,4 @@ export const patientConsents = pgTable("patient_consents", {
     hospitalIdIdx: index("consent_hospital_idx").on(table.hospitalId),
     patientTypeIdx: index("consent_patient_type_idx").on(table.patientId, table.type),
   };
-});
+}).enableRLS();

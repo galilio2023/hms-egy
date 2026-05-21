@@ -25,7 +25,7 @@ export const medications = pgTable("medications", {
     hospitalMedIdx: index("med_hospital_name_idx").on(table.hospitalId, table.nameEn),
     barcodeIdx: index("med_barcode_idx").on(table.barcode),
   };
-});
+}).enableRLS();
 
 export const prescriptions = pgTable("prescriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -44,7 +44,7 @@ export const prescriptions = pgTable("prescriptions", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPatIdx: index("rx_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
-});
+}).enableRLS();
 
 export const prescriptionItems = pgTable("prescription_items", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -76,7 +76,7 @@ export const stockTransactions = pgTable("stock_transactions", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalMedTxIdx: index("stock_hospital_med_idx").on(table.hospitalId, table.medicationId),
   };
-});
+}).enableRLS();
 
 export const medicationInteractions = pgTable("medication_interactions", {
   id: uuid("id").primaryKey().defaultRandom(),

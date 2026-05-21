@@ -25,8 +25,9 @@ export const invoices = pgTable("invoices", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPatIdx: index("inv_hospital_patient_idx").on(table.hospitalId, table.patientId),
     hospitalInvoiceNumberUnique: unique("inv_hospital_number_unique").on(table.hospitalId, table.invoiceNumber),
+    archivingIdx: index("inv_archiving_idx").on(table.hospitalId, table.isArchived, table.createdAt),
   };
-});
+}).enableRLS();
 
 export const invoiceItems = pgTable("invoice_items", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -59,7 +60,7 @@ export const payments = pgTable("payments", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalInvoiceIdx: index("pay_hospital_invoice_idx").on(table.hospitalId, table.invoiceId),
   };
-});
+}).enableRLS();
 
 export const insuranceClaims = pgTable("insurance_claims", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -80,7 +81,7 @@ export const insuranceClaims = pgTable("insurance_claims", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalClaimIdx: index("claim_hospital_status_idx").on(table.hospitalId, table.status),
   };
-});
+}).enableRLS();
 
 export const onlinePayments = pgTable("online_payments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -111,7 +112,7 @@ export const onlinePayments = pgTable("online_payments", {
     invoiceIdx: index("onp_invoice_idx").on(table.invoiceId),
     statusIdx: index("onp_status_idx").on(table.status),
   };
-});
+}).enableRLS();
 
 export const paymentReminders = pgTable("payment_reminders", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -127,4 +128,4 @@ export const paymentReminders = pgTable("payment_reminders", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalInvoiceIdx: index("rem_hospital_invoice_idx").on(table.hospitalId, table.invoiceId),
   };
-});
+}).enableRLS();

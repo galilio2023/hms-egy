@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { hospitals, hospitalSettings } from "@db/schema/core";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import SuperAdminDashboardClient from "@/components/layout/SuperAdminDashboardClient";
@@ -59,18 +59,20 @@ export default async function SuperAdminPage({
     .leftJoin(hospitalSettings, eq(hospitals.id, hospitalSettings.hospitalId));
 
   // Compute stats on the server for MRR dynamic Tafgeet words using global PLAN_PRICING
-  const calculatedMRR = dbHospitals
-    .filter((h) => h.isActive)
-    .reduce((sum, h) => {
-      const tier = h.planTier as PlanTier;
-      const price = PLAN_PRICING[tier];
-      if (price === undefined) {
-        console.error(
-          `[SUPER_ADMIN] WARNING: Plan tier "${h.planTier}" for hospital "${h.nameEn}" (ID: ${h.id}) has no pricing configuration defined in PLAN_PRICING map.`
-        );
-      }
-      return sum + (price || 0);
-    }, 0);
+  const [mrrResult] = await db
+    .select({
+      mrr: sql<number>`SUM(CASE WHEN ${hospitals.isActive} = true THEN 
+        CASE 
+          WHEN ${hospitals.planTier} = 'starter' THEN 2500
+          WHEN ${hospitals.planTier} = 'professional' THEN 7500
+          WHEN ${hospitals.planTier} = 'enterprise' THEN 25000
+          ELSE 0 
+        END 
+      ELSE 0 END)`
+    })
+    .from(hospitals);
+  
+  const calculatedMRR = Number(mrrResult?.mrr || 0);
 
   // Convert MRR to Arabic words (Tafgeet)
   const mrrWordsAr = await amountToArabicWords(calculatedMRR);

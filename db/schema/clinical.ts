@@ -19,7 +19,7 @@ export const rooms = pgTable("rooms", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalRoomIdx: index("room_hospital_number_idx").on(table.hospitalId, table.roomNumber),
   };
-});
+}).enableRLS();
 
 export const beds = pgTable("beds", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -36,7 +36,7 @@ export const beds = pgTable("beds", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalStatusIdx: index("bed_hospital_status_idx").on(table.hospitalId, table.status),
   };
-});
+}).enableRLS();
 
 export const appointments = pgTable("appointments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -59,7 +59,7 @@ export const appointments = pgTable("appointments", {
     hospitalDocDateIdx: index("app_hospital_doc_date_idx").on(table.hospitalId, table.doctorId, table.scheduledDate),
     hospitalPatIdx: index("app_hospital_pat_idx").on(table.hospitalId, table.patientId),
   };
-});
+}).enableRLS();
 
 export const waitingList = pgTable("waiting_list", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -76,7 +76,7 @@ export const waitingList = pgTable("waiting_list", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalWaitingIdx: index("wl_hospital_dept_idx").on(table.hospitalId, table.departmentId),
   };
-});
+}).enableRLS();
 
 export const admissions = pgTable("admissions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -96,7 +96,7 @@ export const admissions = pgTable("admissions", {
     hospitalAdmissionIdx: index("adm_hospital_patient_idx").on(table.hospitalId, table.patientId),
     hospitalBedIdx: index("adm_hospital_bed_idx").on(table.hospitalId, table.bedId),
   };
-});
+}).enableRLS();
 
 export const dischargeSummaries = pgTable("discharge_summaries", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -113,7 +113,7 @@ export const dischargeSummaries = pgTable("discharge_summaries", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalIdIdx: index("dis_hospital_idx").on(table.hospitalId),
   };
-});
+}).enableRLS();
 
 export const medicalRecords = pgTable("medical_records", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -132,8 +132,9 @@ export const medicalRecords = pgTable("medical_records", {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalMedicalIdx: index("med_hospital_patient_idx").on(table.hospitalId, table.patientId),
+    archivingIdx: index("med_archiving_idx").on(table.hospitalId, table.isArchived, table.createdAt),
   };
-});
+}).enableRLS();
 
 export const vitalsFlowsheet = pgTable("vitals_flowsheet", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -155,4 +156,4 @@ export const vitalsFlowsheet = pgTable("vitals_flowsheet", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalVitalsIdx: index("vit_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
-});
+}).enableRLS();

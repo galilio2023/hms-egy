@@ -25,4 +25,4 @@ export const housekeepingTasks = pgTable("housekeeping_tasks", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalQueueIdx: index("hk_hospital_status_priority_idx").on(table.hospitalId, table.status, table.priority),
   };
-});
+}).enableRLS();

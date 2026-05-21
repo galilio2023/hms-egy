@@ -19,7 +19,7 @@ export const notifications = pgTable("notifications", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalUserIdx: index("notif_hospital_user_idx").on(table.hospitalId, table.userId),
   };
-});
+}).enableRLS();
 
 export const documents = pgTable("documents", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -37,7 +37,7 @@ export const documents = pgTable("documents", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPatIdx: index("doc_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
-});
+}).enableRLS();
 
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -54,7 +54,7 @@ export const auditLogs = pgTable("audit_logs", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalActionIdx: index("audit_hospital_action_idx").on(table.hospitalId, table.action),
   };
-});
+}).enableRLS();
 
 export const aiAuditLogs = pgTable("ai_audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -74,7 +74,7 @@ export const aiAuditLogs = pgTable("ai_audit_logs", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalFeatureIdx: index("ai_hospital_feature_idx").on(table.hospitalId, table.featureName),
   };
-});
+}).enableRLS();
 
 export const sentReminders = pgTable("sent_reminders", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -100,7 +100,7 @@ export const sentReminders = pgTable("sent_reminders", {
       table.channel
     ),
   };
-});
+}).enableRLS();
 
 export const dataRetentionPolicies = pgTable("data_retention_policies", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -114,7 +114,7 @@ export const dataRetentionPolicies = pgTable("data_retention_policies", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalIdx: index("retention_policy_hospital_idx").on(table.hospitalId),
   };
-});
+}).enableRLS();
 
 export const dataRetentionLogs = pgTable("data_retention_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -129,5 +129,5 @@ export const dataRetentionLogs = pgTable("data_retention_logs", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalLogIdx: index("retention_log_hospital_idx").on(table.hospitalId),
   };
-});
+}).enableRLS();
 

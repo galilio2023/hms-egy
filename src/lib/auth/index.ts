@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { type User } from "@/types/auth-api.types";
 
 export interface Session {
@@ -34,11 +34,10 @@ export async function auth(): Promise<Session | null> {
   // so development flow is not blocked before Phase 6 is complete.
   // In production, we'll check actual cookies/headers.
   if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
-    const host = reqHeaders.get("host") || "";
-    const isLocalhost = host.startsWith("localhost:") || host.startsWith("127.0.0.1:");
-    const referer = reqHeaders.get("referer") || "";
+    const cookieStore = await cookies();
+    const isMockSuperAdmin = cookieStore.get("mock_super_admin")?.value === "true";
     
-    if (isLocalhost && referer.includes("/super-admin")) {
+    if (isMockSuperAdmin) {
       return {
         user: {
           id: "super-admin-id",

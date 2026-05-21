@@ -55,7 +55,7 @@ export const hospitalSettings = pgTable("hospital_settings", {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
   };
-});
+}).enableRLS();
 
 export const departments = pgTable("departments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -72,7 +72,7 @@ export const departments = pgTable("departments", {
     hospitalIdIdx: index("dept_hospital_idx").on(table.hospitalId),
     codeIdx: index("dept_code_idx").on(table.code),
   };
-});
+}).enableRLS();
 
 export const staff = pgTable("staff", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -94,7 +94,7 @@ export const staff = pgTable("staff", {
     emailIdx: index("staff_email_idx").on(table.email),
     roleIdx: index("staff_role_idx").on(table.role),
   };
-});
+}).enableRLS();
 
 export const operatingRooms = pgTable("operating_rooms", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -116,7 +116,7 @@ export const operatingRooms = pgTable("operating_rooms", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalActiveIdx: index("or_hospital_active_idx").on(table.hospitalId, table.isActive),
   };
-});
+}).enableRLS();
 
 export const orBlocks = pgTable("or_blocks", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -139,7 +139,7 @@ export const orBlocks = pgTable("or_blocks", {
     hospitalRoomIdx: index("orb_hospital_room_idx").on(table.hospitalId, table.orRoomId),
     dayTimeIdx: index("orb_day_time_idx").on(table.dayOfWeek, table.startTime),
   };
-});
+}).enableRLS();
 
 export const orBlockOverrides = pgTable("or_block_overrides", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -157,4 +157,4 @@ export const orBlockOverrides = pgTable("or_block_overrides", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalBlockDateIdx: index("obo_hospital_block_date_idx").on(table.hospitalId, table.orBlockId, table.date),
   };
-});
+}).enableRLS();

@@ -48,7 +48,7 @@ export const surgicalCases = pgTable("surgical_cases", {
     hospitalSurgDateIdx: index("sc_hospital_surg_date_idx").on(table.hospitalId, table.leadSurgeonId, table.scheduledDate),
     hospitalPatIdx: index("sc_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
-});
+}).enableRLS();
 
 export const surgicalChecklistTemplates = pgTable("surgical_checklist_templates", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -65,7 +65,7 @@ export const surgicalChecklistTemplates = pgTable("surgical_checklist_templates"
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPhaseIdx: index("sct_hospital_phase_idx").on(table.hospitalId, table.phase),
   };
-});
+}).enableRLS();
 
 export const surgicalChecklists = pgTable("surgical_checklists", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -84,7 +84,7 @@ export const surgicalChecklists = pgTable("surgical_checklists", {
     hospitalIdIdx: index("scl_hospital_idx").on(table.hospitalId),
     casePhaseIdx: index("scl_case_phase_idx").on(table.surgicalCaseId, table.phase),
   };
-});
+}).enableRLS();
 
 export const anesthesiaRecords = pgTable("anesthesia_records", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -118,4 +118,4 @@ export const anesthesiaRecords = pgTable("anesthesia_records", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalPatientIdx: index("anes_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
-});
+}).enableRLS();
