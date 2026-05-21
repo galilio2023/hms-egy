@@ -479,6 +479,21 @@ export function BookingWizardClient({
               </div>
             )}
 
+            {/* Egyptian Holiday Shifting Policy Advisory */}
+            <div className="p-3.5 bg-blue-500/5 border border-blue-500/10 text-blue-700 rounded-xl text-xs flex gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
+              <div>
+                <span className="font-black block mb-0.5">
+                  {isRtl ? "سياسة ترحيل الإجازات الرسمية للجمهورية" : "Egyptian Cabinet Holiday Shifting Policy"}
+                </span>
+                <p className="leading-relaxed font-medium">
+                  {isRtl
+                    ? "تنبيه: قد يتم ترحيل الإجازات الرسمية التي تقع في منتصف الأسبوع إلى يوم الخميس التالي بقرار سيادي من مجلس الوزراء المصري، مما قد يؤثر على تفعيل الحجز الفعلي في الموعد المختار."
+                    : "Advisory: Official mid-week public holidays may be shifted to the following Thursday by Egyptian Cabinet decree, which may override and shift outpatient clinical schedules dynamically."}
+                </p>
+              </div>
+            </div>
+
             {/* Slot list buttons */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-foreground block">

@@ -40,7 +40,8 @@ export async function completeTelemedicineConsultation(
   diagnosis?: string,
   prescriptionItemsList?: PrescriptionItemInput[],
   prescriptionNotes?: string,
-  vitals?: VitalsInput
+  vitals?: VitalsInput,
+  locale?: string
 ) {
   const session = await auth();
   if (!session) {
@@ -92,118 +93,130 @@ export async function completeTelemedicineConsultation(
   }
 
   try {
-    return await withTenantContext(hospitalId, async (tx) => {
-      return await tx.transaction(async (innerTx) => {
-        // A. Update appointment status to completed
-        await innerTx
-          .update(appointments)
-          .set({ status: "completed", updatedAt: new Date() })
-          .where(eq(appointments.id, appointmentId));
+    const cleanTemperature = vitals?.temperature && !isNaN(parseFloat(vitals.temperature))
+      ? parseFloat(vitals.temperature).toFixed(1)
+      : null;
 
-        // B. Insert the clinical encounter SOAP medical record
-        const [medRecord] = await innerTx
-          .insert(medicalRecords)
+    const cleanWeight = vitals?.weightKg && !isNaN(parseFloat(vitals.weightKg))
+      ? parseFloat(vitals.weightKg).toFixed(1)
+      : null;
+
+    return await withTenantContext(hospitalId, async (tx) => {
+      // A. Update appointment status to completed
+      await tx
+        .update(appointments)
+        .set({ status: "completed", updatedAt: new Date() })
+        .where(eq(appointments.id, appointmentId));
+
+      // B. Insert the clinical encounter SOAP medical record
+      const [medRecord] = await tx
+        .insert(medicalRecords)
+        .values({
+          hospitalId,
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          encounterType: "outpatient",
+          symptoms: appointment.notes || "",
+          diagnosis: diagnosis || "Telemedicine Consult Completed",
+          soapNotes,
+          isArchived: false,
+        })
+        .returning();
+
+      // C. If medication prescriptions are supplied, create the prescription and its items
+      let prescriptionId: string | undefined = undefined;
+      if (prescriptionItemsList && prescriptionItemsList.length > 0) {
+        const [newPrescription] = await tx
+          .insert(prescriptions)
           .values({
             hospitalId,
             patientId: appointment.patientId,
             doctorId: appointment.doctorId,
-            encounterType: "outpatient",
-            symptoms: appointment.notes || "",
-            diagnosis: diagnosis || "Telemedicine Consult Completed",
-            soapNotes,
-            isArchived: false,
+            status: "active",
+            notes: prescriptionNotes || null,
           })
           .returning();
 
-        // C. If medication prescriptions are supplied, create the prescription and its items
-        let prescriptionId: string | undefined = undefined;
-        if (prescriptionItemsList && prescriptionItemsList.length > 0) {
-          const [newPrescription] = await innerTx
-            .insert(prescriptions)
-            .values({
-              hospitalId,
-              patientId: appointment.patientId,
-              doctorId: appointment.doctorId,
-              status: "active",
-              notes: prescriptionNotes || null,
-            })
-            .returning();
+        if (!newPrescription) {
+          throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create prescription record.");
+        }
 
-          if (!newPrescription) {
-            throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create prescription record.");
-          }
+        prescriptionId = newPrescription.id;
 
-          prescriptionId = newPrescription.id;
+        const itemsToInsert = prescriptionItemsList.map((item) => ({
+          hospitalId,
+          prescriptionId: newPrescription.id,
+          medicationId: item.medicationId,
+          dosage: item.dosage,
+          frequency: item.frequency,
+          durationDays: item.durationDays,
+          instructions: item.instructions || null,
+          status: "pending",
+        }));
 
-          const itemsToInsert = prescriptionItemsList.map((item) => ({
+        await tx.insert(prescriptionItems).values(itemsToInsert);
+      }
+
+      // D. If vitals are recorded, save them to the flowsheet
+      let vitalsId: string | undefined = undefined;
+      const hasVitals = vitals && (
+        vitals.bloodPressureSystolic ||
+        vitals.bloodPressureDiastolic ||
+        vitals.heartRate ||
+        vitals.respiratoryRate ||
+        vitals.temperature ||
+        vitals.oxygenSaturation ||
+        vitals.weightKg ||
+        vitals.heightCm
+      );
+
+      if (hasVitals) {
+        const [newVitals] = await tx
+          .insert(vitalsFlowsheet)
+          .values({
             hospitalId,
-            prescriptionId: newPrescription.id,
-            medicationId: item.medicationId,
-            dosage: item.dosage,
-            frequency: item.frequency,
-            durationDays: item.durationDays,
-            instructions: item.instructions || null,
-            status: "pending",
-          }));
-
-          await innerTx.insert(prescriptionItems).values(itemsToInsert);
+            patientId: appointment.patientId,
+            recordedBy: appointment.doctorId,
+            recordedAt: new Date(),
+            bloodPressureSystolic: vitals.bloodPressureSystolic || null,
+            bloodPressureDiastolic: vitals.bloodPressureDiastolic || null,
+            heartRate: vitals.heartRate || null,
+            respiratoryRate: vitals.respiratoryRate || null,
+            temperature: cleanTemperature,
+            oxygenSaturation: vitals.oxygenSaturation || null,
+            weightKg: cleanWeight,
+            heightCm: vitals.heightCm || null,
+          })
+          .returning();
+        
+        if (newVitals) {
+          vitalsId = newVitals.id;
         }
+      }
 
-        // D. If vitals are recorded, save them to the flowsheet
-        let vitalsId: string | undefined = undefined;
-        const hasVitals = vitals && (
-          vitals.bloodPressureSystolic ||
-          vitals.bloodPressureDiastolic ||
-          vitals.heartRate ||
-          vitals.respiratoryRate ||
-          vitals.temperature ||
-          vitals.oxygenSaturation ||
-          vitals.weightKg ||
-          vitals.heightCm
-        );
+      // Fetch hospital slug for path revalidation
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+      const hospitalSlug = hospital?.slug || hospitalId;
 
-        if (hasVitals) {
-          const [newVitals] = await innerTx
-            .insert(vitalsFlowsheet)
-            .values({
-              hospitalId,
-              patientId: appointment.patientId,
-              recordedBy: appointment.doctorId,
-              recordedAt: new Date(),
-              bloodPressureSystolic: vitals.bloodPressureSystolic || null,
-              bloodPressureDiastolic: vitals.bloodPressureDiastolic || null,
-              heartRate: vitals.heartRate || null,
-              respiratoryRate: vitals.respiratoryRate || null,
-              temperature: vitals.temperature || null,
-              oxygenSaturation: vitals.oxygenSaturation || null,
-              weightKg: vitals.weightKg || null,
-              heightCm: vitals.heightCm || null,
-            })
-            .returning();
-          
-          if (newVitals) {
-            vitalsId = newVitals.id;
-          }
-        }
+      const activeLocale = locale || "ar";
+      revalidatePath(`/${activeLocale}/${hospitalSlug}/appointments`);
+      revalidatePath(`/${activeLocale}/${hospitalSlug}/patients/${appointment.patientId}`);
 
-        // Fetch hospital slug for path revalidation
-        const [hospital] = await innerTx
-          .select({ slug: hospitals.slug })
-          .from(hospitals)
-          .where(eq(hospitals.id, hospitalId))
-          .limit(1);
-        const hospitalSlug = hospital?.slug || hospitalId;
+      // Purge mirrored translation routes to prevent stale UI states across languages
+      const altLocale = activeLocale === "ar" ? "en" : "ar";
+      revalidatePath(`/${altLocale}/${hospitalSlug}/appointments`);
+      revalidatePath(`/${altLocale}/${hospitalSlug}/patients/${appointment.patientId}`);
 
-        revalidatePath(`/[locale]/${hospitalSlug}/appointments`, "page");
-        revalidatePath(`/[locale]/${hospitalSlug}/patients/${appointment.patientId}`, "page");
-
-        return { 
-          success: true, 
-          medicalRecordId: medRecord.id,
-          prescriptionId,
-          vitalsId
-        };
-      });
+      return { 
+        success: true, 
+        medicalRecordId: medRecord.id,
+        prescriptionId,
+        vitalsId
+      };
     });
   } catch (error) {
     console.error("[CLINICAL_ACTION] completeTelemedicineConsultation failed:", error);

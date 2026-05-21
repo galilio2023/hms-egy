@@ -102,7 +102,7 @@ export default async function TelemedicinePage({
   }
 
   // 4. Fetch active medications for prescribing
-  const activeMedications = await db
+  const rawMedications = await db
     .select({
       id: medications.id,
       nameAr: medications.nameAr,
@@ -115,6 +115,11 @@ export default async function TelemedicinePage({
     .from(medications)
     .where(and(eq(medications.hospitalId, hospitalId), eq(medications.isActive, true)))
     .orderBy(medications.nameEn);
+
+  const activeMedications = rawMedications.map((med) => ({
+    ...med,
+    price: med.price ? (isNaN(parseFloat(med.price)) ? 0 : parseFloat(med.price)) : 0,
+  }));
 
   // 5. Generate secure, cryptographically hashed Jitsi Room name to prevent eavesdropping
   const salt = process.env.JITSI_SALT || "hms-egypt-telemedicine-secret-salt-2026";

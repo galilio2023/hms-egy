@@ -33,6 +33,17 @@ import {
 import { cn } from "@/lib/utils";
 import { completeTelemedicineConsultation } from "@/lib/actions/clinical";
 
+// Memoize the Jitsi player to prevent DOM tear-downs on local state updates
+const JitsiStream = React.memo(({ url }: { url: string }) => (
+  <iframe
+    src={url}
+    allow="camera; microphone; fullscreen; display-capture"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+    className="w-full h-full border-none rounded-2xl flex-1 bg-slate-950"
+  />
+));
+JitsiStream.displayName = "JitsiStream";
+
 interface MedicationProp {
   id: string;
   nameAr: string;
@@ -40,7 +51,7 @@ interface MedicationProp {
   genericName: string;
   form: string;
   strength: string;
-  price: string;
+  price: number;
 }
 
 interface TelemedicineClientRoomProps {
@@ -167,7 +178,7 @@ export function TelemedicineClientRoom({
       frequency: curFrequency,
       durationDays: curDuration,
       instructions: curInstructions,
-      price: isNaN(parseFloat(med.price)) ? 0 : parseFloat(med.price),
+      price: med.price,
     };
 
     setPrescriptionItems((prev) => [...prev, newItem]);
@@ -258,7 +269,8 @@ ${plan}
         diagnosis || "Telemedicine Consult Completed",
         formattedPrescriptions,
         prescriptionNotes || undefined,
-        formattedVitals
+        formattedVitals,
+        locale
       );
 
       if (res.success) {
@@ -339,12 +351,7 @@ ${plan}
         <div className="lg:col-span-7 flex flex-col p-4 overflow-hidden h-full">
           <div className="relative flex-1 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900/40 shadow-inner flex flex-col">
             {callConnected ? (
-              <iframe
-                src={jitsiIframeUrl}
-                allow="camera; microphone; fullscreen; display-capture"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-                className="w-full h-full border-none rounded-2xl flex-1 bg-slate-950"
-              />
+              <JitsiStream url={jitsiIframeUrl} />
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
                 <Video className="h-12 w-12 text-slate-600 animate-pulse" />
@@ -633,9 +640,15 @@ ${plan}
                             <span className="font-mono text-slate-100">{costInfo.total}.00 EGP</span>
                           </div>
                           {costInfo.total > 0 && (
-                            <div className="text-[10px] text-slate-500 font-bold" dir="rtl">
-                              {isRtl ? `فقط وقدره: ${costInfo.textAr} جنيه مصري لا غير` : `In Words: ${costInfo.textAr} EGP`}
-                            </div>
+                            isRtl ? (
+                              <div className="text-[10px] text-slate-500 font-bold text-start" dir="rtl">
+                                فقط وقدره: {costInfo.textAr} جنيه مصري لا غير
+                              </div>
+                            ) : (
+                              <div className="text-[10px] text-slate-500 font-bold text-start">
+                                Equivalent to: {costInfo.total}.00 Egyptian Pounds
+                              </div>
+                            )
                           )}
                         </CardContent>
                       </Card>
