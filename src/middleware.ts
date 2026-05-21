@@ -28,11 +28,15 @@ export default function middleware(request: NextRequest) {
 
   // 2. Optimistic session check using cookies (fully compatible with Edge Runtime)
   // Better Auth uses 'better-auth.session_token' (HTTP) and '__Secure-better-auth.session_token' (HTTPS)
+  const isDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+
   const hasSession = request.cookies.has("better-auth.session_token") || 
                      request.cookies.has("__Secure-better-auth.session_token") ||
                      // Development mock fallbacks
-                     request.cookies.has("mock_super_admin") ||
-                     request.headers.has("x-mock-user");
+                     (isDev && (
+                       request.cookies.has("mock_super_admin") ||
+                       request.headers.has("x-mock-user")
+                     ));
 
   // 3. Routing & Redirection Guards
   if (isDashboardRoute || isChangePasswordPage) {

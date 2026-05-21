@@ -24,6 +24,8 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
   const locale = useLocale();
   const isRtl = locale === "ar";
 
+  const isAuthenticated = !!sessionData?.user;
+
   // Check persistent lock state on mount
   useEffect(() => {
     const persistedLock = localStorage.getItem("workstation_locked") === "true";
@@ -34,7 +36,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
 
   // Automatically clear persistent lock state and timer on logout or when there's no active user session
   useEffect(() => {
-    if (sessionData && !sessionData.user) {
+    if (!isAuthenticated) {
       setIsLocked(false);
       localStorage.removeItem("workstation_locked");
       if (timerRef.current) {
@@ -42,7 +44,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
         timerRef.current = null;
       }
     }
-  }, [sessionData]);
+  }, [isAuthenticated]);
 
   const lockStation = useCallback(() => {
     setIsLocked(true);
@@ -54,7 +56,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
   }, [isRtl]);
 
   const resetTimer = useCallback(() => {
-    if (isLocked || !sessionData?.user) return; // Don't reset if already locked or unauthenticated
+    if (isLocked || !isAuthenticated) return; // Don't reset if already locked or unauthenticated
 
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -63,7 +65,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
     timerRef.current = setTimeout(() => {
       lockStation();
     }, AUTO_LOCK_TIMEOUT);
-  }, [isLocked, lockStation, sessionData]);
+  }, [isLocked, lockStation, isAuthenticated]);
 
   const unlockStation = async (password: string): Promise<boolean> => {
     const result = await unlockWorkstationAction(password);
@@ -89,7 +91,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
 
   // Monitor user activity to reset inactivity lock timer (only when logged in)
   useEffect(() => {
-    if (isLocked || !sessionData?.user) {
+    if (isLocked || !isAuthenticated) {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
@@ -113,7 +115,7 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
         window.removeEventListener(event, handleActivity);
       });
     };
-  }, [isLocked, resetTimer, handleActivity, sessionData]);
+  }, [isLocked, resetTimer, handleActivity, isAuthenticated]);
 
   return (
     <WorkstationContext.Provider value={{ isLocked, lockStation, unlockStation }}>

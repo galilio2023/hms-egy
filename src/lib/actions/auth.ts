@@ -130,21 +130,84 @@ export async function unlockWorkstationAction(password: string): Promise<{ succe
       return { success: false, error: "لم يتم العثور على جلسة عمل نشطة." };
     }
 
-    // Validate password by attempting a verify call
-    const result = await authInstance.api.signInEmail({
-      body: {
-        email: session.user.email,
-        password,
-      },
+    const email = session.user.email;
+
+    // 1. Check for account lockout before calling Better Auth
+    const user = await withBypassContext(async (tx) => {
+      return await tx.query.users.findFirst({
+        where: eq(users.email, email),
+      });
     });
 
-    if (result && result.user) {
-      return { success: true };
+    if (user) {
+      if (user.lockoutUntil && new Date(user.lockoutUntil) > new Date()) {
+        const diffMs = new Date(user.lockoutUntil).getTime() - Date.now();
+        const minutes = Math.ceil(diffMs / 60000);
+        return {
+          success: false,
+          error: `حسابك مغلق مؤقتاً بسبب محاولات دخول فاشلة متكررة. يرجى المحاولة بعد ${minutes} دقيقة.`,
+        };
+      }
     }
 
-    return { success: false, error: "كلمة المرور غير صحيحة." };
+    // 2. Validate password by attempting a verify call
+    try {
+      const result = await authInstance.api.signInEmail({
+        body: {
+          email,
+          password,
+        },
+      });
+
+      if (result && result.user) {
+        // Reset failed attempts counter on success
+        await withBypassContext(async (tx) => {
+          await tx
+            .update(users)
+            .set({
+              failedLoginAttempts: 0,
+              lockoutUntil: null,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, user!.id));
+        });
+
+        return { success: true };
+      }
+
+      throw new Error("Invalid password");
+    } catch {
+      // 3. Track failed attempts on screen unlock failure
+      let errorMessage = "كلمة المرور غير صحيحة.";
+      
+      if (user) {
+        const attempts = user.failedLoginAttempts + 1;
+        let lockoutUntil: Date | null = null;
+        
+        if (attempts >= 5) {
+          lockoutUntil = new Date(Date.now() + 15 * 60 * 1000); // 15-minute lock
+          errorMessage = "تم إغلاق حسابك لمدة ١٥ دقيقة بسبب تجاوز الحد الأقصى لمحاولات تسجيل الدخول الخاطئة.";
+        } else {
+          errorMessage = `كلمة المرور غير صحيحة. المحاولات المتبقية قبل إغلاق الحساب: ${5 - attempts}`;
+        }
+
+        await withBypassContext(async (tx) => {
+          await tx
+            .update(users)
+            .set({
+              failedLoginAttempts: attempts,
+              lockoutUntil,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, user.id));
+        });
+      }
+
+      return { success: false, error: errorMessage };
+    }
   } catch (error) {
-    return { success: false, error: "كلمة المرور غير صحيحة." };
+    console.error("[UNLOCK_ACTION_ERROR]", error);
+    return { success: false, error: "حدث خطأ غير متوقع أثناء إلغاء قفل الشاشة." };
   }
 }
 
