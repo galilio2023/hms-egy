@@ -7,6 +7,7 @@ import { staff, departments } from "@db/schema/core";
 import { sentReminders } from "@db/schema/system";
 import { toCairoTime } from "@/lib/utils/egypt";
 import { and, eq, or, sql, isNull } from "drizzle-orm";
+import { fromZonedTime } from "date-fns-tz";
 import { timingSafeEqual } from "crypto";
 
 const safeCompare = (a: string, b: string) => {
@@ -143,11 +144,10 @@ export async function GET(req: NextRequest) {
 
         // 5. Handle 2h Today Urgent Reminders
         if (appDateStr === todayStr) {
-          const [sh, sm] = app.startTime.split(":").map(Number);
-          const appTimeCairo = new Date(todayMidnight);
-          appTimeCairo.setHours(sh, sm, 0, 0);
+          // Safely map combined Date + local time string directly to exact UTC epoch
+          const appTimeUtc = fromZonedTime(`${appDateStr} ${app.startTime}`, "Africa/Cairo");
 
-          const diffMs = appTimeCairo.getTime() - nowCairo.getTime();
+          const diffMs = appTimeUtc.getTime() - new Date().getTime();
           const diffMinutes = diffMs / (60 * 1000);
 
           // If the appointment starts within 2 hours (0 to 120 minutes in the future)

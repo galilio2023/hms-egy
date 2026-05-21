@@ -5,7 +5,10 @@
  */
 
 export function tafqeet(rawNum: number): string {
-  const num = Math.floor(rawNum); // Ensure decimal safety
+  if (Math.floor(rawNum) !== rawNum) {
+    throw new Error("Tafqeet utility does not support fractional currency (Piastres). Pass integers only.");
+  }
+  const num = rawNum;
 
   if (num === 0) return "صفر جنيه مصري فقط لا غير";
   if (num === 1) return "جنيه مصري واحد فقط لا غير";

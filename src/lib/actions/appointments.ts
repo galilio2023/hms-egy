@@ -28,14 +28,18 @@ function doTimesOverlap(start1: string, end1: string, start2: string, end2: stri
 /**
  * Creates a new clinical appointment scoped strictly inside the active hospital context.
  */
-export async function createAppointment(data: AppointmentSchema) {
+export async function createAppointment(data: AppointmentSchema, targetHospitalId?: string) {
   const session = await auth();
   if (!session) {
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
+  const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
+    ? targetHospitalId
+    : session.user.hospitalId;
+
   const isAuthorized = hasPermission(session.user as any, "appointments:create", {
-    hospitalId: session.user.hospitalId,
+    hospitalId: effectiveHospitalId,
   });
 
   if (!isAuthorized) {
@@ -52,7 +56,7 @@ export async function createAppointment(data: AppointmentSchema) {
   }
 
   const validatedData = validated.data;
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = effectiveHospitalId;
 
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital context is missing." };
@@ -169,21 +173,25 @@ export async function createAppointment(data: AppointmentSchema) {
 /**
  * Updates an appointment's clinical status (scheduled -> completed, cancelled, no_show).
  */
-export async function updateAppointmentStatus(id: string, status: string, cancellationReason?: string) {
+export async function updateAppointmentStatus(id: string, status: string, cancellationReason?: string, targetHospitalId?: string) {
   const session = await auth();
   if (!session) {
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
+  const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
+    ? targetHospitalId
+    : session.user.hospitalId;
+
   const isAuthorized = hasPermission(session.user as any, "appointments:edit", {
-    hospitalId: session.user.hospitalId,
+    hospitalId: effectiveHospitalId,
   });
 
   if (!isAuthorized) {
     return { success: false, error: "Forbidden: You do not have permission to edit appointments." };
   }
 
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = effectiveHospitalId;
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital context missing." };
   }
@@ -227,13 +235,17 @@ export async function updateAppointmentStatus(id: string, status: string, cancel
  * Computes standard 30-minute interval slots for a given doctor and date, 
  * returning availability stats (e.g. 09:00 to 17:00).
  */
-export async function getDoctorAvailability(doctorId: string, date: Date | string) {
+export async function getDoctorAvailability(doctorId: string, date: Date | string, targetHospitalId?: string) {
   const session = await auth();
   if (!session) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const hospitalId = session.user.hospitalId;
+  const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
+    ? targetHospitalId
+    : session.user.hospitalId;
+
+  const hospitalId = effectiveHospitalId;
   if (!hospitalId) {
     return { success: false, error: "Hospital context missing" };
   }

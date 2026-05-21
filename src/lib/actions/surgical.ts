@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
 import { surgicalCases, surgicalChecklists } from "@db/schema/surgical";
+import { tenantSequenceTracker } from "@db/schema/system";
 import { operatingRooms, orBlocks, departments, staff, hospitals } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
 import { and, eq, ne, gte, lte, or, sql } from "drizzle-orm";
@@ -49,13 +50,17 @@ function addMinutesToTimeStr(timeStr: string, minutesToAdd: number): string {
 /**
  * Retrieves operating rooms, scheduled blocks, and active surgical cases for a target date.
  */
-export async function getOrSchedule(date: Date | string) {
+export async function getOrSchedule(date: Date | string, targetHospitalId?: string) {
   const session = await auth();
   if (!session) {
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
-  const hospitalId = session.user.hospitalId;
+  const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
+    ? targetHospitalId
+    : session.user.hospitalId;
+
+  const hospitalId = effectiveHospitalId;
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital context is missing." };
   }
@@ -158,15 +163,20 @@ export async function getOrSchedule(date: Date | string) {
 export async function createSurgicalCase(
   data: SurgicalSchema,
   bypassBlocks: boolean,
-  justification?: string
+  justification?: string,
+  targetHospitalId?: string
 ) {
   const session = await auth();
   if (!session) {
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
+  const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
+    ? targetHospitalId
+    : session.user.hospitalId;
+
   const isAuthorized = hasPermission(session.user as any, "surgical:create", {
-    hospitalId: session.user.hospitalId,
+    hospitalId: effectiveHospitalId,
   });
 
   if (!isAuthorized) {
@@ -183,7 +193,7 @@ export async function createSurgicalCase(
   }
 
   const validatedData = validated.data;
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = effectiveHospitalId;
 
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital context is missing." };
@@ -317,8 +327,20 @@ export async function createSurgicalCase(
       // 4. Generate custom surgical case number (SC-YYYY-NNNNNN) atomically using DB sequence
       const currentYear = new Date().getFullYear();
       
-      const result = await tx.execute(sql`SELECT nextval('surgical_case_seq')::int`);
-      const sequence = Number((result as any).rows[0].nextval);
+      const [seqResult] = await tx
+        .insert(tenantSequenceTracker)
+        .values({
+          hospitalId,
+          sequenceName: "surgical_cases",
+          currentVal: 1,
+        })
+        .onConflictDoUpdate({
+          target: [tenantSequenceTracker.hospitalId, tenantSequenceTracker.sequenceName],
+          set: { currentVal: sql`${tenantSequenceTracker.currentVal} + 1` },
+        })
+        .returning({ currentVal: tenantSequenceTracker.currentVal });
+
+      const sequence = seqResult.currentVal;
       const caseNumber = `SC-${currentYear}-${String(sequence).padStart(6, "0")}`;
 
       // 5. Insert surgical case record

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, jsonb, decimal, uniqueIndex , pgPolicy} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, jsonb, decimal, uniqueIndex, unique, pgPolicy} from "drizzle-orm/pg-core";
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 
@@ -133,3 +133,15 @@ export const dataRetentionLogs = pgTable("data_retention_logs", {
   };
 }).enableRLS();
 
+export const tenantSequenceTracker = pgTable("tenant_sequence_tracker", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  sequenceName: varchar("sequence_name", { length: 100 }).notNull(),
+  currentVal: integer("current_val").default(0).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
+    uniqueSequenceIdx: unique("tenant_seq_unique").on(table.hospitalId, table.sequenceName),
+  };
+}).enableRLS();
