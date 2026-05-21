@@ -41,5 +41,40 @@
       "military": "عسكري",
       "ngo": "جمعية خيرية"
     }
+  },
+  "superAdmin": {
+    "title": "لوحة تحكم المشرف العام",
+    "totalHospitals": "إجمالي المستشفيات",
+    "activeSubscriptions": "الاشتراكات النشطة",
+    "globalMRR": "العائد الشهري المتكرر",
+    "hospitalList": "قائمة المستشفيات المسجلة",
+    "slug": "الرابط التعريفي",
+    "type": "النوع",
+    "status": "الحالة",
+    "tier": "الباقة",
+    "actions": "الإجراءات",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "changeTier": "تغيير الباقة",
+    "save": "حفظ",
+    "cancel": "إلغاء"
+  },
+  "settings": {
+    "title": "إعدادات المستشفى",
+    "generalInfo": "البيانات الأساسية",
+    "moduleConfig": "تفعيل الوحدات",
+    "paymobConfig": "بوابة الدفع الإلكتروني (Paymob)",
+    "surgicalConfig": "وحدة العمليات الجراحية",
+    "housekeepingConfig": "الخدمات المعاونة والتدبير المنزلي",
+    "saveSettings": "حفظ جميع الإعدادات",
+    "success": "تم حفظ الإعدادات بنجاح.",
+    "error": "فشل في حفظ الإعدادات.",
+    "paymobApiKey": "مفتاح واجهة برمجة تطبيقات Paymob API Key",
+    "paymobCardId": "معرف دمج الكروت Integration ID (Card)",
+    "paymobWalletId": "معرف دمج المحافظ الإلكترونية Integration ID (Wallet)",
+    "paymobFawryId": "معرف دمج فوري Integration ID (Fawry)",
+    "paymobHmacSecret": "السر الأمني للـ Webhook (HMAC Secret)",
+    "cleaningDuration": "مدة تنظيف الغرف / الأسرة (بالدقائق)",
+    "autoHousekeeping": "تفعيل التوليد التلقائي لمهام التنظيف عند خروج المريض"
   }
 }

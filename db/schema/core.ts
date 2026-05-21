@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, pgEnum, index, integer } from "drizzle-orm/pg-core";
 
 export const hospitalTypeEnum = pgEnum("hospital_type", ["private", "government", "military", "ngo"]);
 
@@ -13,6 +13,7 @@ export const hospitals = pgTable("hospitals", {
   governorate: text("governorate").notNull(),
   type: hospitalTypeEnum("type").notNull(),
   logoUrl: text("logo_url"),
+  planTier: varchar("plan_tier", { length: 50 }).default("starter").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -37,6 +38,18 @@ export const hospitalSettings = pgTable("hospital_settings", {
   timezone: text("timezone").default("Africa/Cairo"),
   currency: text("currency").default("EGP"),
 
+  // Paymob Credentials
+  paymobApiKey: text("paymob_api_key"),
+  paymobCardId: text("paymob_card_id"),
+  paymobWalletId: text("paymob_wallet_id"),
+  paymobFawryId: text("paymob_fawry_id"),
+  paymobHmacSecret: text("paymob_hmac_secret"),
+
+  // Surgical & Housekeeping settings
+  orCleaningDuration: integer("or_cleaning_duration").default(30).notNull(),
+  autoHousekeeping: boolean("auto_housekeeping").default(true).notNull(),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+

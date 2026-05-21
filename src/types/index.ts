@@ -5,3 +5,4 @@ export * from "./lab-radiology.types";
 export * from "./billing-payment.types";
 export * from "./surgical.types";
 export * from "./auth-api.types";
+export * from "./plans.types";
