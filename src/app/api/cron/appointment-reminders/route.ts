@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     const todayStr = toISODate(todayMidnight);
     const tomorrowStr = toISODate(tomorrowMidnight);
 
-    const { apps } = await withBypassContext(async (tx) => {
+    const results = await withBypassContext(async (tx) => {
       // 3. Fetch scheduled appointments matching today or tomorrow that haven't received their reminder yet
       const tomorrowApps = await tx
         .select({
@@ -145,13 +145,8 @@ export async function GET(req: NextRequest) {
 
       const apps = [...tomorrowApps, ...todayApps];
 
-      return { apps };
-    });
-
-    console.log(`Found ${apps.length} total active scheduled appointments for today/tomorrow.`);
-
-    const remindersToInsert: any[] = [];
-    const appRemindersMap = new Map<string, { type: "24h_reminder" | "2h_reminder", app: any }>();
+      const remindersToInsert: any[] = [];
+      const appRemindersMap: Record<string, { type: "24h_reminder" | "2h_reminder", app: any }> = {};
 
       for (const app of apps) {
         const appDate = app.scheduledDate instanceof Date ? app.scheduledDate : new Date(app.scheduledDate);
@@ -170,7 +165,7 @@ export async function GET(req: NextRequest) {
             success: true,
             sentAt: new Date(),
           });
-          appRemindersMap.set(key, { type: "24h_reminder", app });
+          appRemindersMap[key] = { type: "24h_reminder", app };
         }
 
         // 5. Handle 2h Today Urgent Reminders
@@ -194,17 +189,17 @@ export async function GET(req: NextRequest) {
               success: true,
               sentAt: new Date(),
             });
-            appRemindersMap.set(key, { type: "2h_reminder", app });
+            appRemindersMap[key] = { type: "2h_reminder", app };
           }
         }
       }
 
-    const results = await withBypassContext(async (tx) => {
       let remindersSent = 0;
       let duplicatesSkipped = 0;
+      let insertedLogs: any[] = [];
 
       if (remindersToInsert.length > 0) {
-        const insertedLogs = await tx
+        insertedLogs = await tx
           .insert(sentReminders)
           .values(remindersToInsert)
           .onConflictDoNothing({ target: [sentReminders.hospitalId, sentReminders.entityType, sentReminders.entityId, sentReminders.reminderType, sentReminders.channel] })
@@ -212,17 +207,17 @@ export async function GET(req: NextRequest) {
 
         remindersSent = insertedLogs.length;
         duplicatesSkipped = remindersToInsert.length - remindersSent;
-        
-        return { remindersSent, duplicatesSkipped, insertedLogs, appRemindersMap };
       }
 
-      return { remindersSent, duplicatesSkipped, insertedLogs: [], appRemindersMap };
+      return { apps, remindersSent, duplicatesSkipped, insertedLogs, appRemindersMap };
     });
+
+    console.log(`Found ${results.apps.length} total active scheduled appointments for today/tomorrow.`);
 
     // 6. Safely perform simulated network I/O (SMS Gateway) outside the database transaction block
     for (const log of results.insertedLogs) {
       const key = `${log.entityType}_${log.reminderType === "24h_reminder" ? "24h" : "2h"}_${log.entityId}`;
-      const mapped = results.appRemindersMap.get(key);
+      const mapped = results.appRemindersMap[key];
       if (mapped) {
         const { type, app } = mapped;
         if (type === "24h_reminder") {
