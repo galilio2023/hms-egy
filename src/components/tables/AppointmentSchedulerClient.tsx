@@ -44,6 +44,7 @@ import {
   CalendarRange
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toZonedTime } from "date-fns-tz";
 import { 
   updateAppointmentStatus, 
   getWaitingList, 
@@ -82,7 +83,7 @@ export function AppointmentSchedulerClient({
   const [selectedStatus, setSelectedStatus] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "week">("week");
   const [targetWeekStart, setTargetWeekStart] = useState<Date>(() => {
-    const d = new Date();
+    const d = toZonedTime(new Date(), "Africa/Cairo");
     const day = d.getDay();
     const diff = d.getDate() - day; 
     return new Date(d.setDate(diff));

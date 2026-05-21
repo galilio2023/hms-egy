@@ -7,13 +7,12 @@ import { sentReminders } from "@db/schema/system";
 import { toCairoTime } from "@/lib/utils/egypt";
 import { formatEGP } from "@/lib/utils/formatting";
 import { and, eq, lte, inArray, isNull } from "drizzle-orm";
-import { timingSafeEqual } from "crypto";
+import { timingSafeEqual, createHash } from "crypto";
 
 const safeCompare = (a: string, b: string) => {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
+  const hashA = createHash("sha256").update(a).digest();
+  const hashB = createHash("sha256").update(b).digest();
+  return timingSafeEqual(hashA, hashB);
 };
 
 export const dynamic = "force-dynamic";
