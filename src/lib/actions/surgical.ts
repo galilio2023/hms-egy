@@ -57,7 +57,7 @@ export async function getOrSchedule(date: Date | string, targetHospitalId?: stri
 
   const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
     ? targetHospitalId
-    : session.user.hospitalId;
+    : (session.activeHospitalId || session.user.hospitalId);
 
   const hospitalId = effectiveHospitalId;
   if (!hospitalId) {
@@ -172,7 +172,7 @@ export async function createSurgicalCase(
 
   const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
     ? targetHospitalId
-    : session.user.hospitalId;
+    : (session.activeHospitalId || session.user.hospitalId);
 
   const isAuthorized = hasPermission(session.user as any, "surgical:create", {
     hospitalId: effectiveHospitalId,
@@ -211,7 +211,7 @@ export async function createSurgicalCase(
         // 0. Acquire row-level lock on the specific operating room to serialize case generation for this room
         // Enforce a strict 2-second timeout to prevent lock contention
         await innerTx.execute(sql`SET LOCAL lock_timeout = '2000';`);
-        await innerTx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId}`);
+        await innerTx.execute(sql`SELECT id FROM operating_rooms WHERE id = ${validatedData.orRoomId} FOR UPDATE`);
       
       // 0.5. Acquire row-level locks on the staff (surgeons and anesthesiologists) to prevent double-booking
       // the same medical personnel across different rooms simultaneously
@@ -231,7 +231,7 @@ export async function createSurgicalCase(
           sql`, `
         );
         
-        await innerTx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff})`);
+        await innerTx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff}) FOR UPDATE`);
       }
 
       const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));

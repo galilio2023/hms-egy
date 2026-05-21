@@ -5,6 +5,9 @@
  */
 
 export function tafqeet(rawNum: number): string {
+  if (typeof rawNum !== "number" || Number.isNaN(rawNum)) {
+    return "قيمة غير صالحة";
+  }
   const num = Math.round(rawNum); // Fallback gracefully to nearest integer
 
   if (num < 0) return "قيمة سالبة غير صالحة";

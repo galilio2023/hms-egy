@@ -35,7 +35,7 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
 
   const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
     ? targetHospitalId
-    : session.user.hospitalId;
+    : (session.activeHospitalId || session.user.hospitalId);
 
   const isAuthorized = hasPermission(session.user as any, "appointments:create", {
     hospitalId: effectiveHospitalId,
@@ -182,7 +182,7 @@ export async function updateAppointmentStatus(id: string, status: string, cancel
 
   const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
     ? targetHospitalId
-    : session.user.hospitalId;
+    : (session.activeHospitalId || session.user.hospitalId);
 
   const isAuthorized = hasPermission(session.user as any, "appointments:edit", {
     hospitalId: effectiveHospitalId,
@@ -244,7 +244,7 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
 
   const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
     ? targetHospitalId
-    : session.user.hospitalId;
+    : (session.activeHospitalId || session.user.hospitalId);
 
   const hospitalId = effectiveHospitalId;
   if (!hospitalId) {
@@ -348,7 +348,7 @@ export async function getWaitingList(departmentId?: string, targetHospitalId?: s
 
   const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
     ? targetHospitalId
-    : session.user.hospitalId;
+    : (session.activeHospitalId || session.user.hospitalId);
 
   if (!effectiveHospitalId) {
     return { success: false, error: "Hospital context missing" };
@@ -412,7 +412,7 @@ export async function addToWaitingList(data: {
     return { success: false, error: "Unauthorized" };
   }
 
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
   if (!hospitalId) {
     return { success: false, error: "Hospital context missing" };
   }
@@ -462,7 +462,7 @@ export async function scheduleFromWaitingList(waitingListId: string, appointment
     return { success: false, error: "Unauthorized" };
   }
 
-  const hospitalId = session.user.hospitalId;
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
   if (!hospitalId) {
     return { success: false, error: "Hospital context missing" };
   }

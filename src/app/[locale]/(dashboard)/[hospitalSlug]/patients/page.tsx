@@ -51,7 +51,8 @@ export default async function PatientsListPage({
 
   // Validate cross-tenant access context
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
-  if (!isSuperAdmin && session.user.hospitalId !== dbHospital.id) {
+  const currentHospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!isSuperAdmin && currentHospitalId !== dbHospital.id) {
     notFound(); // Return 404 to avoid exposing that the slug exists
   }
 

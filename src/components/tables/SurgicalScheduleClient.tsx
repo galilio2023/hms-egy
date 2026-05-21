@@ -327,7 +327,7 @@ export function SurgicalScheduleClient({
           ) : (
             /* Horizontal Timeline Scroller */
             <div className="overflow-x-auto scrollbar-thin">
-              <div style={{ width: `${timelineWidth + 240}px` }} className="flex flex-col divide-y divide-border/20">
+              <div dir="ltr" style={{ width: `${timelineWidth + 240}px` }} className="flex flex-col divide-y divide-border/20">
                 {/* Timeline Grid Hours Header */}
                 <div className="flex bg-muted/30 text-[10px] font-bold text-muted-foreground">
                   {/* Left spacer for operating room labels */}
