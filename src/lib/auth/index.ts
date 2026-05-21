@@ -13,17 +13,20 @@ export interface Session {
  */
 export async function auth(): Promise<Session | null> {
   const reqHeaders = await headers();
-  const mockUserHeader = reqHeaders.get("x-mock-user");
   
-  if (mockUserHeader) {
-    try {
-      const user = JSON.parse(mockUserHeader);
-      return {
-        user,
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
-      };
-    } catch {
-      // Ignored
+  // Guard mock headers so they can NEVER be evaluated in production
+  if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
+    const mockUserHeader = reqHeaders.get("x-mock-user");
+    if (mockUserHeader) {
+      try {
+        const user = JSON.parse(mockUserHeader);
+        return {
+          user,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
+        };
+      } catch {
+        // Ignored
+      }
     }
   }
 

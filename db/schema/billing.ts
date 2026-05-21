@@ -100,6 +100,7 @@ export const onlinePayments = pgTable("online_payments", {
   completedAt: timestamp("completed_at"),
 }, (table) => {
   return {
+    hospitalIdIdx: index("onp_hospital_idx").on(table.hospitalId),
     orderIdx: index("onp_order_idx").on(table.paymobOrderId),
     txIdx: index("onp_tx_idx").on(table.paymobTransactionId),
     invoiceIdx: index("onp_invoice_idx").on(table.invoiceId),

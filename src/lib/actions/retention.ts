@@ -80,6 +80,7 @@ export async function runDataArchivingJob(
     console.log(`- Transient Logs Cutoff: ${logsCutoff.toISOString()}`);
 
     // 2. Archive medical records (MOH Audits)
+    // Return only the ID column to minimize network payload and memory footprint (prevent Heap OOM)
     const clinicalUpdateResult = await tx
       .update(schema.medicalRecords)
       .set({ isArchived: true, updatedAt: now })
@@ -90,11 +91,12 @@ export async function runDataArchivingJob(
           lt(schema.medicalRecords.createdAt, clinicalCutoff)
         )
       )
-      .returning();
+      .returning({ id: schema.medicalRecords.id });
     const clinicalCount = clinicalUpdateResult.length;
     console.log(`📦 Archived ${clinicalCount} clinical medical records.`);
 
     // 3. Archive financial invoices (ETA Compliance)
+    // Return only the ID column to minimize network payload and memory footprint (prevent Heap OOM)
     const financialUpdateResult = await tx
       .update(schema.invoices)
       .set({ isArchived: true, updatedAt: now })
@@ -105,11 +107,12 @@ export async function runDataArchivingJob(
           lt(schema.invoices.createdAt, financialCutoff)
         )
       )
-      .returning();
+      .returning({ id: schema.invoices.id });
     const financialCount = financialUpdateResult.length;
     console.log(`📦 Archived ${financialCount} financial invoices.`);
 
     // 4. Prune transient logs (Reminders & Notifications older than 1 year) to save database space
+    // Return only the ID column to minimize network payload and memory footprint (prevent Heap OOM)
     const reminderDeleteResult = await tx
       .delete(schema.sentReminders)
       .where(
@@ -118,8 +121,9 @@ export async function runDataArchivingJob(
           lt(schema.sentReminders.sentAt, logsCutoff)
         )
       )
-      .returning();
+      .returning({ id: schema.sentReminders.id });
       
+    // Return only the ID column to minimize network payload and memory footprint (prevent Heap OOM)
     const notificationDeleteResult = await tx
       .delete(schema.notifications)
       .where(
@@ -128,7 +132,7 @@ export async function runDataArchivingJob(
           lt(schema.notifications.createdAt, logsCutoff)
         )
       )
-      .returning();
+      .returning({ id: schema.notifications.id });
       
     const transientCount = reminderDeleteResult.length + notificationDeleteResult.length;
     console.log(`🗑️ Pruned ${transientCount} transient/reminder notifications logs.`);

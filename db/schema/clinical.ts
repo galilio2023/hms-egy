@@ -102,6 +102,10 @@ export const dischargeSummaries = pgTable("discharge_summaries", {
   dischargeCondition: varchar("discharge_condition", { length: 50 }).notNull(), // stable, improved, referred, deceased
   followUpInstructions: text("follow_up_instructions"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    hospitalIdIdx: index("dis_hospital_idx").on(table.hospitalId),
+  };
 });
 
 export const medicalRecords = pgTable("medical_records", {

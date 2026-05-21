@@ -77,6 +77,7 @@ export const surgicalChecklists = pgTable("surgical_checklists", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    hospitalIdIdx: index("scl_hospital_idx").on(table.hospitalId),
     casePhaseIdx: index("scl_case_phase_idx").on(table.surgicalCaseId, table.phase),
   };
 });

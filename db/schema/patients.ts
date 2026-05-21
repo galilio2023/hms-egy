@@ -44,6 +44,7 @@ export const patientConsents = pgTable("patient_consents", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
+    hospitalIdIdx: index("consent_hospital_idx").on(table.hospitalId),
     patientTypeIdx: index("consent_patient_type_idx").on(table.patientId, table.type),
   };
 });

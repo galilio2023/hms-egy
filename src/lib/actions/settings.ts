@@ -102,14 +102,14 @@ export async function updateHospitalSettings(
     // Determine final values for sensitive Paymob secrets to prevent overwriting or exposure
     let finalPaymobApiKey: string | null = null;
     if (paymobApiKey === "••••••••") {
-      finalPaymobApiKey = dbHospital.paymobApiKey;
+      finalPaymobApiKey = dbHospital?.paymobApiKey ?? null;
     } else if (paymobApiKey) {
       finalPaymobApiKey = encryptField(paymobApiKey);
     }
 
     let finalPaymobHmacSecret: string | null = null;
     if (paymobHmacSecret === "••••••••") {
-      finalPaymobHmacSecret = dbHospital.paymobHmacSecret;
+      finalPaymobHmacSecret = dbHospital?.paymobHmacSecret ?? null;
     } else if (paymobHmacSecret) {
       finalPaymobHmacSecret = encryptField(paymobHmacSecret);
     }
