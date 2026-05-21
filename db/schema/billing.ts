@@ -31,7 +31,7 @@ export const invoices = pgTable("invoices", {
 
 export const invoiceItems = pgTable("invoice_items", {
   id: uuid("id").primaryKey().defaultRandom(),
-  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull().default(sql`'00000000-0000-0000-0000-000000000000'::uuid`),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull(),
   invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "cascade" }).notNull(),
   descriptionAr: text("description_ar").notNull(),
   descriptionEn: text("description_en").notNull(),

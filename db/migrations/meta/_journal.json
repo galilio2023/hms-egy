@@ -43,6 +43,13 @@
       "when": 1779366896676,
       "tag": "0005_brown_hedge_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779368132119,
+      "tag": "0006_left_captain_flint",
+      "breakpoints": true
     }
   ]
 }

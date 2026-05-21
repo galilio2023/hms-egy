@@ -45,7 +45,7 @@ export const labOrders = pgTable("lab_orders", {
 
 export const labOrderItems = pgTable("lab_order_items", {
   id: uuid("id").primaryKey().defaultRandom(),
-  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull().default(sql`'00000000-0000-0000-0000-000000000000'::uuid`),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull(),
   labOrderId: uuid("lab_order_id").references(() => labOrders.id, { onDelete: "cascade" }).notNull(),
   labTestId: uuid("lab_test_id").references(() => labTests.id, { onDelete: "restrict" }).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, collected, completed

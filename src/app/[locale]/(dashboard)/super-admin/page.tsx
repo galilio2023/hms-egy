@@ -63,9 +63,9 @@ export default async function SuperAdminPage({
     .select({
       mrr: sql<number>`SUM(CASE WHEN ${hospitals.isActive} = true THEN 
         CASE 
-          WHEN ${hospitals.planTier} = 'starter' THEN 2500
-          WHEN ${hospitals.planTier} = 'professional' THEN 7500
-          WHEN ${hospitals.planTier} = 'enterprise' THEN 25000
+          WHEN ${hospitals.planTier} = 'starter' THEN ${PLAN_PRICING.starter}
+          WHEN ${hospitals.planTier} = 'professional' THEN ${PLAN_PRICING.professional}
+          WHEN ${hospitals.planTier} = 'enterprise' THEN ${PLAN_PRICING.enterprise}
           ELSE 0 
         END 
       ELSE 0 END)`

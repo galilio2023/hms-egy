@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { onlinePayments, payments, invoices } from "@db/schema/billing";
 import { eq } from "drizzle-orm";
 import { withBypassContext, withTenantContext } from "@/lib/db/tenant";
-import { getDecryptedPaymobCredentials } from "@/lib/actions/settings";
+import { getDecryptedPaymobCredentials } from "@/lib/db/paymob";
 import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
@@ -119,7 +119,10 @@ export async function POST(req: NextRequest) {
         }
         return o?.order;
       }
-      return path.split('.').reduce((prev, curr) => prev && prev[curr], o);
+      return path.split('.').reduce((prev, curr) => {
+        if (prev === null || prev === undefined) return undefined;
+        return prev[curr];
+      }, o);
     };
 
     // Concatenate values in strict order as strings

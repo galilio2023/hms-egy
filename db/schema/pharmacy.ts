@@ -48,7 +48,7 @@ export const prescriptions = pgTable("prescriptions", {
 
 export const prescriptionItems = pgTable("prescription_items", {
   id: uuid("id").primaryKey().defaultRandom(),
-  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull().default(sql`'00000000-0000-0000-0000-000000000000'::uuid`),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull(),
   prescriptionId: uuid("prescription_id").references(() => prescriptions.id, { onDelete: "cascade" }).notNull(),
   medicationId: uuid("medication_id").references(() => medications.id, { onDelete: "restrict" }).notNull(),
   dosage: text("dosage").notNull(), // e.g. "1 tablet"
