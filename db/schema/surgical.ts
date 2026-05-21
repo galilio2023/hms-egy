@@ -99,7 +99,7 @@ export const anesthesiaRecords = pgTable("anesthesia_records", {
   totalFluidML: integer("total_fluid_ml"),
   bloodLossEstimateML: integer("blood_loss_estimate_ml"),
   transfusionProducts: text("transfusion_products").array(),
-  vitalsTrend: jsonb("vitals_trend").array(), // intraoperative vitals snapshots: [{time: timestamp, bp_systolic: int, bp_diastolic: int, hr: int, spo2: int}]
+  vitalsTrend: jsonb("vitals_trend"), // intraoperative vitals snapshots: [{time: timestamp, bp_systolic: int, bp_diastolic: int, hr: int, spo2: int}]
   airwayEvents: text("airway_events"),
   anesthesiaStartTime: timestamp("anesthesia_start_time"),
   anesthesiaEndTime: timestamp("anesthesia_end_time"),

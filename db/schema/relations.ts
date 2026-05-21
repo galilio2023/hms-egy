@@ -12,10 +12,7 @@ import { notifications, documents, auditLogs, aiAuditLogs, sentReminders } from 
 
 // hospitals Relations
 export const hospitalsRelations = relations(hospitals, ({ one, many }) => ({
-  settings: one(hospitalSettings, {
-    fields: [hospitals.id],
-    references: [hospitalSettings.hospitalId],
-  }),
+  settings: one(hospitalSettings),
   departments: many(departments),
   staff: many(staff),
   operatingRooms: many(operatingRooms),

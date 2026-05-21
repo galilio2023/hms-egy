@@ -8,7 +8,8 @@
 
 import { withTenantContext } from "../db/tenant";
 import * as schema from "../../../db/schema";
-import { and, lt, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
 export interface ArchivingJobResult {
   success: boolean;
@@ -56,85 +57,91 @@ export async function runDataArchivingJob(
     }
 
     const now = new Date();
+    const nowCairo = toZonedTime(now, "Africa/Cairo");
     
-    // Calculate cutoff dates based on configured years
-    const clinicalCutoff = new Date(
-      now.getFullYear() - policy.clinicalRetentionYears,
-      now.getMonth(),
-      now.getDate()
+    // Calculate cutoff dates based on configured years in Cairo time
+    const clinicalCutoffCairo = new Date(
+      nowCairo.getFullYear() - policy.clinicalRetentionYears,
+      nowCairo.getMonth(),
+      nowCairo.getDate(),
+      nowCairo.getHours(),
+      nowCairo.getMinutes(),
+      nowCairo.getSeconds()
     );
-    const financialCutoff = new Date(
-      now.getFullYear() - policy.financialRetentionYears,
-      now.getMonth(),
-      now.getDate()
+    const financialCutoffCairo = new Date(
+      nowCairo.getFullYear() - policy.financialRetentionYears,
+      nowCairo.getMonth(),
+      nowCairo.getDate(),
+      nowCairo.getHours(),
+      nowCairo.getMinutes(),
+      nowCairo.getSeconds()
     );
     // Transient logs (SMS reminders, AI logs, audit trials) cleaned up if older than 1 year
-    const logsCutoff = new Date(
-      now.getFullYear() - 1,
-      now.getMonth(),
-      now.getDate()
+    const logsCutoffCairo = new Date(
+      nowCairo.getFullYear() - 1,
+      nowCairo.getMonth(),
+      nowCairo.getDate(),
+      nowCairo.getHours(),
+      nowCairo.getMinutes(),
+      nowCairo.getSeconds()
     );
+
+    const clinicalCutoff = fromZonedTime(clinicalCutoffCairo, "Africa/Cairo");
+    const financialCutoff = fromZonedTime(financialCutoffCairo, "Africa/Cairo");
+    const logsCutoff = fromZonedTime(logsCutoffCairo, "Africa/Cairo");
 
     console.log(`- Clinical Cutoff (MOH): ${clinicalCutoff.toISOString()}`);
     console.log(`- Financial Cutoff (ETA): ${financialCutoff.toISOString()}`);
     console.log(`- Transient Logs Cutoff: ${logsCutoff.toISOString()}`);
 
-    // 2. Archive medical records (MOH Audits)
-    // Return only the ID column to minimize network payload and memory footprint (prevent Heap OOM)
-    const clinicalUpdateResult = await tx
-      .update(schema.medicalRecords)
-      .set({ isArchived: true, updatedAt: now })
-      .where(
-        and(
-          eq(schema.medicalRecords.hospitalId, hospitalId),
-          eq(schema.medicalRecords.isArchived, false),
-          lt(schema.medicalRecords.createdAt, clinicalCutoff)
-        )
+    // 2. Archive medical records (MOH Audits) - CTE database-side to prevent Heap OOM
+    const clinicalResult = await tx.execute(sql`
+      WITH archived AS (
+        UPDATE medical_records 
+        SET is_archived = true, updated_at = ${now}
+        WHERE hospital_id = ${hospitalId} AND is_archived = false AND created_at < ${clinicalCutoff}
+        RETURNING id
       )
-      .returning({ id: schema.medicalRecords.id });
-    const clinicalCount = clinicalUpdateResult.length;
+      SELECT COALESCE(count(*), 0)::int AS count FROM archived;
+    `);
+    const clinicalCount = (clinicalResult.rows[0] as { count: number })?.count ?? 0;
     console.log(`📦 Archived ${clinicalCount} clinical medical records.`);
 
-    // 3. Archive financial invoices (ETA Compliance)
-    // Return only the ID column to minimize network payload and memory footprint (prevent Heap OOM)
-    const financialUpdateResult = await tx
-      .update(schema.invoices)
-      .set({ isArchived: true, updatedAt: now })
-      .where(
-        and(
-          eq(schema.invoices.hospitalId, hospitalId),
-          eq(schema.invoices.isArchived, false),
-          lt(schema.invoices.createdAt, financialCutoff)
-        )
+    // 3. Archive financial invoices (ETA Compliance) - CTE database-side to prevent Heap OOM
+    const financialResult = await tx.execute(sql`
+      WITH archived AS (
+        UPDATE invoices 
+        SET is_archived = true, updated_at = ${now}
+        WHERE hospital_id = ${hospitalId} AND is_archived = false AND created_at < ${financialCutoff}
+        RETURNING id
       )
-      .returning({ id: schema.invoices.id });
-    const financialCount = financialUpdateResult.length;
+      SELECT COALESCE(count(*), 0)::int AS count FROM archived;
+    `);
+    const financialCount = (financialResult.rows[0] as { count: number })?.count ?? 0;
     console.log(`📦 Archived ${financialCount} financial invoices.`);
 
-    // 4. Prune transient logs (Reminders & Notifications older than 1 year) to save database space
-    // Return only the ID column to minimize network payload and memory footprint (prevent Heap OOM)
-    const reminderDeleteResult = await tx
-      .delete(schema.sentReminders)
-      .where(
-        and(
-          eq(schema.sentReminders.hospitalId, hospitalId),
-          lt(schema.sentReminders.sentAt, logsCutoff)
-        )
+    // 4. Prune transient logs (Reminders & Notifications older than 1 year) to save database space - CTE database-side
+    const remindersResult = await tx.execute(sql`
+      WITH deleted AS (
+        DELETE FROM sent_reminders
+        WHERE hospital_id = ${hospitalId} AND sent_at < ${logsCutoff}
+        RETURNING id
       )
-      .returning({ id: schema.sentReminders.id });
+      SELECT COALESCE(count(*), 0)::int AS count FROM deleted;
+    `);
+    const remindersCount = (remindersResult.rows[0] as { count: number })?.count ?? 0;
       
-    // Return only the ID column to minimize network payload and memory footprint (prevent Heap OOM)
-    const notificationDeleteResult = await tx
-      .delete(schema.notifications)
-      .where(
-        and(
-          eq(schema.notifications.hospitalId, hospitalId),
-          lt(schema.notifications.createdAt, logsCutoff)
-        )
+    const notificationsResult = await tx.execute(sql`
+      WITH deleted AS (
+        DELETE FROM notifications
+        WHERE hospital_id = ${hospitalId} AND created_at < ${logsCutoff}
+        RETURNING id
       )
-      .returning({ id: schema.notifications.id });
+      SELECT COALESCE(count(*), 0)::int AS count FROM deleted;
+    `);
+    const notificationsCount = (notificationsResult.rows[0] as { count: number })?.count ?? 0;
       
-    const transientCount = reminderDeleteResult.length + notificationDeleteResult.length;
+    const transientCount = remindersCount + notificationsCount;
     console.log(`🗑️ Pruned ${transientCount} transient/reminder notifications logs.`);
 
     // 5. Write Compliance Audit Logs of archiving operations

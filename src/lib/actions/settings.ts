@@ -26,7 +26,8 @@ export async function updateHospitalSettings(
 
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
   const isAdmin = session.user.role === "ADMIN";
-  const matchesHospital = session.user.hospitalId === hospitalId || session.user.hospitalId === "default-hospital-id";
+  const isDevBypass = process.env.NODE_ENV !== "production" && session.user.hospitalId === "default-hospital-id";
+  const matchesHospital = session.user.hospitalId === hospitalId || isDevBypass;
 
   if (!isSuperAdmin && (!isAdmin || !matchesHospital)) {
     return {
