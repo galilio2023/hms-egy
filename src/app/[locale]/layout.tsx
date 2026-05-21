@@ -3,6 +3,8 @@ import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Cairo } from "next/font/google";
 import { routing } from "@/i18n/routing";
+import { WorkstationProvider } from "@/context/WorkstationContext";
+import WorkstationLock from "@/components/layout/WorkstationLock";
 import "../globals.css";
 
 const cairo = Cairo({
@@ -37,7 +39,10 @@ export default async function LocaleLayout({
     >
       <body className={`${cairo.className} min-h-full antialiased`}>
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <WorkstationProvider>
+            {children}
+            <WorkstationLock />
+          </WorkstationProvider>
         </NextIntlClientProvider>
       </body>
     </html>

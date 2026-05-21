@@ -1,20 +1,108 @@
 import { headers, cookies } from "next/headers";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { db } from "../db";
+import * as schema from "../../../db/schema";
 import { type User } from "@/types/auth-api.types";
 
 export interface Session {
   user: User;
   expiresAt: Date;
+  activeHospitalId?: string;
 }
 
 /**
- * Gets the current authenticated session on the server.
- * Since Authentication is in Phase 6, this returns a mock session for development/testing,
- * but is fully structured to match the Better Auth interface.
+ * Better Auth Server Instance configured for HMS Egypt's multi-tenant PG schema.
+ */
+export const authInstance = betterAuth({
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: {
+      user: schema.users,
+      session: schema.sessions,
+      account: schema.accounts,
+      verification: schema.verifications,
+    },
+  }),
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true,
+  },
+  // Custom user fields corresponding to our users database table
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        required: true,
+      },
+      hospitalId: {
+        type: "string",
+        required: false,
+      },
+      departmentId: {
+        type: "string",
+        required: false,
+      },
+      isPasswordExpired: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+      },
+      failedLoginAttempts: {
+        type: "number",
+        required: false,
+        defaultValue: 0,
+      },
+      lockoutUntil: {
+        type: "date",
+        required: false,
+      },
+    },
+  },
+  // Custom session fields corresponding to our sessions database table
+  session: {
+    additionalFields: {
+      activeHospitalId: {
+        type: "string",
+        required: false,
+      },
+    },
+  },
+});
+
+/**
+ * High-compatibility auth helper that acts as the primary server session retriever.
+ * Checks for a real Better Auth session, with seamless fallback to development mock headers/cookies.
  */
 export async function auth(): Promise<Session | null> {
   const reqHeaders = await headers();
   
-  // Guard mock headers so they can NEVER be evaluated in production
+  // 1. Check real Better Auth session
+  try {
+    const session = await authInstance.api.getSession({
+      headers: reqHeaders,
+    });
+    
+    if (session) {
+      return {
+        user: {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+          role: session.user.role as string,
+          hospitalId: session.user.hospitalId || "system-wide",
+          departmentId: session.user.departmentId || undefined,
+          isPasswordExpired: session.user.isPasswordExpired ?? false,
+        },
+        expiresAt: new Date(session.session.expiresAt),
+        activeHospitalId: session.session.activeHospitalId || undefined,
+      };
+    }
+  } catch (error) {
+    console.error("[AUTH_SESSION_ERROR] Error fetching Better Auth session:", error);
+  }
+
+  // 2. Development mock fallbacks (only in development or test modes)
   if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
     const mockUserHeader = reqHeaders.get("x-mock-user");
     if (mockUserHeader) {
@@ -28,12 +116,7 @@ export async function auth(): Promise<Session | null> {
         // Ignored
       }
     }
-  }
 
-  // Safe development fallback: returns the simulated default administrator or super admin
-  // so development flow is not blocked before Phase 6 is complete.
-  // In production, we'll check actual cookies/headers.
-  if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
     const cookieStore = await cookies();
     const isMockSuperAdmin = cookieStore.get("mock_super_admin")?.value === "true";
     
@@ -50,7 +133,7 @@ export async function auth(): Promise<Session | null> {
       };
     }
 
-    // Default mock tenant administrator
+    // Default mock tenant administrator (fallback if nothing else is specified)
     return {
       user: {
         id: "admin-id-1",

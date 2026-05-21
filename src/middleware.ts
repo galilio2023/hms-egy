@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
 const intlMiddleware = createMiddleware({
@@ -8,16 +9,49 @@ const intlMiddleware = createMiddleware({
 });
 
 export default function middleware(request: NextRequest) {
-  // 1. Handle next-intl routing
-  const response = intlMiddleware(request);
+  const { pathname } = request.nextUrl;
 
-  // 2. Auth protection logic (simulated for now until Better Auth is configured)
-  // TODO: Implement Better Auth session check
+  // 1. Identify locale and segments
+  const segments = pathname.split("/").filter(Boolean);
+  const hasLocale = ["ar", "en"].includes(segments[0]);
+  const locale = hasLocale ? segments[0] : "ar";
+  const normalizedSegments = hasLocale ? segments.slice(1) : segments;
 
-  // 3. Rate limiting (simulated)
-  // Using Upstash Rate Limit would happen here in production
+  const primarySegment = normalizedSegments[0];
 
-  return response;
+  const isLoginPage = primarySegment === "login";
+  const isChangePasswordPage = primarySegment === "change-password";
+  const isOnboardingPage = primarySegment === "onboarding";
+  
+  // Dashboard routes represent any non-auth, non-onboarding, and non-empty path
+  const isDashboardRoute = primarySegment && !isLoginPage && !isChangePasswordPage && !isOnboardingPage;
+
+  // 2. Optimistic session check using cookies (fully compatible with Edge Runtime)
+  // Better Auth uses 'better-auth.session_token' (HTTP) and '__Secure-better-auth.session_token' (HTTPS)
+  const hasSession = request.cookies.has("better-auth.session_token") || 
+                     request.cookies.has("__Secure-better-auth.session_token") ||
+                     // Development mock fallbacks
+                     request.cookies.has("mock_super_admin") ||
+                     request.headers.has("x-mock-user");
+
+  // 3. Routing & Redirection Guards
+  if (isDashboardRoute || isChangePasswordPage) {
+    if (!hasSession) {
+      // Unauthenticated, redirect to login
+      const loginUrl = new URL(`/${locale}/login`, request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  if (isLoginPage && hasSession) {
+    // Authenticated user trying to access login, redirect to home or super-admin
+    // (Actual role-based dashboard landing pages are handled securely inside pages/layouts)
+    return NextResponse.redirect(new URL(`/${locale}`, request.url));
+  }
+
+  // 4. Handle next-intl routing
+  return intlMiddleware(request);
 }
 
 export const config = {
@@ -29,3 +63,5 @@ export const config = {
   // - /favicon.ico, /sitemap.xml (SEO)
   matcher: ["/((?!api|_next|_vercel|static|.*\\..*).*)"],
 };
+
+
