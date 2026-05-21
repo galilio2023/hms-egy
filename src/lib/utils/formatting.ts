@@ -125,16 +125,17 @@ export function formatAge(dob: Date, locale: "ar" | "en" = "ar"): string {
   return `${years} years`;
 }
 
-import Tafgeet from "tafgeetjs";
-
 /**
  * Converts amount to Arabic words (Tafgeet).
  * Used for invoices and financial reports to prevent tampering.
  */
-export function amountToArabicWords(amount: number): string {
+export async function amountToArabicWords(amount: number): Promise<string> {
   try {
     // Round to 2 decimal places to prevent floating point issues (e.g. 150.700000002)
     const roundedAmount = Math.round(amount * 100) / 100;
+    
+    // Lazy load tafgeetjs to keep initial bundle size lean
+    const { default: Tafgeet } = await import("tafgeetjs");
     const tafgeet = new Tafgeet(roundedAmount, "EGP");
     return tafgeet.convert();
   } catch (error) {

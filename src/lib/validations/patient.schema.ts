@@ -47,10 +47,11 @@ export const patientSchema = z.object({
     }
     // Validate Date of Birth Match (strictly timezone-resilient comparison)
     const formatToISODate = (date: Date) => {
-      const y = date.getUTCFullYear();
-      const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-      const d = String(date.getUTCDate()).padStart(2, "0");
-      return `${y}-${m}-${d}`;
+      // If the date was parsed locally (e.g. via Zod coercion), shift it by the 
+      // timezone offset to ensure we compare the intended calendar date in UTC.
+      const offset = date.getTimezoneOffset();
+      const normalized = new Date(date.getTime() - offset * 60 * 1000);
+      return normalized.toISOString().split("T")[0];
     };
 
     const parsedIso = formatToISODate(parsed.dob);

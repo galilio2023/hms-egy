@@ -39,8 +39,4 @@ export const hospitalSettings = pgTable("hospital_settings", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => {
-  return {
-    hospitalIdIdx: index("hospital_settings_hospital_id_idx").on(table.hospitalId),
-  };
 });
