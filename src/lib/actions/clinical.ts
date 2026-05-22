@@ -7,7 +7,7 @@ import { prescriptions, prescriptionItems, medications } from "@db/schema/pharma
 import { labTests, labOrders, labOrderItems } from "@db/schema/laboratory";
 import { radiologyOrders } from "@db/schema/radiology";
 import { hospitals, staff } from "@db/schema/core";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
@@ -360,101 +360,101 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
       ? parseFloat(data.vitals.weightKg).toFixed(1)
       : null;
 
-    // Resolve/Seed Medications Catalog outside the main transaction to prevent deadlock locking reference tables
-    const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
-    if (data.orderSetMedications && data.orderSetMedications.length > 0) {
-      // 1. Filter valid items and prepare bulk insert payload with trimmed names to handle empty strings correctly
-      const validMeds = data.orderSetMedications.filter(item =>
-        item.nameEn?.trim() && item.nameAr?.trim() && item.genericName?.trim() && item.form?.trim() && item.strength?.trim()
-      );
-
-      if (validMeds.length > 0) {
-        const medsToInsert = validMeds.map(item => ({
-          hospitalId,
-          nameAr: item.nameAr.trim(),
-          nameEn: item.nameEn.trim(),
-          genericName: item.genericName.trim(),
-          form: item.form.trim(),
-          strength: item.strength.trim(),
-          barcode: `AUTO-${randomBytes(4).toString("hex").toUpperCase()}`,
-          stockCount: 100,
-          minStockLevel: 10,
-          price: "50.00",
-          isActive: true,
-        }));
-
-        // 2. Execute Bulk Insert with conflict resolution to handle race conditions atomically and optimize roundtrips
-        const insertedMeds = await db
-          .insert(medications)
-          .values(medsToInsert)
-          .onConflictDoUpdate({
-            target: [medications.hospitalId, medications.nameEn],
-            targetWhere: sql`name_en IS NOT NULL AND name_en != ''`,
-            set: { updatedAt: new Date() } // Safe dummy update to return the existing row
-          })
-          .returning();
-
-        // 3. Map back the resolved IDs to the items
-        const medMap = new Map(insertedMeds.map(m => [m.nameEn, m.id]));
-        validMeds.forEach(item => {
-          const medId = medMap.get(item.nameEn.trim());
-          if (medId) {
-            resolvedMedicationItems.push({
-              medicationId: medId,
-              dosage: item.dosage,
-              frequency: item.frequency,
-              durationDays: item.durationDays,
-              instructions: item.instructions,
-            });
-          }
-        });
-      }
-    }
-
-    // Resolve/Seed Labs Catalog outside the main transaction to prevent deadlock locking reference tables
-    const resolvedLabItems: string[] = [];
-    if (data.orderSetLabs && data.orderSetLabs.length > 0) {
-      // 1. Filter valid items and prepare bulk insert payload
-      const validLabs = data.orderSetLabs.filter(item =>
-        item.nameEn?.trim() && item.nameAr?.trim()
-      );
-
-      if (validLabs.length > 0) {
-        const labsToInsert = validLabs.map(item => ({
-          hospitalId,
-          nameAr: item.nameAr.trim(),
-          nameEn: item.nameEn.trim(),
-          loincCode: item.loincCode,
-          cptCode: item.cptCode,
-          normalRange: item.normalRange,
-          unit: item.unit,
-          price: "150.00",
-          isActive: true,
-        }));
-
-        // 2. Execute Bulk Insert with conflict resolution
-        const insertedLabs = await db
-          .insert(labTests)
-          .values(labsToInsert)
-          .onConflictDoUpdate({
-            target: [labTests.hospitalId, labTests.nameEn],
-            targetWhere: sql`name_en IS NOT NULL AND name_en != ''`,
-            set: { updatedAt: new Date() } // Safe dummy update to return the existing row
-          })
-          .returning();
-
-        // 3. Collect the resolved IDs
-        const labMap = new Map(insertedLabs.map(l => [l.nameEn, l.id]));
-        validLabs.forEach(item => {
-          const labId = labMap.get(item.nameEn.trim());
-          if (labId) {
-            resolvedLabItems.push(labId);
-          }
-        });
-      }
-    }
-
     return await withTenantContext(hospitalId, async (tx) => {
+      // 1. Resolve/Seed Medications Catalog inside the transaction context for RLS compliance
+      const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
+      if (data.orderSetMedications && data.orderSetMedications.length > 0) {
+        // Filter valid items and prepare bulk insert payload with trimmed names to handle empty strings correctly
+        const validMeds = data.orderSetMedications.filter(item =>
+          item.nameEn?.trim() && item.nameAr?.trim() && item.genericName?.trim() && item.form?.trim() && item.strength?.trim()
+        );
+
+        if (validMeds.length > 0) {
+          const medsToInsert = validMeds.map(item => ({
+            hospitalId,
+            nameAr: item.nameAr.trim(),
+            nameEn: item.nameEn.trim(),
+            genericName: item.genericName.trim(),
+            form: item.form.trim(),
+            strength: item.strength.trim(),
+            barcode: `AUTO-${randomBytes(4).toString("hex").toUpperCase()}`,
+            stockCount: 100,
+            minStockLevel: 10,
+            price: "50.00",
+            isActive: true,
+          }));
+
+          // Execute Bulk Insert with conflict resolution using transactional client tx
+          const insertedMeds = await tx
+            .insert(medications)
+            .values(medsToInsert)
+            .onConflictDoUpdate({
+              target: [medications.hospitalId, medications.nameEn],
+              targetWhere: sql`name_en IS NOT NULL AND name_en != ''`,
+              set: { updatedAt: new Date() } // Safe dummy update to return the existing row
+            })
+            .returning();
+
+          // Map back the resolved IDs to the items
+          const medMap = new Map(insertedMeds.map(m => [m.nameEn, m.id]));
+          validMeds.forEach(item => {
+            const medId = medMap.get(item.nameEn.trim());
+            if (medId) {
+              resolvedMedicationItems.push({
+                medicationId: medId,
+                dosage: item.dosage,
+                frequency: item.frequency,
+                durationDays: item.durationDays,
+                instructions: item.instructions,
+              });
+            }
+          });
+        }
+      }
+
+      // 2. Resolve/Seed Labs Catalog inside the transaction context
+      const resolvedLabItems: string[] = [];
+      if (data.orderSetLabs && data.orderSetLabs.length > 0) {
+        // Filter valid items and prepare bulk insert payload
+        const validLabs = data.orderSetLabs.filter(item =>
+          item.nameEn?.trim() && item.nameAr?.trim()
+        );
+
+        if (validLabs.length > 0) {
+          const labsToInsert = validLabs.map(item => ({
+            hospitalId,
+            nameAr: item.nameAr.trim(),
+            nameEn: item.nameEn.trim(),
+            loincCode: item.loincCode,
+            cptCode: item.cptCode,
+            normalRange: item.normalRange,
+            unit: item.unit,
+            price: "150.00",
+            isActive: true,
+          }));
+
+          // Execute Bulk Insert with conflict resolution using transactional client tx
+          const insertedLabs = await tx
+            .insert(labTests)
+            .values(labsToInsert)
+            .onConflictDoUpdate({
+              target: [labTests.hospitalId, labTests.nameEn],
+              targetWhere: sql`name_en IS NOT NULL AND name_en != ''`,
+              set: { updatedAt: new Date() } // Safe dummy update to return the existing row
+            })
+            .returning();
+
+          // Collect the resolved IDs
+          const labMap = new Map(insertedLabs.map(l => [l.nameEn, l.id]));
+          validLabs.forEach(item => {
+            const labId = labMap.get(item.nameEn.trim());
+            if (labId) {
+              resolvedLabItems.push(labId);
+            }
+          });
+        }
+      }
+
       // 2. Resolve Doctor (Staff) ID of the current user for this hospital inside tenant context
       const doctor = await tx
         .select()

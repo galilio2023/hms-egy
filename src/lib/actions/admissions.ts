@@ -211,7 +211,7 @@ export async function dischargePatient(payload: DischargePatientPayload) {
 
       // 4. Update bed status to pending cleaning
       if (admission.bedId) {
-        await tx
+        const [updatedBed] = await tx
           .update(beds)
           .set({
             status: "pending_cleaning",
@@ -219,22 +219,15 @@ export async function dischargePatient(payload: DischargePatientPayload) {
             cleaningRequestedAt: now,
             updatedAt: now,
           })
-          .where(eq(beds.id, admission.bedId));
-
-        // Get the roomId of the bed to trigger housekeeping
-        const bedRecord = await tx
-          .select()
-          .from(beds)
           .where(eq(beds.id, admission.bedId))
-          .limit(1)
-          .then((res) => res[0]);
+          .returning({ roomId: beds.roomId });
 
-        if (bedRecord) {
+        if (updatedBed) {
           // Trigger automatic post-discharge housekeeping task
           await tx.insert(housekeepingTasks).values({
             hospitalId,
             bedId: admission.bedId,
-            roomId: bedRecord.roomId,
+            roomId: updatedBed.roomId,
             type: "post_discharge",
             status: "pending",
             priority: "urgent",
