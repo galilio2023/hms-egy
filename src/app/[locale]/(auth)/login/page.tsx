@@ -1,41 +1,21 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { loginAction } from "@/lib/actions/auth";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Activity, Lock, Mail, Loader2, Stethoscope, HeartPulse, Globe } from "lucide-react";
 import { toast } from "sonner";
-import { useSession } from "@/lib/auth/client";
-import { auth } from "@/lib/auth";
-import { redirect } from "@/i18n/routing";
 
 export default function LoginPage() {
-  // We don't perform the server-side check here because this is a 'use client' file.
-  // Instead, the redirect is handled by the middleware (proxy.ts) or a server-side parent.
-  // However, to satisfy the reviewer and improve UX, we keep the client-side check.
-  
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const { data: sessionState } = useSession();
-
-  useEffect(() => {
-    if (sessionState?.user) {
-      router.replace(`/${locale}`);
-    }
-  }, [sessionState, locale, router]);
-
   const isRtl = locale === "ar";
-
-  if (sessionState?.user) {
-    return null;
-  }
-
 
   const handleToggleLocale = () => {
     const nextLocale = locale === "ar" ? "en" : "ar";

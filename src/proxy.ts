@@ -39,6 +39,11 @@ export default function proxy(request: NextRequest) {
                      ));
 
   // 3. Routing & Redirection Guards
+  if (isLoginPage && hasSession) {
+    // Authenticated, redirect away from login
+    return NextResponse.redirect(new URL(`/${locale}`, request.url));
+  }
+
   if (isDashboardRoute || isChangePasswordPage) {
     if (!hasSession) {
       // Unauthenticated, redirect to login

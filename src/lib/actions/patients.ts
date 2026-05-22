@@ -48,7 +48,7 @@ export async function registerPatient(data: PatientSchema) {
     return { success: false, error: "System Error: Hospital session context missing." };
   }
 
-  // Normalize Arabic name for storage consistency
+  // Normalize Arabic name for indexed storage consistency
   const normalizedNameAr = normalizeArabic(validatedData.nameAr);
 
   try {
@@ -129,7 +129,8 @@ export async function registerPatient(data: PatientSchema) {
         .values({
           hospitalId,
           patientNumber,
-          nameAr: validatedData.nameAr.trim(), // Save un-mutated exact name for MOH/UHIS compliance
+          nameAr: validatedData.nameAr.trim(), // Legal name for compliance
+          normalizedNameAr, // Normalized copy for fast indexed search
           nameEn: validatedData.nameEn.trim(),
           nationalId: validatedData.nationalId?.trim() || null,
           passportNumber: validatedData.passportNumber?.trim() || null,
@@ -225,7 +226,8 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
       await tx
         .update(patients)
         .set({
-          nameAr: data.nameAr?.trim(), // Save un-mutated exact name for MOH/UHIS compliance
+          nameAr: data.nameAr?.trim(), // Legal name for compliance
+          normalizedNameAr: normalizedNameAr, // Updated indexed copy
           nameEn: data.nameEn?.trim(),
           nationalId: data.nationalId?.trim() || null,
           passportNumber: data.passportNumber?.trim() || null,
@@ -313,26 +315,6 @@ export async function searchPatientsAction(query: string) {
   // Normalize the incoming query for Arabic text consistency
   const normalizedQuery = normalizeArabic(query?.trim() || "");
 
-  // SQL-level normalization helper for Arabic columns
-  const normalizeSql = (col: any) => sql`
-    REPLACE(
-      REPLACE(
-        REPLACE(
-          REPLACE(
-            REPLACE(
-              ${col},
-              'أ', 'ا'
-            ),
-            'إ', 'ا'
-          ),
-          'آ', 'ا'
-        ),
-        'ة', 'ه'
-      ),
-      'ي', 'ى'
-    )
-  `;
-
   try {
     return await withTenantContext(hospitalId, async (tx) => {
       let results;
@@ -346,7 +328,7 @@ export async function searchPatientsAction(query: string) {
           .orderBy(sql`${patients.createdAt} DESC`)
           .limit(20);
       } else {
-        // Run full database directory search
+        // Run full database directory search using optimized normalized column
         results = await tx
           .select()
           .from(patients)
@@ -355,8 +337,8 @@ export async function searchPatientsAction(query: string) {
               eq(patients.hospitalId, hospitalId),
               or(
                 ilike(patients.patientNumber, `%${normalizedQuery}%`),
-                // Normalize DB name column on the fly to match normalized search query
-                sql`${normalizeSql(patients.nameAr)} ILIKE ${'%' + normalizedQuery + '%'}`,
+                // Search against the pre-normalized B-Tree indexed column
+                ilike(patients.normalizedNameAr, `%${normalizedQuery}%`),
                 ilike(patients.nameEn, `%${normalizedQuery}%`),
                 ilike(patients.contactPhone, `%${normalizedQuery}%`),
                 ilike(patients.nationalId || "", `%${normalizedQuery}%`),
