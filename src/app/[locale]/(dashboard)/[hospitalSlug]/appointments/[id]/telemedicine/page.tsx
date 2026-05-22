@@ -173,23 +173,3 @@ export default async function TelemedicinePage({
     </div>
   );
 }
-
-  // 5. Generate secure, cryptographically hashed Jitsi Room name to prevent eavesdropping
-  const salt = process.env.JITSI_SALT || "hms-egypt-telemedicine-secret-salt-2026";
-  const secureHash = createHmac("sha256", salt).update(id).digest("hex").slice(0, 16);
-  const secureRoomName = `hms-egypt-${id}-${secureHash}`;
-
-  return (
-    <div className="bg-slate-950 min-h-screen p-4 sm:p-6 lg:p-8 flex flex-col justify-center">
-      <div className="max-w-7xl mx-auto w-full">
-        <TelemedicineClientRoom
-          appointment={appointment}
-          medications={activeMedications}
-          hospitalSlug={hospitalSlug}
-          locale={locale}
-          secureRoomName={secureRoomName}
-        />
-      </div>
-    </div>
-  );
-}

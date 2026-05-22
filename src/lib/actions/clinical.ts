@@ -254,18 +254,25 @@ export async function completeTelemedicineConsultation(
         }
       }
 
+      // Fetch hospital slug for path revalidation
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+
       return { 
         success: true, 
         medicalRecordId: medRecord.id,
         patientId: lockedAppointment.patientId,
+        hospitalSlug: hospital?.slug || hospitalId,
         prescriptionId,
         vitalsId
       };
     });
 
     if (result.success) {
-      const hospital = await getHospitalBySlug(hospitalSlug);
-      const hSlug = hospital?.slug || hospitalSlug;
+      const hSlug = result.hospitalSlug;
       const activeLocale = locale || "ar";
       revalidatePath(`/${activeLocale}/${hSlug}/appointments`);
       revalidatePath(`/${activeLocale}/${hSlug}/patients/${result.patientId}`);
@@ -627,10 +634,18 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
         radOrders.forEach(o => createdRadiologyOrderIds.push(o.id));
       }
 
+      // Fetch hospital slug for path revalidation
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+
       return {
         success: true,
         medicalRecordId: medRecord.id,
         patientId: data.patientId,
+        hospitalSlug: hospital?.slug || hospitalId,
         vitalsId,
         prescriptionId,
         labOrderId,
@@ -639,8 +654,7 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
     });
 
     if (result.success) {
-      const hospital = await getHospitalBySlug(hospitalSlug);
-      const hSlug = hospital?.slug || hospitalSlug;
+      const hSlug = result.hospitalSlug;
       const activeLocale = data.locale || "ar";
       revalidatePath(`/${activeLocale}/${hSlug}/patients/${result.patientId}`);
 
