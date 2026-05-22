@@ -155,8 +155,16 @@ export default async function TelemedicinePage({
   }
 
   // 4. Generate secure, cryptographically hashed Jitsi Room name to prevent eavesdropping
-  const salt = process.env.JITSI_SALT || "hms-egypt-telemedicine-secret-salt-2026";
-  const secureHash = createHmac("sha256", salt).update(id).digest("hex").slice(0, 16);
+  const salt = process.env.JITSI_SALT;
+  
+  if (!salt && process.env.NODE_ENV === "production") {
+    throw new Error("CRITICAL_SECURITY_ERROR: JITSI_SALT environment variable is not defined.");
+  }
+
+  const secureHash = createHmac("sha256", salt || "dev-fallback-salt")
+    .update(id)
+    .digest("hex")
+    .slice(0, 16);
   const secureRoomName = `hms-egypt-${id}-${secureHash}`;
 
   return (

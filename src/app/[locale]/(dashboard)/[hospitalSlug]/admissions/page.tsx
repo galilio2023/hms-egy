@@ -62,9 +62,10 @@ export default async function AdmissionsPage({
       roomsList,
       bedsWithAdmissions,
       doctorsList,
-      housekeepingRes
+      housekeepingRes,
+      recentVitals
     ] = await Promise.all([
-      // Fetch all rooms in the hospital
+      // A. Fetch all rooms in the hospital
       tx
         .select({
           id: rooms.id,
@@ -78,7 +79,7 @@ export default async function AdmissionsPage({
         .where(eq(rooms.hospitalId, hospital.id))
         .orderBy(rooms.roomNumber),
 
-      // Fetch all beds joined with rooms, active admissions, patients, and admitting doctor
+      // B. Fetch all beds joined with rooms, active admissions, patients, and admitting doctor
       tx
         .select({
           bedId: beds.id,
@@ -125,7 +126,7 @@ export default async function AdmissionsPage({
         .where(eq(beds.hospitalId, hospital.id))
         .orderBy(beds.bedNumber),
 
-      // Fetch active admitting doctors list
+      // C. Fetch active admitting doctors list
       tx
         .select({
           id: staff.id,
@@ -143,7 +144,7 @@ export default async function AdmissionsPage({
         )
         .orderBy(staff.nameEn),
 
-      // Count pending cleaning housekeeping tasks
+      // D. Count pending cleaning housekeeping tasks
       tx
         .select({ count: sql<number>`count(*)::int` })
         .from(housekeepingTasks)
@@ -153,50 +154,43 @@ export default async function AdmissionsPage({
             eq(housekeepingTasks.status, "pending")
           )
         )
-        .then((res) => res[0])
+        .then((res) => res[0]),
+
+      // E. Fetch recent vitals for ALL currently active inpatients in this hospital
+      // This eliminates the waterfall by not waiting for bedsWithAdmissions results
+      tx
+        .select({
+          id: vitalsFlowsheet.id,
+          patientId: vitalsFlowsheet.patientId,
+          recordedAt: vitalsFlowsheet.recordedAt,
+          bloodPressureSystolic: vitalsFlowsheet.bloodPressureSystolic,
+          bloodPressureDiastolic: vitalsFlowsheet.bloodPressureDiastolic,
+          heartRate: vitalsFlowsheet.heartRate,
+          respiratoryRate: vitalsFlowsheet.respiratoryRate,
+          temperature: vitalsFlowsheet.temperature,
+          oxygenSaturation: vitalsFlowsheet.oxygenSaturation,
+          weightKg: vitalsFlowsheet.weightKg,
+          heightCm: vitalsFlowsheet.heightCm,
+          recorderNameAr: staff.nameAr,
+          recorderNameEn: staff.nameEn,
+        })
+        .from(vitalsFlowsheet)
+        .innerJoin(
+          admissions,
+          and(
+            eq(vitalsFlowsheet.patientId, admissions.patientId),
+            eq(admissions.status, "active"),
+            eq(admissions.hospitalId, hospital.id)
+          )
+        )
+        .leftJoin(staff, eq(vitalsFlowsheet.recordedBy, staff.id))
+        .where(eq(vitalsFlowsheet.hospitalId, hospital.id))
+        .orderBy(desc(vitalsFlowsheet.recordedAt))
     ]);
 
-    // Extract unique patient IDs with active admissions to load vitals history
-    const activePatientIds = Array.from(
-      new Set(
-        bedsWithAdmissions
-          .map((row) => row.patientId)
-          .filter((id): id is string => !!id)
-      )
-    );
-
-    // Fetch historic vitals for the currently admitted inpatients (dependent query, run after beds resolution)
-    const inpatientsVitals = activePatientIds.length > 0
-      ? await tx
-          .select({
-            id: vitalsFlowsheet.id,
-            patientId: vitalsFlowsheet.patientId,
-            recordedAt: vitalsFlowsheet.recordedAt,
-            bloodPressureSystolic: vitalsFlowsheet.bloodPressureSystolic,
-            bloodPressureDiastolic: vitalsFlowsheet.bloodPressureDiastolic,
-            heartRate: vitalsFlowsheet.heartRate,
-            respiratoryRate: vitalsFlowsheet.respiratoryRate,
-            temperature: vitalsFlowsheet.temperature,
-            oxygenSaturation: vitalsFlowsheet.oxygenSaturation,
-            weightKg: vitalsFlowsheet.weightKg,
-            heightCm: vitalsFlowsheet.heightCm,
-            recorderNameAr: staff.nameAr,
-            recorderNameEn: staff.nameEn,
-          })
-          .from(vitalsFlowsheet)
-          .leftJoin(staff, eq(vitalsFlowsheet.recordedBy, staff.id))
-          .where(
-            and(
-              eq(vitalsFlowsheet.hospitalId, hospital.id),
-              inArray(vitalsFlowsheet.patientId, activePatientIds)
-            )
-          )
-          .orderBy(desc(vitalsFlowsheet.recordedAt))
-      : [];
-
     // Group vitals by patient ID
-    const vitalsByPatient: Record<string, typeof inpatientsVitals> = {};
-    for (const record of inpatientsVitals) {
+    const vitalsByPatient: Record<string, typeof recentVitals> = {};
+    for (const record of recentVitals) {
       const patientId = record.patientId;
       if (!vitalsByPatient[patientId]) {
         vitalsByPatient[patientId] = [];
