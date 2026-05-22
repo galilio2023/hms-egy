@@ -1,5 +1,6 @@
 "use server";
 import { db } from "@/lib/db";
+import { randomBytes } from "crypto";
 import { withTenantContext } from "@/lib/db/tenant";
 import { appointments, medicalRecords, vitalsFlowsheet, admissions } from "@db/schema/clinical";
 import { prescriptions, prescriptionItems, medications } from "@db/schema/pharmacy";
@@ -374,6 +375,92 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
       ? parseFloat(data.vitals.weightKg).toFixed(1)
       : null;
 
+    // Resolve/Seed Medications Catalog outside the main transaction to prevent deadlock locking reference tables
+    const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
+    if (data.orderSetMedications && data.orderSetMedications.length > 0) {
+      for (const item of data.orderSetMedications) {
+        let [med] = await db
+          .select()
+          .from(medications)
+          .where(
+            and(
+              eq(medications.hospitalId, hospitalId),
+              eq(medications.nameEn, item.nameEn)
+            )
+          )
+          .limit(1);
+
+        if (!med) {
+          // Self-seed missing medication in hospital catalog with high-entropy cryptographic barcode
+          [med] = await db
+            .insert(medications)
+            .values({
+              hospitalId,
+              nameAr: item.nameAr,
+              nameEn: item.nameEn,
+              genericName: item.genericName,
+              form: item.form,
+              strength: item.strength,
+              barcode: `AUTO-${randomBytes(4).toString("hex").toUpperCase()}`,
+              stockCount: 100,
+              minStockLevel: 10,
+              price: "50.00",
+              isActive: true,
+            })
+            .returning();
+        }
+
+        if (med) {
+          resolvedMedicationItems.push({
+            medicationId: med.id,
+            dosage: item.dosage,
+            frequency: item.frequency,
+            durationDays: item.durationDays,
+            instructions: item.instructions,
+          });
+        }
+      }
+    }
+
+    // Resolve/Seed Labs Catalog outside the main transaction to prevent deadlock locking reference tables
+    const resolvedLabItems: string[] = [];
+    if (data.orderSetLabs && data.orderSetLabs.length > 0) {
+      for (const item of data.orderSetLabs) {
+        let [test] = await db
+          .select()
+          .from(labTests)
+          .where(
+            and(
+              eq(labTests.hospitalId, hospitalId),
+              eq(labTests.nameEn, item.nameEn)
+            )
+          )
+          .limit(1);
+
+        if (!test) {
+          // Self-seed missing lab test in hospital catalog
+          [test] = await db
+            .insert(labTests)
+            .values({
+              hospitalId,
+              nameAr: item.nameAr,
+              nameEn: item.nameEn,
+              loincCode: item.loincCode,
+              cptCode: item.cptCode,
+              normalRange: item.normalRange,
+              unit: item.unit,
+              price: "150.00",
+              isActive: true,
+            })
+            .returning();
+        }
+
+        if (test) {
+          resolvedLabItems.push(test.id);
+        }
+      }
+    }
+
     return await withTenantContext(hospitalId, async (tx) => {
       // A. Create the medical record
       const [medRecord] = await tx
@@ -450,157 +537,71 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
 
       // D. Process Order Set Medications
       let prescriptionId: string | undefined = undefined;
-      if (data.orderSetMedications && data.orderSetMedications.length > 0) {
-        const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
+      if (resolvedMedicationItems.length > 0) {
+        const [presc] = await tx
+          .insert(prescriptions)
+          .values({
+            hospitalId,
+            patientId: data.patientId,
+            doctorId: doctor.id,
+            admissionId,
+            status: "active",
+            notes: data.appliedOrderSetId ? `Applied via protocol: ${data.appliedOrderSetId}` : "Applied via Order Set",
+            hasDdiOverride: false,
+          })
+          .returning();
 
-        for (const item of data.orderSetMedications) {
-          let [med] = await tx
-            .select()
-            .from(medications)
-            .where(
-              and(
-                eq(medications.hospitalId, hospitalId),
-                eq(medications.nameEn, item.nameEn)
-              )
-            )
-            .limit(1);
-
-          if (!med) {
-            // Self-seed missing medication in hospital catalog
-            [med] = await tx
-              .insert(medications)
-              .values({
-                hospitalId,
-                nameAr: item.nameAr,
-                nameEn: item.nameEn,
-                genericName: item.genericName,
-                form: item.form,
-                strength: item.strength,
-                barcode: `AUTO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-                stockCount: 100,
-                minStockLevel: 10,
-                price: "50.00",
-                isActive: true,
-              })
-              .returning();
-          }
-
-          if (med) {
-            resolvedMedicationItems.push({
-              medicationId: med.id,
-              dosage: item.dosage,
-              frequency: item.frequency,
-              durationDays: item.durationDays,
-              instructions: item.instructions,
-            });
-          }
-        }
-
-        if (resolvedMedicationItems.length > 0) {
-          const [presc] = await tx
-            .insert(prescriptions)
-            .values({
+        if (presc) {
+          prescriptionId = presc.id;
+          for (const rxItem of resolvedMedicationItems) {
+            await tx.insert(prescriptionItems).values({
               hospitalId,
-              patientId: data.patientId,
-              doctorId: doctor.id,
-              admissionId,
-              status: "active",
-              notes: data.appliedOrderSetId ? `Applied via protocol: ${data.appliedOrderSetId}` : "Applied via Order Set",
-              hasDdiOverride: false,
-            })
-            .returning();
-
-          if (presc) {
-            prescriptionId = presc.id;
-            for (const rxItem of resolvedMedicationItems) {
-              await tx.insert(prescriptionItems).values({
-                hospitalId,
-                prescriptionId: presc.id,
-                medicationId: rxItem.medicationId,
-                dosage: rxItem.dosage,
-                frequency: rxItem.frequency,
-                durationDays: rxItem.durationDays,
-                instructions: rxItem.instructions,
-                dispensedCount: 0,
-                status: "pending",
-              });
-            }
+              prescriptionId: presc.id,
+              medicationId: rxItem.medicationId,
+              dosage: rxItem.dosage,
+              frequency: rxItem.frequency,
+              durationDays: rxItem.durationDays,
+              instructions: rxItem.instructions,
+              dispensedCount: 0,
+              status: "pending",
+            });
           }
         }
       }
 
       // E. Process Order Set Labs
       let labOrderId: string | undefined = undefined;
-      if (data.orderSetLabs && data.orderSetLabs.length > 0) {
-        const resolvedLabItems: string[] = [];
-
-        for (const item of data.orderSetLabs) {
-          let [test] = await tx
-            .select()
-            .from(labTests)
-            .where(
-              and(
-                eq(labTests.hospitalId, hospitalId),
-                eq(labTests.nameEn, item.nameEn)
-              )
-            )
-            .limit(1);
-
-          if (!test) {
-            // Self-seed missing lab test in hospital catalog
-            [test] = await tx
-              .insert(labTests)
-              .values({
-                hospitalId,
-                nameAr: item.nameAr,
-                nameEn: item.nameEn,
-                loincCode: item.loincCode,
-                cptCode: item.cptCode,
-                normalRange: item.normalRange,
-                unit: item.unit,
-                price: "150.00",
-                isActive: true,
-              })
-              .returning();
-          }
-
-          if (test) {
-            resolvedLabItems.push(test.id);
-          }
+      if (resolvedLabItems.length > 0) {
+        let orderPriority: "routine" | "urgent" | "stat" = "routine";
+        if (data.orderSetLabs && data.orderSetLabs.some((l) => l.priority === "stat")) {
+          orderPriority = "stat";
+        } else if (data.orderSetLabs && data.orderSetLabs.some((l) => l.priority === "urgent")) {
+          orderPriority = "urgent";
         }
 
-        if (resolvedLabItems.length > 0) {
-          let orderPriority: "routine" | "urgent" | "stat" = "routine";
-          if (data.orderSetLabs.some((l) => l.priority === "stat")) {
-            orderPriority = "stat";
-          } else if (data.orderSetLabs.some((l) => l.priority === "urgent")) {
-            orderPriority = "urgent";
-          }
+        const [labOrd] = await tx
+          .insert(labOrders)
+          .values({
+            hospitalId,
+            patientId: data.patientId,
+            doctorId: doctor.id,
+            admissionId,
+            priority: orderPriority,
+            status: "pending",
+            clinicalNotes: data.appliedOrderSetId ? `Applied via protocol: ${data.appliedOrderSetId}` : "Applied via Order Set",
+          })
+          .returning();
 
-          const [labOrd] = await tx
-            .insert(labOrders)
-            .values({
+        if (labOrd) {
+          labOrderId = labOrd.id;
+          for (const testId of resolvedLabItems) {
+            await tx.insert(labOrderItems).values({
               hospitalId,
-              patientId: data.patientId,
-              doctorId: doctor.id,
-              admissionId,
-              priority: orderPriority,
+              labOrderId: labOrd.id,
+              labTestId: testId,
               status: "pending",
-              clinicalNotes: data.appliedOrderSetId ? `Applied via protocol: ${data.appliedOrderSetId}` : "Applied via Order Set",
-            })
-            .returning();
-
-          if (labOrd) {
-            labOrderId = labOrd.id;
-            for (const testId of resolvedLabItems) {
-              await tx.insert(labOrderItems).values({
-                hospitalId,
-                labOrderId: labOrd.id,
-                labTestId: testId,
-                status: "pending",
-                isCritical: false,
-              });
-            }
+              isCritical: false,
+            });
           }
         }
       }

@@ -4,23 +4,19 @@ import React, { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
+import { cn } from "@/lib/utils";
 import {
   Bed as BedIcon,
   Plus,
   Search,
-  User,
   Check,
   Activity,
   UserCheck,
   LogOut,
   Clock,
-  AlertCircle,
   FileText,
   Thermometer,
-  Percent,
-  Weight as WeightIcon,
   Layers,
-  Sparkles,
   RefreshCw,
   Gauge,
   CheckCircle2,
@@ -28,9 +24,7 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -140,15 +134,14 @@ interface AdmissionsDashboardClientProps {
 
 export default function AdmissionsDashboardClient({
   locale,
-  hospitalSlug,
+  hospitalSlug: _hospitalSlug,
   rooms,
   bedsData,
   doctors,
   vitalsHistory,
-  pendingCleaningCount,
+  pendingCleaningCount: _pendingCleaningCount,
 }: AdmissionsDashboardClientProps) {
   const t = useTranslations("admissions");
-  const tp = useTranslations("patients");
   const router = useRouter();
 
   // State managers
@@ -161,12 +154,12 @@ export default function AdmissionsDashboardClient({
   // Local state for vitals history to prevent mutating props directly and satisfy React's state management
   const [localVitalsHistory, setLocalVitalsHistory] = useState<Record<string, VitalRecord[]>>(vitalsHistory);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLocalVitalsHistory(vitalsHistory);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [vitalsHistory]);
+  const [prevVitalsHistory, setPrevVitalsHistory] = useState<Record<string, VitalRecord[]>>(vitalsHistory);
+
+  if (vitalsHistory !== prevVitalsHistory) {
+    setPrevVitalsHistory(vitalsHistory);
+    setLocalVitalsHistory(vitalsHistory);
+  }
   
   // New Admission Dialog fields
   const [patientQuery, setPatientQuery] = useState("");
@@ -230,7 +223,7 @@ export default function AdmissionsDashboardClient({
       } else {
         toast.error(res.error || "Failed to search patients.");
       }
-    } catch (err) {
+    } catch {
       toast.error("Error occurred while searching.");
     } finally {
       setIsSearchingPatients(false);
@@ -790,12 +783,15 @@ export default function AdmissionsDashboardClient({
             ) : (
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                  <Search className={cn("absolute top-3.5 h-4 w-4 text-slate-400", isRtl ? "right-3" : "left-3")} />
                   <Input
                     placeholder={t("searchPlaceholder")}
                     value={patientQuery}
                     onChange={(e) => setPatientQuery(e.target.value)}
-                    className="ps-9 rounded-xl border-slate-200/80 shadow-sm h-11 text-xs text-start"
+                    className={cn(
+                      "rounded-xl border-slate-200/80 shadow-sm h-11 text-xs text-start",
+                      isRtl ? "pr-9 pl-4" : "pl-9 pr-4"
+                    )}
                   />
                 </div>
 
