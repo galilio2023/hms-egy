@@ -221,10 +221,7 @@ export default function AdmissionsDashboardClient({
   });
 
   // Patient Search function inside Admission Modal
-  const handleSearchPatients = useCallback(async (e?: React.FormEvent | string) => {
-    if (typeof e !== "string" && e) e.preventDefault();
-    const query = typeof e === "string" ? e : patientQuery;
-    
+  const handleSearchPatients = useCallback(async (query: string) => {
     if (!query.trim()) return;
 
     setIsSearchingPatients(true);
@@ -240,7 +237,7 @@ export default function AdmissionsDashboardClient({
     } finally {
       setIsSearchingPatients(false);
     }
-  }, [patientQuery]);
+  }, []); // Stable callback instance
 
   // Trigger search on typing debounce or enter
   useEffect(() => {

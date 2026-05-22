@@ -200,7 +200,9 @@ export function TelemedicineClientRoom({
 
   // Calculate prescription estimated cost
   const getPrescriptionCost = () => {
-    const total = prescriptionItems.reduce((acc, cur) => acc + cur.price, 0);
+    const rawTotal = prescriptionItems.reduce((acc, cur) => acc + cur.price, 0);
+    // Round to 2 decimal places to prevent float precision errors in financial calculations (e.g. 19.99 + 10.10)
+    const total = Math.round(rawTotal * 100) / 100;
     const textAr = total > 0 ? tafqeet(Math.round(total)) : "";
     return { total, textAr };
   };

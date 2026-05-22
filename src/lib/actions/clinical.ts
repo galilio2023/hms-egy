@@ -378,80 +378,92 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
     // Resolve/Seed Medications Catalog outside the main transaction to prevent deadlock locking reference tables
     const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
     if (data.orderSetMedications && data.orderSetMedications.length > 0) {
-      for (const item of data.orderSetMedications) {
-        // SECURITY: Strict validation of seeding payload to prevent catalog corruption
-        if (!item.nameEn || !item.nameAr || !item.genericName || !item.form || !item.strength) {
-          continue; // Skip malformed seeding items
-        }
+      // 1. Filter valid items and prepare bulk insert payload with trimmed names to handle empty strings correctly
+      const validMeds = data.orderSetMedications.filter(item =>
+        item.nameEn?.trim() && item.nameAr?.trim() && item.genericName?.trim() && item.form?.trim() && item.strength?.trim()
+      );
 
-        // Self-seed missing medication in hospital catalog with high-entropy cryptographic barcode
-        // Using onConflictDoUpdate to handle potential race conditions atomically
-        const [med] = await db
+      if (validMeds.length > 0) {
+        const medsToInsert = validMeds.map(item => ({
+          hospitalId,
+          nameAr: item.nameAr.trim(),
+          nameEn: item.nameEn.trim(),
+          genericName: item.genericName.trim(),
+          form: item.form.trim(),
+          strength: item.strength.trim(),
+          barcode: `AUTO-${randomBytes(4).toString("hex").toUpperCase()}`,
+          stockCount: 100,
+          minStockLevel: 10,
+          price: "50.00",
+          isActive: true,
+        }));
+
+        // 2. Execute Bulk Insert with conflict resolution to handle race conditions atomically and optimize roundtrips
+        const insertedMeds = await db
           .insert(medications)
-          .values({
-            hospitalId,
-            nameAr: item.nameAr,
-            nameEn: item.nameEn,
-            genericName: item.genericName,
-            form: item.form,
-            strength: item.strength,
-            barcode: `AUTO-${randomBytes(4).toString("hex").toUpperCase()}`,
-            stockCount: 100,
-            minStockLevel: 10,
-            price: "50.00",
-            isActive: true,
-          })
+          .values(medsToInsert)
           .onConflictDoUpdate({
             target: [medications.hospitalId, medications.nameEn],
             set: { updatedAt: new Date() } // Safe dummy update to return the existing row
           })
           .returning();
 
-        if (med) {
-          resolvedMedicationItems.push({
-            medicationId: med.id,
-            dosage: item.dosage,
-            frequency: item.frequency,
-            durationDays: item.durationDays,
-            instructions: item.instructions,
-          });
-        }
+        // 3. Map back the resolved IDs to the items
+        const medMap = new Map(insertedMeds.map(m => [m.nameEn, m.id]));
+        validMeds.forEach(item => {
+          const medId = medMap.get(item.nameEn.trim());
+          if (medId) {
+            resolvedMedicationItems.push({
+              medicationId: medId,
+              dosage: item.dosage,
+              frequency: item.frequency,
+              durationDays: item.durationDays,
+              instructions: item.instructions,
+            });
+          }
+        });
       }
     }
 
     // Resolve/Seed Labs Catalog outside the main transaction to prevent deadlock locking reference tables
     const resolvedLabItems: string[] = [];
     if (data.orderSetLabs && data.orderSetLabs.length > 0) {
-      for (const item of data.orderSetLabs) {
-        // SECURITY: Strict validation of seeding payload to prevent catalog corruption
-        if (!item.nameEn || !item.nameAr) {
-          continue; // Skip malformed seeding items
-        }
+      // 1. Filter valid items and prepare bulk insert payload
+      const validLabs = data.orderSetLabs.filter(item =>
+        item.nameEn?.trim() && item.nameAr?.trim()
+      );
 
-        // Self-seed missing lab test in hospital catalog
-        // Using onConflictDoUpdate to handle potential race conditions atomically
-        const [test] = await db
+      if (validLabs.length > 0) {
+        const labsToInsert = validLabs.map(item => ({
+          hospitalId,
+          nameAr: item.nameAr.trim(),
+          nameEn: item.nameEn.trim(),
+          loincCode: item.loincCode,
+          cptCode: item.cptCode,
+          normalRange: item.normalRange,
+          unit: item.unit,
+          price: "150.00",
+          isActive: true,
+        }));
+
+        // 2. Execute Bulk Insert with conflict resolution
+        const insertedLabs = await db
           .insert(labTests)
-          .values({
-            hospitalId,
-            nameAr: item.nameAr,
-            nameEn: item.nameEn,
-            loincCode: item.loincCode,
-            cptCode: item.cptCode,
-            normalRange: item.normalRange,
-            unit: item.unit,
-            price: "150.00",
-            isActive: true,
-          })
+          .values(labsToInsert)
           .onConflictDoUpdate({
             target: [labTests.hospitalId, labTests.nameEn],
             set: { updatedAt: new Date() } // Safe dummy update to return the existing row
           })
           .returning();
 
-        if (test) {
-          resolvedLabItems.push(test.id);
-        }
+        // 3. Collect the resolved IDs
+        const labMap = new Map(insertedLabs.map(l => [l.nameEn, l.id]));
+        validLabs.forEach(item => {
+          const labId = labMap.get(item.nameEn.trim());
+          if (labId) {
+            resolvedLabItems.push(labId);
+          }
+        });
       }
     }
 
