@@ -202,6 +202,11 @@ export default function AdmissionsDashboardClient({
   const [summaryEn, setSummaryEn] = useState("");
   const [isDischarging, setIsDischarging] = useState(false);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isRtl = locale === "ar";
 
   // Compute metrics dynamically from the static dataset passed from the server
@@ -427,9 +432,9 @@ export default function AdmissionsDashboardClient({
       toast.warning(t("bedUnavailable"));
     }  };
 
-  // Format date helper
+  // Format date helper - uses mounted check to prevent hydration mismatch between server/client timezones
   const formatDate = (date: Date | string | null) => {
-    if (!date) return "";
+    if (!date || !mounted) return "";
     const d = new Date(date);
     return d.toLocaleString(isRtl ? "ar-EG" : "en-US", {
       month: "short",

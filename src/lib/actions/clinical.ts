@@ -36,7 +36,7 @@ interface VitalsInput {
 /**
  * Performs clinical boundary/range validation on vitals signs inputs to prevent typographical errors.
  */
-function validateVitals(vitals?: VitalsInput) {
+export function validateVitals(vitals?: VitalsInput) {
   if (!vitals) return { success: true };
 
   const SystolicRange = { min: 40, max: 260 };

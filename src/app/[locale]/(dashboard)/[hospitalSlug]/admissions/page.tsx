@@ -156,10 +156,14 @@ export default async function AdmissionsPage({
         .then((res) => res[0])
     ]);
 
-    // Extract patient IDs with active admissions to load vitals history
-    const activePatientIds = bedsWithAdmissions
-      .map((row) => row.patientId)
-      .filter((id): id is string => !!id);
+    // Extract unique patient IDs with active admissions to load vitals history
+    const activePatientIds = Array.from(
+      new Set(
+        bedsWithAdmissions
+          .map((row) => row.patientId)
+          .filter((id): id is string => !!id)
+      )
+    );
 
     // Fetch historic vitals for the currently admitted inpatients (dependent query, run after beds resolution)
     const inpatientsVitals = activePatientIds.length > 0

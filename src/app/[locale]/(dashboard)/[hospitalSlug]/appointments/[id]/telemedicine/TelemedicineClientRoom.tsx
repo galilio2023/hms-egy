@@ -228,7 +228,22 @@ export function TelemedicineClientRoom({
     const rawTotal = prescriptionItems.reduce((acc, cur) => acc + cur.price, 0);
     // Round to 2 decimal places to prevent float precision errors in financial calculations (e.g. 19.99 + 10.10)
     const total = Math.round(rawTotal * 100) / 100;
-    const textAr = total > 0 ? tafqeet(Math.round(total)) : "";
+    
+    // Separate pounds and piastres for precise Tafqeet
+    const pounds = Math.floor(total);
+    const piastres = Math.round((total - pounds) * 100);
+    
+    let textAr = "";
+    if (pounds > 0) {
+      textAr = tafqeet(pounds);
+      if (piastres > 0) {
+        textAr = textAr.replace(" فقط لا غير", "");
+        textAr += ` و${piastres} قرشاً فقط لا غير`;
+      }
+    } else if (piastres > 0) {
+      textAr = `${piastres} قرشاً فقط لا غير`;
+    }
+    
     return { total, textAr };
   };
 
@@ -236,20 +251,22 @@ export function TelemedicineClientRoom({
 
   // Clinical note templates helper
   const applySoapTemplate = (type: "normal" | "cardio" | "pediatric") => {
+    const appendToText = (current: string, next: string) => current ? `${current}\n${next}` : next;
+
     if (type === "normal") {
-      setSubjective(isRtl ? "المريض يشكو من إجهاد عام وصداع طفيف. لا توجد آلام حادة." : "Patient reports mild fatigue and mild headache. No acute severe pain.");
-      setObjective(isRtl ? "درجة الحرارة وضغط الدم ضمن المعدلات الطبيعية. الحلق سليم." : "BP and Temp within normal limits. Throat clear, chest clear on auscultation.");
-      setAssessment(isRtl ? "صداع إجهادي بسيط (Tension Headache)." : "Tension headache due to fatigue.");
-      setPlan(isRtl ? "الراحة الكافية، زيادة شرب السوائل، ومسكن عند اللزوم." : "Adequate rest, hydration, and analgesics as needed.");
-      setDiagnosis(isRtl ? "صداع بسبب الإجهاد" : "Tension Headache");
+      setSubjective(prev => appendToText(prev, isRtl ? "المريض يشكو من إجهاد عام وصداع طفيف. لا توجد آلام حادة." : "Patient reports mild fatigue and mild headache. No acute severe pain."));
+      setObjective(prev => appendToText(prev, isRtl ? "درجة الحرارة وضغط الدم ضمن المعدلات الطبيعية. الحلق سليم." : "BP and Temp within normal limits. Throat clear, chest clear on auscultation."));
+      setAssessment(prev => appendToText(prev, isRtl ? "صداع إجهادي بسيط (Tension Headache)." : "Tension headache due to fatigue."));
+      setPlan(prev => appendToText(prev, isRtl ? "الراحة الكافية، زيادة شرب السوائل، ومسكن عند اللزوم." : "Adequate rest, hydration, and analgesics as needed."));
+      setDiagnosis(prev => appendToText(prev, isRtl ? "صداع بسبب الإجهاد" : "Tension Headache"));
     } else if (type === "cardio") {
-      setSubjective(isRtl ? "شكوى من تسارع خفيف في ضربات القلب عند بذل مجهود بسيط." : "Complains of mild exertional palpitation.");
-      setObjective(isRtl ? "نبض منتظم، أصوات القلب طبيعية، لا توجد وذمة في الأطراف." : "Regular rhythm, normal S1/S2, no lower limb edema.");
-      setAssessment(isRtl ? "خفقان بسيط غير محدد السبب." : "Mild exertional palpitations, R/O arrhythmia.");
-      setPlan(isRtl ? "إجراء رسم قلب، تقليل الكافيين، ومراجعة النتائج خلال أسبوع." : "ECG requested, restrict caffeine, follow-up in 1 week.");
-      setDiagnosis(isRtl ? "خفقان عارض" : "Mild Palpitation");
+      setSubjective(prev => appendToText(prev, isRtl ? "شكوى من تسارع خفيف في ضربات القلب عند بذل مجهود بسيط." : "Complains of mild exertional palpitation."));
+      setObjective(prev => appendToText(prev, isRtl ? "نبض منظم، أصوات القلب طبيعية، لا توجد وذمة في الأطراف." : "Regular rhythm, normal S1/S2, no lower limb edema."));
+      setAssessment(prev => appendToText(prev, isRtl ? "خفقان بسيط غير محدد السبب." : "Mild exertional palpitations, R/O arrhythmia."));
+      setPlan(prev => appendToText(prev, isRtl ? "إجراء رسم قلب، تقليل الكافيين، ومراجعة النتائج خلال أسبوع." : "ECG requested, restrict caffeine, follow-up in 1 week."));
+      setDiagnosis(prev => appendToText(prev, isRtl ? "خفقان عارض" : "Mild Palpitation"));
     }
-    toast.success(isRtl ? "تم تطبيق القالب السريري بنجاح" : "Clinical template applied successfully");
+    toast.success(isRtl ? "تمت إضافة القالب السريري" : "Clinical template appended successfully");
   };
 
   // Submit complete consultation
@@ -699,7 +716,7 @@ ${plan}
                           {costInfo.total > 0 && (
                             isRtl ? (
                               <div className="text-[10px] text-slate-500 font-bold text-start" dir="rtl">
-                                فقط وقدره: {costInfo.textAr} جنيه مصري لا غير
+                                فقط وقدره: {costInfo.textAr}
                               </div>
                             ) : (
                               <div className="text-[10px] text-slate-500 font-bold text-start">

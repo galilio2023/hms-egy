@@ -11,6 +11,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
+import { validateVitals } from "./clinical";
 
 interface AdmitPatientPayload {
   patientId: string;
@@ -84,13 +85,12 @@ export async function admitPatient(payload: AdmitPatientPayload) {
         );
       }
 
-      // 2. Verify bed availability
-      const bed = await tx
+      // 2. Verify bed availability with row-level write lock to prevent double-booking race conditions
+      const [bed] = await tx
         .select()
         .from(beds)
         .where(and(eq(beds.id, payload.bedId), eq(beds.hospitalId, hospitalId)))
-        .limit(1)
-        .then((res) => res[0]);
+        .for("update");
 
       if (!bed) {
         throw new AppError(ErrorCode.NOT_FOUND, "The selected bed was not found.");
@@ -267,6 +267,20 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
 
   if (!isAuthorized) {
     return { success: false, error: "Forbidden: You do not have permission to record vitals." };
+  }
+
+  // Enforce clinical biological safety boundaries to prevent data corruption
+  const vitalsValidation = validateVitals({
+    bloodPressureSystolic: payload.bloodPressureSystolic,
+    bloodPressureDiastolic: payload.bloodPressureDiastolic,
+    heartRate: payload.heartRate,
+    respiratoryRate: payload.respiratoryRate,
+    temperature: payload.temperature,
+    oxygenSaturation: payload.oxygenSaturation,
+  });
+
+  if (!vitalsValidation.success) {
+    return { success: false, error: vitalsValidation.error };
   }
 
   try {
