@@ -145,13 +145,16 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setTimeout(() => setIsFocused(false), 200)} // delay to allow clicks on search results
+          onBlur={() => setIsFocused(false)}
           className="w-full h-11 bg-background/50 border-border/50 text-xs font-semibold focus:ring-primary/20 transition-all duration-300 rounded-xl ps-10 pe-4 text-start"
         />
 
         {/* Floating Local Fuzzy Search Results Dropdown */}
         {isFocused && query.trim() !== "" && (
-          <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl border border-border/40 bg-background/95 backdrop-blur-md shadow-lg scrollbar-none animate-in fade-in duration-100">
+          <div 
+            onMouseDown={(e) => e.preventDefault()} // Prevents focus loss on the input when clicking results
+            className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl border border-border/40 bg-background/95 backdrop-blur-md shadow-lg scrollbar-none animate-in fade-in duration-100"
+          >
             {results.length === 0 ? (
               <div className="p-4 text-center text-xs font-semibold text-muted-foreground">
                 {isRtl ? "لا توجد نتائج مطابقة" : "No matching diagnosis found"}

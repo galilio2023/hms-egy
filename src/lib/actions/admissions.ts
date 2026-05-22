@@ -157,15 +157,15 @@ export async function dischargePatient(payload: DischargePatientPayload) {
   }
 
   try {
-    // Resolve discharging physician staff ID
-    const currentStaff = await db
-      .select()
-      .from(staff)
-      .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
-      .limit(1)
-      .then((res) => res[0]);
-
     return await withTenantContext(hospitalId, async (tx) => {
+      // Resolve discharging physician staff ID inside tenant context
+      const currentStaff = await tx
+        .select()
+        .from(staff)
+        .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+        .limit(1)
+        .then((res) => res[0]);
+
       // 1. Resolve admission record
       const admission = await tx
         .select()
@@ -277,17 +277,6 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
   }
 
   try {
-    const currentStaff = await db
-      .select()
-      .from(staff)
-      .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
-      .limit(1)
-      .then((res) => res[0]);
-
-    if (!currentStaff) {
-      return { success: false, error: "Unauthorized: You must be registered as hospital staff to record clinical vitals." };
-    }
-
     const cleanTemperature = payload.temperature && !isNaN(parseFloat(payload.temperature))
       ? parseFloat(payload.temperature).toFixed(1)
       : null;
@@ -297,6 +286,17 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
       : null;
 
     return await withTenantContext(hospitalId, async (tx) => {
+      const currentStaff = await tx
+        .select()
+        .from(staff)
+        .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+        .limit(1)
+        .then((res) => res[0]);
+
+      if (!currentStaff) {
+        throw new AppError(ErrorCode.UNAUTHORIZED, "You must be registered as hospital staff to record clinical vitals.");
+      }
+
       const [record] = await tx
         .insert(vitalsFlowsheet)
         .values({

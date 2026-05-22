@@ -1,7 +1,7 @@
 "use server";
 import { db } from "@/lib/db";
 import { randomBytes } from "crypto";
-import { withTenantContext } from "@/lib/db/tenant";
+import { withTenantContext, withBypassContext } from "@/lib/db/tenant";
 import { appointments, medicalRecords, vitalsFlowsheet, admissions } from "@db/schema/clinical";
 import { prescriptions, prescriptionItems, medications } from "@db/schema/pharmacy";
 import { labTests, labOrders, labOrderItems } from "@db/schema/laboratory";
@@ -88,13 +88,15 @@ export async function completeTelemedicineConsultation(
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
-  // 1. Get the appointment to resolve patientId, doctorId, and hospitalId
-  const appointment = await db
-    .select()
-    .from(appointments)
-    .where(eq(appointments.id, appointmentId))
-    .limit(1)
-    .then((res) => res[0]);
+  // 1. Get the appointment to resolve patientId, doctorId, and hospitalId using bypass to resolve tenant
+  const appointment = await withBypassContext(async (tx) => {
+    return await tx
+      .select()
+      .from(appointments)
+      .where(eq(appointments.id, appointmentId))
+      .limit(1)
+      .then((res) => res[0]);
+  });
 
   if (!appointment) {
     return { success: false, error: "Appointment not found." };
@@ -113,25 +115,7 @@ export async function completeTelemedicineConsultation(
 
   // 3. Enforce doctor assignment ownership (only the assigned doctor or SUPER_ADMIN can finalize)
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
-  let isAssignedDoctor = false;
-
-  if (!isSuperAdmin) {
-    const currentStaff = await db
-      .select()
-      .from(staff)
-      .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
-      .limit(1)
-      .then((res) => res[0]);
-
-    if (currentStaff && appointment.doctorId === currentStaff.id) {
-      isAssignedDoctor = true;
-    }
-  }
-
-  if (!isSuperAdmin && !isAssignedDoctor) {
-    return { success: false, error: "Forbidden: Only the assigned medical professional or a super administrator can complete this encounter." };
-  }
-
+  
   // 4. Validate vitals bounds to avoid corrupted historical logs
   const vitalsValidation = validateVitals(vitals);
   if (!vitalsValidation.success) {
@@ -148,6 +132,25 @@ export async function completeTelemedicineConsultation(
       : null;
 
     return await withTenantContext(hospitalId, async (tx) => {
+      // Resolve assigned doctor status inside tenant context
+      let isAssignedDoctor = false;
+      if (!isSuperAdmin) {
+        const currentStaff = await tx
+          .select()
+          .from(staff)
+          .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+          .limit(1)
+          .then((res) => res[0]);
+
+        if (currentStaff && appointment.doctorId === currentStaff.id) {
+          isAssignedDoctor = true;
+        }
+
+        if (!isAssignedDoctor) {
+          throw new AppError(ErrorCode.FORBIDDEN, "Forbidden: Only the assigned medical professional or a super administrator can complete this encounter.");
+        }
+      }
+
       // A. Fetch and row-lock the appointment inside the transaction to prevent concurrent race conditions
       const [lockedAppointment] = await tx
         .select()
@@ -348,24 +351,6 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
     return { success: false, error: "Forbidden: You do not have permission to create medical records." };
   }
 
-  // 2. Resolve Doctor (Staff) ID of the current user for this hospital
-  const doctor = await db
-    .select()
-    .from(staff)
-    .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
-    .limit(1)
-    .then((res) => res[0]);
-
-  if (!doctor) {
-    return { success: false, error: "Clinical Profile Error: Doctor profile not found for current user." };
-  }
-
-  // 3. Validate vitals bounds to avoid corrupted historical logs
-  const vitalsValidation = validateVitals(data.vitals);
-  if (!vitalsValidation.success) {
-    return { success: false, error: vitalsValidation.error };
-  }
-
   try {
     const cleanTemperature = data.vitals?.temperature && !isNaN(parseFloat(data.vitals.temperature))
       ? parseFloat(data.vitals.temperature).toFixed(1)
@@ -404,6 +389,7 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
           .values(medsToInsert)
           .onConflictDoUpdate({
             target: [medications.hospitalId, medications.nameEn],
+            targetWhere: sql`name_en IS NOT NULL AND name_en != ''`,
             set: { updatedAt: new Date() } // Safe dummy update to return the existing row
           })
           .returning();
@@ -452,6 +438,7 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
           .values(labsToInsert)
           .onConflictDoUpdate({
             target: [labTests.hospitalId, labTests.nameEn],
+            targetWhere: sql`name_en IS NOT NULL AND name_en != ''`,
             set: { updatedAt: new Date() } // Safe dummy update to return the existing row
           })
           .returning();
@@ -468,6 +455,18 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
     }
 
     return await withTenantContext(hospitalId, async (tx) => {
+      // 2. Resolve Doctor (Staff) ID of the current user for this hospital inside tenant context
+      const doctor = await tx
+        .select()
+        .from(staff)
+        .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+        .limit(1)
+        .then((res) => res[0]);
+
+      if (!doctor) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Clinical Profile Error: Doctor profile not found for current user.");
+      }
+
       // A. Create the medical record
       const [medRecord] = await tx
         .insert(medicalRecords)

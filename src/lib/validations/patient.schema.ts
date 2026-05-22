@@ -26,7 +26,9 @@ export const patientSchema = z.object({
   insuranceProviderId: z.string().optional(),
   insuranceNumber: z.string().optional(),
   guardianName: z.string().optional(),
-  guardianNid: z.string().optional(),
+  guardianNid: z.string().optional().refine((val) => !val || val === "" || validateNationalId(val), {
+    message: "Invalid Egyptian National ID format or check digits for guardian.",
+  }),
   guardianPhone: egyptianPhoneSchema.optional().or(z.literal("")),
 }).refine((data) => {
   if (data.insuranceProviderId === "uhis") {
