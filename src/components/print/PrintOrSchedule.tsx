@@ -119,7 +119,7 @@ export function PrintOrSchedule({
         </div>
         <div className="space-y-4 text-left" dir="ltr">
           <p className="font-bold">Chief of Surgical Services / رئيس قسم العمليات والجراحة:</p>
-          <div className="h-10 w-64 border-b border-black/40 border-dotted mr-auto" />
+          <div className="h-10 w-64 border-b border-black/40 border-dotted me-auto" />
           <p className="text-[10px] text-slate-500">Signature / التوقيع: _______________________</p>
         </div>
       </div>

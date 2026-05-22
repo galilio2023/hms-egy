@@ -56,8 +56,8 @@ export default function ChangePasswordPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#090d16] text-slate-100 overflow-hidden px-4">
       {/* Background Ambience */}
-      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-teal-900/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-900/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-20%] start-[-10%] w-[600px] h-[600px] rounded-full bg-teal-900/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] end-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-900/10 blur-[120px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}

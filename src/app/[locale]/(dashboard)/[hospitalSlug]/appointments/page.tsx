@@ -54,7 +54,13 @@ export default async function AppointmentsPage({
   // Validate cross-tenant access context
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
   const currentHospitalId = session.activeHospitalId || session.user.hospitalId;
-  if (!isSuperAdmin && currentHospitalId !== dbHospital.id) {
+  
+  // Allow matching against either the UUID ID or the Slug (useful for mock/dev sessions)
+  const isAuthorized = isSuperAdmin || 
+                       currentHospitalId === dbHospital.id || 
+                       currentHospitalId === dbHospital.slug;
+
+  if (!isAuthorized) {
     notFound(); // Return 404 to avoid exposing that the slug exists
   }
 

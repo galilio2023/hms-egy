@@ -26,15 +26,19 @@ import {
   Stethoscope, 
   ChevronRight, 
   ChevronLeft,
+  ChevronDown,
   XCircle,
   TrendingUp,
   AlertCircle,
-  Pill
+  Pill,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Fuse from "fuse.js";
 import { safeParseInt } from "@/lib/utils/formatting";
 import { completeTelemedicineConsultation } from "@/lib/actions/clinical";
+import { ORDER_SETS } from "@/lib/clinical/order-sets";
 
 // Memoize the Jitsi player to prevent DOM tear-downs on local state updates
 const JitsiStream = React.memo(({ url }: { url: string }) => (
@@ -103,6 +107,7 @@ export function TelemedicineClientRoom({
   secureRoomName,
 }: TelemedicineClientRoomProps) {
   const isRtl = locale === "ar";
+  const t = useTranslations("patients");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -111,7 +116,7 @@ export function TelemedicineClientRoom({
   const [callConnected, setCallStatus] = useState(true);
 
   // Tabs state: "soap" | "prescription" | "vitals" | "history"
-  const [activeTab, setActiveTab] = useState<"soap" | "prescription" | "vitals">("soap");
+  const [activeTab, setActiveTab] = useState<"soap" | "prescription" | "vitals" | "protocols">("soap");
 
   // SOAP State
   const [subjective, setSubjective] = useState("");
@@ -119,6 +124,39 @@ export function TelemedicineClientRoom({
   const [assessment, setAssessment] = useState("");
   const [plan, setPlan] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
+
+  // Order Sets Selection State
+  const [selectedOrderSetId, setSelectedOrderSetId] = useState<string>("none");
+  const [checkedMeds, setCheckedMeds] = useState<Record<number, boolean>>({});
+  const [checkedLabs, setCheckedLabs] = useState<Record<number, boolean>>({});
+  const [checkedRadiology, setCheckedRadiology] = useState<Record<number, boolean>>({});
+  const [protocolSubTab, setProtocolSubTab] = useState<"medications" | "labs" | "radiology">("medications");
+
+  const handleOrderSetChange = (orderSetId: string) => {
+    setSelectedOrderSetId(orderSetId);
+    if (orderSetId === "none") {
+      setCheckedMeds({});
+      setCheckedLabs({});
+      setCheckedRadiology({});
+      return;
+    }
+
+    const orderSet = ORDER_SETS.find((os) => os.id === orderSetId);
+    if (orderSet) {
+      const initialMeds: Record<number, boolean> = {};
+      orderSet.medications.forEach((_, idx) => { initialMeds[idx] = true; });
+
+      const initialLabs: Record<number, boolean> = {};
+      orderSet.labs.forEach((_, idx) => { initialLabs[idx] = true; });
+
+      const initialRadiology: Record<number, boolean> = {};
+      orderSet.radiology.forEach((_, idx) => { initialRadiology[idx] = true; });
+
+      setCheckedMeds(initialMeds);
+      setCheckedLabs(initialLabs);
+      setCheckedRadiology(initialRadiology);
+    }
+  };
 
   // Fuzzy Medication Search Logic
   const [medQuery, setMedQuery] = useState("");
@@ -309,6 +347,21 @@ ${plan}
       instructions: item.instructions,
     }));
 
+    // Resolve Order Set Data for submission
+    const activeOrderSet = ORDER_SETS.find((os) => os.id === selectedOrderSetId);
+    
+    const orderSetMedications = activeOrderSet && selectedOrderSetId !== "none"
+      ? activeOrderSet.medications.filter((_, idx) => checkedMeds[idx])
+      : undefined;
+
+    const orderSetLabs = activeOrderSet && selectedOrderSetId !== "none"
+      ? activeOrderSet.labs.filter((_, idx) => checkedLabs[idx])
+      : undefined;
+
+    const orderSetRadiology = activeOrderSet && selectedOrderSetId !== "none"
+      ? activeOrderSet.radiology.filter((_, idx) => checkedRadiology[idx])
+      : undefined;
+
     startTransition(async () => {
       const res = await completeTelemedicineConsultation(
         appointment.id,
@@ -317,7 +370,10 @@ ${plan}
         formattedPrescriptions,
         prescriptionNotes || undefined,
         formattedVitals,
-        locale
+        locale,
+        orderSetMedications,
+        orderSetLabs,
+        orderSetRadiology
       );
 
       if (res.success) {
@@ -428,11 +484,12 @@ ${plan}
         <div className="lg:col-span-5 border-s border-slate-800 bg-slate-900/40 flex flex-col h-full overflow-hidden text-start">
           
           {/* Tab bar navigation */}
-          <div className="grid grid-cols-3 border-b border-slate-800 bg-slate-900 shrink-0">
+          <div className="grid grid-cols-4 border-b border-slate-800 bg-slate-900 shrink-0">
             {[
               { id: "soap" as const, name: isRtl ? "سجل SOAP" : "SOAP Notes", icon: FileText },
-              { id: "prescription" as const, name: isRtl ? "روشتة علاجية" : "Prescription", icon: Pill },
-              { id: "vitals" as const, name: isRtl ? "العلامات الحيوية" : "Patient Vitals", icon: Activity },
+              { id: "protocols" as const, name: isRtl ? "بروتوكولات" : "Protocols", icon: Sparkles },
+              { id: "prescription" as const, name: isRtl ? "روشتة" : "Prescription", icon: Pill },
+              { id: "vitals" as const, name: isRtl ? "علامات" : "Vitals", icon: Activity },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -440,7 +497,7 @@ ${plan}
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "py-3.5 px-2 flex flex-col sm:flex-row items-center justify-center gap-1.5 text-xs font-black border-b-2 transition-all",
+                    "py-3.5 px-1 flex flex-col items-center justify-center gap-1 text-[10px] sm:text-xs font-black border-b-2 transition-all",
                     activeTab === tab.id
                       ? "border-accent text-accent bg-accent/2"
                       : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30"
@@ -555,7 +612,155 @@ ${plan}
               </div>
             )}
 
-            {/* TAB 2: E-PRESCRIPTION PAD */}
+            {/* TAB 2: PROTOCOLS & ORDER SETS */}
+            {activeTab === "protocols" && (
+              <div className="space-y-4 animate-in fade-in duration-300">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-accent" />
+                  <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider">
+                    {isRtl ? "بروتوكولات الرعاية السريرية" : "Clinical Care Protocols"}
+                  </h3>
+                </div>
+
+                <div className="relative">
+                  <select
+                    value={selectedOrderSetId}
+                    onChange={(e) => handleOrderSetChange(e.target.value)}
+                    className="h-10 w-full bg-slate-900 border border-slate-800 focus:border-accent text-xs font-bold rounded-xl px-4 outline-none transition-all appearance-none cursor-pointer text-start pe-10 text-slate-200"
+                  >
+                    <option value="none">{isRtl ? "بدون بروتوكول" : "No Protocol Selected"}</option>
+                    {ORDER_SETS.map((os) => (
+                      <option key={os.id} value={os.id}>
+                        {isRtl ? os.nameAr : os.nameEn}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 flex items-center px-3 pointer-events-none text-slate-500 end-0">
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </div>
+
+                {selectedOrderSetId !== "none" && (() => {
+                  const activeSet = ORDER_SETS.find((os) => os.id === selectedOrderSetId);
+                  if (!activeSet) return null;
+
+                  const medsCount = activeSet.medications.length;
+                  const labsCount = activeSet.labs.length;
+                  const radCount = activeSet.radiology.length;
+
+                  const checkedMedsCount = activeSet.medications.filter((_, i) => checkedMeds[i]).length;
+                  const checkedLabsCount = activeSet.labs.filter((_, i) => checkedLabs[i]).length;
+                  const checkedRadCount = activeSet.radiology.filter((_, i) => checkedRadiology[i]).length;
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Description */}
+                      <div className="p-3 rounded-xl bg-accent/5 border border-accent/10 text-[10px] font-medium leading-relaxed text-slate-300 italic">
+                        {isRtl ? activeSet.descriptionAr : activeSet.descriptionEn}
+                      </div>
+
+                      {/* Sub-tabs */}
+                      <div className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-slate-900/60 border border-slate-800">
+                        {[
+                          { id: "medications" as const, label: isRtl ? "أدوية" : "Meds", count: `${checkedMedsCount}/${medsCount}`, color: "text-blue-400" },
+                          { id: "labs" as const, label: isRtl ? "تحاليل" : "Labs", count: `${checkedLabsCount}/${labsCount}`, color: "text-purple-400" },
+                          { id: "radiology" as const, label: isRtl ? "أشعة" : "Rad", count: `${checkedRadCount}/${radCount}`, color: "text-pink-400" }
+                        ].map((sub) => (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => setProtocolSubTab(sub.id)}
+                            className={cn(
+                              "py-1.5 px-1 rounded-md text-[10px] font-black flex items-center justify-center gap-1 transition-all",
+                              protocolSubTab === sub.id
+                                ? "bg-slate-800 text-slate-100 shadow-sm"
+                                : "text-slate-500 hover:text-slate-300"
+                            )}
+                          >
+                            <span className={sub.color}>{sub.label}</span>
+                            <span className="text-[9px] opacity-60">({sub.count})</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Items List */}
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+                        {protocolSubTab === "medications" && activeSet.medications.map((item, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => setCheckedMeds(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                            className={cn(
+                              "p-2.5 rounded-xl border transition-all cursor-pointer select-none flex items-start gap-2.5",
+                              checkedMeds[idx] ? "bg-slate-800/40 border-blue-500/30" : "bg-slate-900/20 border-slate-800 opacity-50"
+                            )}
+                          >
+                            <div className={cn("mt-0.5 shrink-0", checkedMeds[idx] ? "text-blue-400" : "text-slate-600")}>
+                              {checkedMeds[idx] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 text-start">
+                              <div className="text-[11px] font-black text-slate-200">{isRtl ? item.nameAr : item.nameEn}</div>
+                              <div className="text-[9px] text-slate-500 font-bold">{item.strength} · {item.dosage} · {item.frequency}</div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {protocolSubTab === "labs" && activeSet.labs.map((item, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => setCheckedLabs(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                            className={cn(
+                              "p-2.5 rounded-xl border transition-all cursor-pointer select-none flex items-start gap-2.5",
+                              checkedLabs[idx] ? "bg-slate-800/40 border-purple-500/30" : "bg-slate-900/20 border-slate-800 opacity-50"
+                            )}
+                          >
+                            <div className={cn("mt-0.5 shrink-0", checkedLabs[idx] ? "text-purple-400" : "text-slate-600")}>
+                              {checkedLabs[idx] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 text-start">
+                              <div className="text-[11px] font-black text-slate-200">{isRtl ? item.nameAr : item.nameEn}</div>
+                              <div className="text-[9px] text-slate-500 font-bold">CPT: {item.cptCode} · {t(item.priority)}</div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {protocolSubTab === "radiology" && activeSet.radiology.map((item, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => setCheckedRadiology(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                            className={cn(
+                              "p-2.5 rounded-xl border transition-all cursor-pointer select-none flex items-start gap-2.5",
+                              checkedRadiology[idx] ? "bg-slate-800/40 border-pink-500/30" : "bg-slate-900/20 border-slate-800 opacity-50"
+                            )}
+                          >
+                            <div className={cn("mt-0.5 shrink-0", checkedRadiology[idx] ? "text-pink-400" : "text-slate-600")}>
+                              {checkedRadiology[idx] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 text-start">
+                              <div className="text-[11px] font-black text-slate-200">{isRtl ? item.procedureNameAr : item.procedureNameEn}</div>
+                              <div className="text-[9px] text-slate-500 font-bold">CPT: {item.cptCode} · {t(item.priority)}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Summary Banner */}
+                      {(checkedMedsCount > 0 || checkedLabsCount > 0 || checkedRadCount > 0) && (
+                        <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-start gap-2 animate-in zoom-in-95">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                          <div className="text-[10px] font-bold text-emerald-400/90 leading-snug">
+                            {isRtl 
+                              ? `سيتم تطبيق ${checkedMedsCount} أدوية، ${checkedLabsCount} تحاليل، و ${checkedRadCount} فحوصات أشعة.`
+                              : `Will apply ${checkedMedsCount} meds, ${checkedLabsCount} labs, and ${checkedRadCount} rad orders.`}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* TAB 3: E-PRESCRIPTION PAD */}
             {activeTab === "prescription" && (
               <div className="space-y-5">
                 <h3 className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1">
@@ -585,7 +790,7 @@ ${plan}
 
                       {/* Fuzzy Results Dropdown */}
                       {isMedSearching && medResults.length > 0 && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl scrollbar-thin">
+                        <div className="absolute z-50 start-0 end-0 mt-1 max-h-48 overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl scrollbar-thin">
                           {medResults.map((med) => (
                             <button
                               key={med.id}

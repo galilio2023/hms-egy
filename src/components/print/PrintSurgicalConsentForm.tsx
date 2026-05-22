@@ -54,18 +54,18 @@ export function PrintSurgicalConsentForm({
       <div className="grid grid-cols-2 gap-4 border border-black/30 p-4 rounded-xl mb-6 bg-slate-50/50">
         <div className="space-y-2">
           <p className="text-xs font-bold">
-            اسم المريض / Patient Name: <span className="font-semibold text-sm mr-2">{patient.name}</span>
+            اسم المريض / Patient Name: <span className="font-semibold text-sm me-2">{patient.name}</span>
           </p>
           <p className="text-xs font-bold">
-            الرقم القومي / National ID: <span className="font-mono text-sm mr-2">{formatNationalId(patient.nid)}</span>
+            الرقم القومي / National ID: <span className="font-mono text-sm me-2">{formatNationalId(patient.nid)}</span>
           </p>
         </div>
         <div className="space-y-2">
           <p className="text-xs font-bold">
-            العمر / Age: <span className="font-semibold text-sm mr-2">{patient.age}</span>
+            العمر / Age: <span className="font-semibold text-sm me-2">{patient.age}</span>
           </p>
           <p className="text-xs font-bold">
-            الجنس / Gender: <span className="font-semibold text-sm mr-2">{patient.gender === "male" ? "ذكر / Male" : "أنثى / Female"}</span>
+            الجنس / Gender: <span className="font-semibold text-sm me-2">{patient.gender === "male" ? "ذكر / Male" : "أنثى / Female"}</span>
           </p>
         </div>
       </div>
@@ -76,18 +76,18 @@ export function PrintSurgicalConsentForm({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <p className="text-xs font-bold">
-              العملية المقررة (بالعربية): <span className="font-semibold text-sm mr-2">{surgery.procedureNameAr}</span>
+              العملية المقررة (بالعربية): <span className="font-semibold text-sm me-2">{surgery.procedureNameAr}</span>
             </p>
             <p className="text-xs font-bold">
-              Procedure Name (English): <span className="font-semibold text-sm mr-2" dir="ltr">{surgery.procedureNameEn}</span>
+              Procedure Name (English): <span className="font-semibold text-sm me-2" dir="ltr">{surgery.procedureNameEn}</span>
             </p>
           </div>
           <div className="space-y-2">
             <p className="text-xs font-bold">
-              الجراح المسؤول / Surgeon: <span className="font-semibold text-sm mr-2">{surgery.surgeonName}</span>
+              الجراح المسؤول / Surgeon: <span className="font-semibold text-sm me-2">{surgery.surgeonName}</span>
             </p>
             <p className="text-xs font-bold">
-              نوع التخدير المقترح / Anesthesia: <span className="font-semibold text-sm mr-2">{surgery.anesthesiaType}</span>
+              نوع التخدير المقترح / Anesthesia: <span className="font-semibold text-sm me-2">{surgery.anesthesiaType}</span>
             </p>
           </div>
         </div>
@@ -97,7 +97,7 @@ export function PrintSurgicalConsentForm({
       <div className="space-y-4 text-xs leading-relaxed border border-black/30 p-4 rounded-xl mb-8">
         <div>
           <h4 className="font-black text-sm mb-2 border-b border-black/10 pb-1 text-accent">إقرار المريض (القسم العربي)</h4>
-          <ol className="list-decimal list-inside space-y-1.5 pr-2">
+          <ol className="list-decimal list-inside space-y-1.5 pe-2">
             <li>أقر أنا الموقع أدناه برغبتي الحرة في إجراء العملية الجراحية الموضحة أعلاه تحت إشراف الطبيب المذكور.</li>
             <li>لقد تم شرح طبيعة العملية، والمخاطر والمضاعفات المحتملة الحدوث، والبدائل العلاجية المتاحة بوضوح تام من قبل الطبيب المعالج.</li>
             <li>أفوض الجراح وفريق العمل الطبي المساعد لاتخاذ أي إجراءات تعديلية أو جراحية إضافية يرونها ضرورية أثناء سير العملية الجراحية لإنقاذ الحياة أو المحافظة على السلامة الصحية.</li>
@@ -107,7 +107,7 @@ export function PrintSurgicalConsentForm({
 
         <div className="border-t border-dashed border-black/15 pt-3" dir="ltr">
           <h4 className="font-black text-sm mb-2 border-b border-black/10 pb-1 text-slate-700">Patient Consent (English Section)</h4>
-          <ol className="list-decimal list-inside space-y-1.5 pl-2 text-[11px] text-slate-800">
+          <ol className="list-decimal list-inside space-y-1.5 ps-2 text-[11px] text-slate-800">
             <li>I hereby authorize Dr. <span className="underline">{surgery.surgeonName}</span> and designees to perform the surgical procedure described above.</li>
             <li>The nature of the procedure, its possible risks, complications, and alternative treatments have been explained to me clearly.</li>
             <li>I authorize the surgical team to perform any additional procedures they deem clinically necessary during the course of the operation to preserve life and safety.</li>

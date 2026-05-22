@@ -36,7 +36,7 @@ interface VitalsInput {
 /**
  * Performs clinical boundary/range validation on vitals signs inputs to prevent typographical errors.
  */
-export function validateVitals(vitals?: VitalsInput) {
+export async function validateVitals(vitals?: VitalsInput) {
   if (!vitals) return { success: true };
 
   const SystolicRange = { min: 40, max: 260 };
@@ -81,7 +81,33 @@ export async function completeTelemedicineConsultation(
   prescriptionItemsList?: PrescriptionItemInput[],
   prescriptionNotes?: string,
   vitals?: VitalsInput,
-  locale?: string
+  locale?: string,
+  orderSetMedications?: Array<{
+    nameAr: string;
+    nameEn: string;
+    genericName: string;
+    form: string;
+    strength: string;
+    dosage: string;
+    frequency: string;
+    durationDays: number;
+    instructions: string;
+  }>,
+  orderSetLabs?: Array<{
+    nameAr: string;
+    nameEn: string;
+    loincCode: string;
+    cptCode: string;
+    priority: "routine" | "urgent" | "stat";
+    instructions: string;
+  }>,
+  orderSetRadiology?: Array<{
+    procedureNameAr: string;
+    procedureNameEn: string;
+    cptCode: string;
+    priority: "routine" | "urgent" | "stat";
+    clinicalNotes: string;
+  }>
 ) {
   const session = await auth();
   if (!session) {
@@ -117,7 +143,7 @@ export async function completeTelemedicineConsultation(
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
   
   // 4. Validate vitals bounds to avoid corrupted historical logs
-  const vitalsValidation = validateVitals(vitals);
+  const vitalsValidation = await validateVitals(vitals);
   if (!vitalsValidation.success) {
     return { success: false, error: vitalsValidation.error };
   }
@@ -131,7 +157,41 @@ export async function completeTelemedicineConsultation(
       ? parseFloat(vitals.weightKg).toFixed(1)
       : null;
 
-    return await withTenantContext(hospitalId, async (tx) => {
+    const result = await withTenantContext(hospitalId, async (tx) => {
+      // 1. Resolve Medications from Catalog inside the transaction context for RLS compliance
+      const resolvedOrderSetMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
+      if (orderSetMedications && orderSetMedications.length > 0) {
+        const medNames = orderSetMedications.map(item => item.nameEn.trim()).filter(Boolean);
+        
+        if (medNames.length > 0) {
+          const existingMeds = await tx
+            .select()
+            .from(medications)
+            .where(and(
+              eq(medications.hospitalId, hospitalId),
+              eq(medications.isActive, true),
+              sql`lower(${medications.nameEn}) IN ${medNames.map(name => name.toLowerCase())}`
+            ));
+
+          const medMap = new Map(existingMeds.map(m => [m.nameEn.toLowerCase(), m.id]));
+          
+          for (const item of orderSetMedications) {
+            const medId = medMap.get(item.nameEn.toLowerCase().trim());
+            if (medId) {
+              resolvedOrderSetMedicationItems.push({
+                medicationId: medId,
+                dosage: item.dosage,
+                frequency: item.frequency,
+                durationDays: item.durationDays,
+                instructions: item.instructions,
+              });
+            } else {
+              throw new AppError(ErrorCode.NOT_FOUND, `Medication "${item.nameEn}" is not registered in this hospital's active catalog.`);
+            }
+          }
+        }
+      }
+
       // Resolve assigned doctor status inside tenant context
       let isAssignedDoctor = false;
       if (!isSuperAdmin) {
@@ -185,7 +245,12 @@ export async function completeTelemedicineConsultation(
 
       // D. If medication prescriptions are supplied, create the prescription and its items
       let prescriptionId: string | undefined = undefined;
-      if (prescriptionItemsList && prescriptionItemsList.length > 0) {
+      const allMedItems = [
+        ...(prescriptionItemsList || []),
+        ...resolvedOrderSetMedicationItems
+      ];
+
+      if (allMedItems.length > 0) {
         const [newPrescription] = await tx
           .insert(prescriptions)
           .values({
@@ -193,7 +258,7 @@ export async function completeTelemedicineConsultation(
             patientId: lockedAppointment.patientId,
             doctorId: lockedAppointment.doctorId,
             status: "active",
-            notes: prescriptionNotes || null,
+            notes: prescriptionNotes || (orderSetMedications && orderSetMedications.length > 0 ? "Includes protocol-based medications" : null),
           })
           .returning();
 
@@ -203,7 +268,7 @@ export async function completeTelemedicineConsultation(
 
         prescriptionId = newPrescription.id;
 
-        const itemsToInsert = prescriptionItemsList.map((item) => ({
+        const itemsToInsert = allMedItems.map((item) => ({
           hospitalId,
           prescriptionId: newPrescription.id,
           medicationId: item.medicationId,
@@ -217,7 +282,85 @@ export async function completeTelemedicineConsultation(
         await tx.insert(prescriptionItems).values(itemsToInsert);
       }
 
-      // E. If vitals are recorded, save them to the flowsheet
+      // E. Resolve and Process Labs inside transaction context
+      let labOrderId: string | undefined = undefined;
+      if (orderSetLabs && orderSetLabs.length > 0) {
+        const labNames = orderSetLabs.map(item => item.nameEn.trim()).filter(Boolean);
+        if (labNames.length > 0) {
+          const existingLabs = await tx
+            .select()
+            .from(labTests)
+            .where(and(
+              eq(labTests.hospitalId, hospitalId),
+              eq(labTests.isActive, true),
+              sql`lower(${labTests.nameEn}) IN ${labNames.map(name => name.toLowerCase())}`
+            ));
+
+          const labMap = new Map(existingLabs.map(l => [l.nameEn.toLowerCase(), l.id]));
+          const resolvedLabIds: string[] = [];
+
+          for (const item of orderSetLabs) {
+            const labId = labMap.get(item.nameEn.toLowerCase().trim());
+            if (labId) {
+              resolvedLabIds.push(labId);
+            }
+          }
+
+          if (resolvedLabIds.length > 0) {
+            let orderPriority: "routine" | "urgent" | "stat" = "routine";
+            if (orderSetLabs.some((l) => l.priority === "stat")) {
+              orderPriority = "stat";
+            } else if (orderSetLabs.some((l) => l.priority === "urgent")) {
+              orderPriority = "urgent";
+            }
+
+            const [labOrd] = await tx
+              .insert(labOrders)
+              .values({
+                hospitalId,
+                patientId: lockedAppointment.patientId,
+                doctorId: lockedAppointment.doctorId,
+                priority: orderPriority,
+                status: "pending",
+                clinicalNotes: "Ordered via Telemedicine",
+              })
+              .returning();
+
+            if (labOrd) {
+              labOrderId = labOrd.id;
+              const itemsToInsert = resolvedLabIds.map(testId => ({
+                hospitalId,
+                labOrderId: labOrd.id,
+                labTestId: testId,
+                status: "pending",
+                isCritical: false,
+              }));
+              await tx.insert(labOrderItems).values(itemsToInsert);
+            }
+          }
+        }
+      }
+
+      // F. Process Radiology Orders
+      const createdRadiologyOrderIds: string[] = [];
+      if (orderSetRadiology && orderSetRadiology.length > 0) {
+        const ordersToInsert = orderSetRadiology.map(item => ({
+          hospitalId,
+          patientId: lockedAppointment.patientId,
+          doctorId: lockedAppointment.doctorId,
+          procedureNameAr: item.procedureNameAr,
+          procedureNameEn: item.procedureNameEn,
+          cptCode: item.cptCode,
+          priority: item.priority,
+          status: "pending",
+          clinicalNotes: item.clinicalNotes || "Ordered via Telemedicine",
+          price: "350.00",
+        }));
+        const radOrders = await tx.insert(radiologyOrders).values(ordersToInsert).returning();
+        radOrders.forEach(o => createdRadiologyOrderIds.push(o.id));
+      }
+
+      // G. If vitals are recorded, save them to the flowsheet
       let vitalsId: string | undefined = undefined;
       const hasVitals = vitals && (
         vitals.bloodPressureSystolic ||
@@ -267,6 +410,8 @@ export async function completeTelemedicineConsultation(
         patientId: lockedAppointment.patientId,
         hospitalSlug: hospital?.slug || hospitalId,
         prescriptionId,
+        labOrderId,
+        radiologyOrderIds: createdRadiologyOrderIds.length > 0 ? createdRadiologyOrderIds : undefined,
         vitalsId
       };
     });
@@ -365,7 +510,7 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
       ? parseFloat(data.vitals.weightKg).toFixed(1)
       : null;
 
-    return await withTenantContext(hospitalId, async (tx) => {
+    const result = await withTenantContext(hospitalId, async (tx) => {
       // 1. Resolve Medications from Catalog inside the transaction context for RLS compliance
       // Order Sets should map strictly to pre-existing active catalog items to maintain inventory audit integrity.
       const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
@@ -380,7 +525,7 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
             .where(and(
               eq(medications.hospitalId, hospitalId),
               eq(medications.isActive, true),
-              inArray(sql`lower(${medications.nameEn})`, medNames.map(name => name.toLowerCase()))
+              sql`lower(${medications.nameEn}) IN ${medNames.map(name => name.toLowerCase())}`
             ));
 
           const medMap = new Map(existingMeds.map(m => [m.nameEn.toLowerCase(), m.id]));
@@ -418,7 +563,7 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
             .where(and(
               eq(labTests.hospitalId, hospitalId),
               eq(labTests.isActive, true),
-              inArray(sql`lower(${labTests.nameEn})`, labNames.map(name => name.toLowerCase()))
+              sql`lower(${labTests.nameEn}) IN ${labNames.map(name => name.toLowerCase())}`
             ));
 
           const labMap = new Map(existingLabs.map(l => [l.nameEn.toLowerCase(), l.id]));

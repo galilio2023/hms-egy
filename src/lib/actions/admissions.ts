@@ -270,7 +270,7 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
   }
 
   // Enforce clinical biological safety boundaries to prevent data corruption
-  const vitalsValidation = validateVitals({
+  const vitalsValidation = await validateVitals({
     bloodPressureSystolic: payload.bloodPressureSystolic,
     bloodPressureDiastolic: payload.bloodPressureDiastolic,
     heartRate: payload.heartRate,

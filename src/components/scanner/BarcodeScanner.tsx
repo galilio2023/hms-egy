@@ -153,7 +153,7 @@ export function BarcodeScanner({ onScan, onClose, title }: BarcodeScannerProps) 
           <div className="absolute inset-0 pointer-events-none flex flex-col justify-center items-center z-10">
             <div className="w-[80%] h-[150px] border-2 border-dashed border-accent/40 rounded-xl relative">
               {/* Laser line itself */}
-              <div className="absolute left-0 right-0 h-0.5 bg-accent shadow-[0_0_10px_#14b8a6] animate-pulse top-1/2" />
+              <div className="absolute start-0 end-0 h-0.5 bg-accent shadow-[0_0_10px_#14b8a6] animate-pulse top-1/2" />
             </div>
             <span className="text-[10px] text-white/75 font-semibold bg-black/60 px-2.5 py-1 rounded-full mt-4 backdrop-blur-xs">
               {isRtl ? "ضع الرمز الطبي داخل المربع" : "Position barcode inside the viewport"}

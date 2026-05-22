@@ -461,11 +461,11 @@ export function SurgicalScheduleClient({
       </Card>
 
       {/* Quick Booking Dialog (OR Case Creator Wizard) */}
-      <Dialog isOpen={isBookModalOpen} onClose={() => setIsBookModalOpen(false)}>
+      <Dialog open={isBookModalOpen} onOpenChange={setIsBookModalOpen}>
         <DialogContent className="sm:max-w-lg text-start">
           <DialogHeader className="text-start">
             <DialogTitle className={cn("text-lg font-black text-foreground flex items-center gap-1.5", bypassBlocks && "text-rose-700")}>
-              {bypassBlocks ? "تسجيل حالة طارئة في جناح العمليات" : "جدولة حالة جراحية جديدة"}
+              {bypassBlocks ? (isRtl ? "تسجيل حالة طارئة في جناح العمليات" : "Emergency Block Override Mode Active!") : (isRtl ? "جدولة حالة جراحية جديدة" : "Schedule Surgical Case")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
               {isRtl 
@@ -713,7 +713,7 @@ export function SurgicalScheduleClient({
       </Dialog>
 
       {/* Case Details Drawer */}
-      <Drawer isOpen={isDetailDrawerOpen} onClose={() => setIsDetailDrawerOpen(false)}>
+      <Drawer open={isDetailDrawerOpen} onOpenChange={setIsDetailDrawerOpen}>
         <DrawerContent className="text-start">
           <div className="mx-auto w-full max-w-lg p-6">
             {selectedCase && (

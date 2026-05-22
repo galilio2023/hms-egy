@@ -494,14 +494,14 @@ export default function AdmissionsDashboardClient({
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/30 pb-6 text-start">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600">
+            <span className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <Layers className="h-5 w-5 animate-pulse" />
             </span>
-            <h1 className="text-3xl font-black tracking-tight text-slate-950">
+            <h1 className="text-3xl font-black tracking-tight text-foreground">
               {t("title")}
             </h1>
           </div>
-          <p className="text-sm text-slate-500 max-w-xl">
+          <p className="text-sm text-muted-foreground max-w-xl">
             {isRtl 
               ? "متابعة السعة الاستيعابية الحالية للقسم الداخلي، ومراقبة حالة إشغال الأسرة، والتدفق الفوري للمؤشرات الحيوية لمرضى المنشأة." 
               : "Track live inpatient capacity, manage floor bed maps, schedule new admissions, and audit patient flowsheet trends."}
@@ -512,9 +512,9 @@ export default function AdmissionsDashboardClient({
           <Button
             onClick={() => router.refresh()}
             variant="outline"
-            className="rounded-xl border-slate-200/80 bg-white hover:bg-slate-50 shadow-sm"
+            className="rounded-xl border-border bg-card hover:bg-muted text-foreground shadow-sm"
           >
-            <RefreshCw className="h-4 w-4 text-slate-600 me-2" />
+            <RefreshCw className="h-4 w-4 text-muted-foreground me-2" />
             {isRtl ? "تحديث" : "Refresh"}
           </Button>
 
@@ -535,93 +535,93 @@ export default function AdmissionsDashboardClient({
       {/* Metrics Grid dashboard */}
       <section className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Beds */}
-        <Card className="rounded-2xl border border-slate-100 shadow-sm bg-white overflow-hidden text-start">
+        <Card className="rounded-2xl border border-border/60 shadow-sm bg-card overflow-hidden text-start">
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+              <p className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
                 {t("totalBeds")}
               </p>
-              <h3 className="text-3xl font-black text-slate-800 tracking-tight">
+              <h3 className="text-3xl font-black text-foreground tracking-tight">
                 {totalBeds}
               </h3>
             </div>
-            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
+            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-400">
               <BedIcon className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
 
         {/* Occupied Beds */}
-        <Card className="rounded-2xl border border-slate-100 shadow-sm bg-white overflow-hidden text-start">
+        <Card className="rounded-2xl border border-border/60 shadow-sm bg-card overflow-hidden text-start">
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+              <p className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
                 {t("occupiedBeds")}
               </p>
-              <h3 className="text-3xl font-black text-blue-600 tracking-tight">
+              <h3 className="text-3xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
                 {occupiedBeds}
               </h3>
             </div>
-            <div className="p-3 bg-blue-50/50 rounded-2xl text-blue-500">
+            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 dark:text-blue-400">
               <UserCheck className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
 
         {/* Available Beds */}
-        <Card className="rounded-2xl border border-slate-100 shadow-sm bg-white overflow-hidden text-start">
+        <Card className="rounded-2xl border border-border/60 shadow-sm bg-card overflow-hidden text-start">
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+              <p className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
                 {t("availableBeds")}
               </p>
-              <h3 className="text-3xl font-black text-emerald-600 tracking-tight">
+              <h3 className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                 {availableBeds}
               </h3>
             </div>
-            <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600">
+            <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-400">
               <Check className="h-6 w-6" />
             </div>
           </CardContent>
         </Card>
 
         {/* Pending Cleaning */}
-        <Card className="rounded-2xl border border-slate-100 shadow-sm bg-white overflow-hidden text-start">
+        <Card className="rounded-2xl border border-border/60 shadow-sm bg-card overflow-hidden text-start">
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+              <p className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
                 {t("pendingCleaning")}
               </p>
-              <h3 className="text-3xl font-black text-amber-500 tracking-tight">
+              <h3 className="text-3xl font-black text-amber-500 dark:text-amber-400 tracking-tight">
                 {pendingCleaningBeds}
               </h3>
             </div>
-            <div className="p-3 bg-amber-50 rounded-2xl text-amber-500">
+            <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-500">
               <Clock className="h-6 w-6 animate-spin" style={{ animationDuration: '6s' }} />
             </div>
           </CardContent>
         </Card>
 
         {/* Occupancy Rate */}
-        <Card className="rounded-2xl border border-slate-100 shadow-sm bg-white overflow-hidden text-start col-span-2 lg:col-span-1">
+        <Card className="rounded-2xl border border-border/60 shadow-sm bg-card overflow-hidden text-start col-span-2 lg:col-span-1">
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-2 flex-1 me-2">
-              <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+              <p className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
                 {t("occupancyRate")}
               </p>
               <div className="flex items-baseline gap-1">
-                <h3 className="text-3xl font-black text-purple-600 tracking-tight">
+                <h3 className="text-3xl font-black text-purple-600 dark:text-purple-400 tracking-tight">
                   {occupancyRate}%
                 </h3>
               </div>
-              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+              <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden mt-1">
                 <div 
-                  className="bg-purple-600 h-full rounded-full transition-all duration-500" 
+                  className="bg-purple-600 dark:bg-purple-400 h-full rounded-full transition-all duration-500" 
                   style={{ width: `${occupancyRate}%` }}
                 />
               </div>
             </div>
-            <div className="p-3 bg-purple-50 rounded-2xl text-purple-600">
+            <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-600 dark:text-purple-400">
               <Gauge className="h-6 w-6" />
             </div>
           </CardContent>
@@ -631,15 +631,15 @@ export default function AdmissionsDashboardClient({
       {/* Main Bed Map Grid Container */}
       <main className="space-y-8">
         {roomsWithBedsMap.length === 0 ? (
-          <Card className="rounded-2xl border border-slate-100 p-12 bg-white text-center">
+          <Card className="rounded-2xl border border-border/60 p-12 bg-card text-center">
             <CardContent className="flex flex-col items-center justify-center space-y-4">
-              <div className="p-4 rounded-full bg-slate-50 text-slate-400">
+              <div className="p-4 rounded-full bg-muted text-muted-foreground">
                 <BedIcon className="h-12 w-12" />
               </div>
-              <h3 className="text-lg font-bold text-slate-800">
+              <h3 className="text-lg font-bold text-foreground">
                 {isRtl ? "لم يتم تعريف أية غرف أو أسرة بعد في هذه المنشأة" : "No Rooms or Beds Registered Yet"}
               </h3>
-              <p className="text-sm text-slate-500 max-w-sm">
+              <p className="text-sm text-muted-foreground max-w-sm">
                 {isRtl 
                   ? "يرجى التوجه لإعدادات المستشفى أو الدعم لإضافة غرف وأسرة للقسم الداخلي." 
                   : "Please configure your hospital wards and add clinical rooms under the system configuration guide."}
@@ -648,28 +648,28 @@ export default function AdmissionsDashboardClient({
           </Card>
         ) : (
           roomsWithBedsMap.map((room) => (
-            <Card key={room.id} className="rounded-2xl border border-slate-100/80 shadow-sm bg-white overflow-hidden text-start">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 px-6 flex flex-row items-center justify-between">
+            <Card key={room.id} className="rounded-2xl border border-border/60 shadow-sm bg-card overflow-hidden text-start">
+              <CardHeader className="bg-muted/30 border-b border-border/60 py-4 px-6 flex flex-row items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-slate-800 text-lg">
+                    <span className="font-extrabold text-foreground text-lg">
                       {isRtl ? `غرفة ${room.roomNumber}` : `Room ${room.roomNumber}`}
                     </span>
-                    <Badge variant="outline" className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-500 border-slate-200 capitalize">
+                    <Badge variant="outline" className="rounded-full bg-card px-2 py-0.5 text-xs text-muted-foreground border-border capitalize">
                       {room.type}
                     </Badge>
                   </div>
-                  <div className="text-xs text-slate-400 flex items-center gap-2">
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
                     <span>{isRtl ? `الطابق: ${room.floor}` : `Floor: ${room.floor}`}</span>
                     {room.wing && (
                       <>
-                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+                        <span className="w-1 h-1 rounded-full bg-border" />
                         <span>{isRtl ? `الجناح: ${room.wing}` : `Wing: ${room.wing}`}</span>
                       </>
                     )}
                   </div>
                 </div>
-                <Badge className="rounded-full bg-slate-200/80 text-slate-600 px-3 py-1 text-xs border-none font-bold">
+                <Badge className="rounded-full bg-muted text-muted-foreground px-3 py-1 text-xs border-none font-bold">
                   {isRtl ? `${room.beds.length} أسرة` : `${room.beds.length} Beds`}
                 </Badge>
               </CardHeader>
@@ -678,31 +678,31 @@ export default function AdmissionsDashboardClient({
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {room.beds.map((bed) => {
                     // Decide color styling based on bed status
-                    let statusColor = "border-emerald-200 text-emerald-800 bg-emerald-50/50 hover:bg-emerald-50";
-                    let statusBadge = "bg-emerald-100 text-emerald-800";
+                    let statusColor = "border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10";
+                    let statusBadge = "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400";
                     let patientName = "";
 
                     if (bed.status === "occupied") {
-                      statusColor = "border-blue-200 text-blue-800 bg-blue-50/50 hover:bg-blue-100/50";
-                      statusBadge = "bg-blue-100 text-blue-800";
+                      statusColor = "border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-500/5 hover:bg-blue-500/10";
+                      statusBadge = "bg-blue-500/20 text-blue-600 dark:text-blue-400";
                       patientName = isRtl ? (bed.patientNameAr || bed.patientNameEn || "") : (bed.patientNameEn || "");
                     } else if (bed.status === "pending_cleaning") {
-                      statusColor = "border-amber-200 text-amber-800 bg-amber-50/50 hover:bg-amber-100/50 cursor-not-allowed";
-                      statusBadge = "bg-amber-100 text-amber-800";
+                      statusColor = "border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 cursor-not-allowed";
+                      statusBadge = "bg-amber-500/20 text-amber-600 dark:text-amber-400";
                     } else if (bed.status === "maintenance") {
-                      statusColor = "border-slate-200 text-slate-800 bg-slate-50/50 cursor-not-allowed";
-                      statusBadge = "bg-slate-200 text-slate-600";
+                      statusColor = "border-border text-muted-foreground bg-muted/30 cursor-not-allowed";
+                      statusBadge = "bg-muted text-muted-foreground";
                     }
 
                     return (
                       <button
                         key={bed.bedId}
                         onClick={() => handleBedClick(bed)}
-                        className={`flex flex-col justify-between p-4 rounded-xl border border-dashed transition-all text-start w-full relative outline-none focus:ring-2 focus:ring-blue-500 h-28 group ${statusColor}`}
+                        className={`flex flex-col justify-between p-4 rounded-xl border border-dashed transition-all text-start w-full relative outline-none focus:ring-2 focus:ring-primary h-28 group ${statusColor}`}
                       >
                         <div className="flex items-center justify-between w-full">
                           <span className="font-black text-sm flex items-center gap-1.5">
-                            <BedIcon className="h-4 w-4 text-slate-400 group-hover:scale-110 transition-transform" />
+                            <BedIcon className="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
                             {isRtl ? `سرير ${bed.bedNumber}` : `Bed ${bed.bedNumber}`}
                           </span>
                           <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full capitalize ${statusBadge}`}>
@@ -712,22 +712,22 @@ export default function AdmissionsDashboardClient({
 
                         {bed.status === "occupied" ? (
                           <div className="mt-3 space-y-1 flex-1 flex flex-col justify-end">
-                            <p className="text-xs font-black truncate max-w-full text-slate-900 group-hover:text-blue-700 transition-colors">
+                            <p className="text-xs font-black truncate max-w-full text-foreground group-hover:text-primary transition-colors">
                               {patientName}
                             </p>
-                            <p className="text-[10px] text-slate-400 truncate">
+                            <p className="text-[10px] text-muted-foreground truncate">
                               {bed.patientNumber || ""}
                             </p>
                           </div>
                         ) : (
-                          <div className="mt-3 text-[10px] text-slate-400 flex flex-col justify-end flex-1">
+                          <div className="mt-3 text-[10px] text-muted-foreground flex flex-col justify-end flex-1">
                             {bed.status === "available" ? (
-                              <span className="text-emerald-600 font-bold flex items-center gap-1">
+                              <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                                 <Plus className="h-3 w-3" />
                                 {isRtl ? "اضغط للإدخال" : "Click to Admit"}
                               </span>
                             ) : bed.status === "pending_cleaning" ? (
-                              <span className="text-amber-600 font-bold">{isRtl ? "بانتظار التعقيم" : "Cleaning Queue"}</span>
+                              <span className="text-amber-600 dark:text-amber-400 font-bold">{isRtl ? "بانتظار التعقيم" : "Cleaning Queue"}</span>
                             ) : (
                               <span>{isRtl ? "مغلق حالياً" : "Out of Service"}</span>
                             )}
@@ -744,15 +744,15 @@ export default function AdmissionsDashboardClient({
       </main>
 
       {/* MODAL: Admit New Patient */}
-      <Dialog isOpen={isAdmitOpen} onClose={() => setIsAdmitOpen(false)}>
+      <Dialog open={isAdmitOpen} onOpenChange={setIsAdmitOpen}>
         <DialogHeader onClose={() => setIsAdmitOpen(false)} className="text-start space-y-1.5">
-          <DialogTitle className="text-xl font-extrabold text-slate-950 flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600">
+          <DialogTitle className="text-xl font-extrabold text-foreground flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <UserCheck className="h-5 w-5" />
             </span>
             {t("admitPatient")}
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">
+          <DialogDescription className="text-xs text-muted-foreground">
             {isRtl 
               ? "سجل إدخال مريض جديد للقسم الداخلي، واختر الطبيب المعالج والسرير المناسب." 
               : "Record patient admission details, assign physician, and confirm physical bed allocations."}
@@ -762,25 +762,25 @@ export default function AdmissionsDashboardClient({
         <DialogContent className="space-y-6 text-start" dir={isRtl ? "rtl" : "ltr"}>
           {/* Bed Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700">{t("selectBed")}</label>
+            <label className="text-xs font-bold text-foreground/90">{t("selectBed")}</label>
             {selectedBed && targetBedId === selectedBed.bedId ? (
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs flex justify-between items-center font-bold text-slate-700">
+              <div className="p-3 rounded-xl bg-muted/40 border border-border/60 text-xs flex justify-between items-center font-bold text-foreground">
                 <span>
                   {isRtl 
                     ? `غرفة ${selectedBed.roomNumber} · سرير ${selectedBed.bedNumber} (${selectedBed.roomType})` 
                     : `Room ${selectedBed.roomNumber} · Bed ${selectedBed.bedNumber} (${selectedBed.roomType})`}
                 </span>
-                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   {isRtl ? "محدد" : "Locked"}
                 </Badge>
               </div>
             ) : (
               <Select value={targetBedId} onChange={(e) => setTargetBedId(e.target.value)}>
-                <option value="" disabled className="text-xs text-muted-foreground">
+                <option value="" disabled className="text-xs text-muted-foreground bg-background">
                   {isRtl ? "اختر سريراً متاحاً..." : "Select an available bed..."}
                 </option>
                 {availableBedsList.map((b) => (
-                  <option key={b.bedId} value={b.bedId} className="text-xs">
+                  <option key={b.bedId} value={b.bedId} className="text-xs bg-background text-foreground">
                     {isRtl 
                       ? `غرفة ${b.roomNumber} · سرير ${b.bedNumber} (${b.roomType})` 
                       : `Room ${b.roomNumber} · Bed ${b.bedNumber} (${b.roomType})`}
@@ -792,14 +792,14 @@ export default function AdmissionsDashboardClient({
 
           {/* Patient Search */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-700">{t("selectPatient")}</label>
+            <label className="text-xs font-bold text-foreground/90">{t("selectPatient")}</label>
             {selectedPatient ? (
-              <div className="p-4 rounded-xl bg-blue-50/40 border border-blue-100 text-xs flex justify-between items-center">
+              <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 text-xs flex justify-between items-center">
                 <div className="space-y-1">
-                  <p className="font-extrabold text-blue-900">
+                  <p className="font-extrabold text-blue-600 dark:text-blue-400">
                     {isRtl ? selectedPatient.nameAr : selectedPatient.nameEn}
                   </p>
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-[10px] text-muted-foreground">
                     {selectedPatient.patientNumber} · {selectedPatient.nationalId || (isRtl ? "جواز سفر" : "Passport")}
                   </p>
                 </div>
@@ -807,7 +807,7 @@ export default function AdmissionsDashboardClient({
                   variant="ghost" 
                   size="sm" 
                   onClick={() => setSelectedPatient(null)}
-                  className="text-[11px] text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg px-2 h-7"
+                  className="text-[11px] text-red-500 hover:text-red-700 hover:bg-red-500/10 rounded-lg px-2 h-7"
                 >
                   {isRtl ? "تغيير" : "Change"}
                 </Button>
@@ -815,34 +815,34 @@ export default function AdmissionsDashboardClient({
             ) : (
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className="absolute top-3.5 h-4 w-4 text-slate-400 start-3" />
+                  <Search className="absolute top-3.5 h-4 w-4 text-muted-foreground start-3" />
                   <Input
                     placeholder={t("searchPlaceholder")}
                     value={patientQuery}
                     onChange={(e) => setPatientQuery(e.target.value)}
-                    className="rounded-xl border-slate-200/80 shadow-sm h-11 text-xs text-start ps-9 pe-4"
+                    className="rounded-xl border-border/60 shadow-sm h-11 text-xs text-start ps-9 pe-4 bg-background text-foreground"
                   />
                 </div>
                 {isSearchingPatients && (
-                  <div className="text-xs text-slate-400 italic ps-1 flex items-center gap-1.5 mt-1">
+                  <div className="text-xs text-muted-foreground italic ps-1 flex items-center gap-1.5 mt-1">
                     <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
                     {isRtl ? "جاري البحث..." : "Searching directory..."}
                   </div>
                 )}
 
                 {searchResults.length > 0 && (
-                  <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm max-h-48 overflow-y-auto bg-slate-50/50 mt-1">
+                  <div className="border border-border/60 rounded-xl overflow-hidden shadow-sm max-h-48 overflow-y-auto bg-muted/40 mt-1">
                     {searchResults.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => setSelectedPatient(p)}
-                        className="w-full p-3 text-start hover:bg-white border-b border-slate-100/50 last:border-b-0 transition-colors flex items-center justify-between text-xs outline-none"
+                        className="w-full p-3 text-start hover:bg-card border-b border-border/40 last:border-b-0 transition-colors flex items-center justify-between text-xs outline-none bg-transparent"
                       >
                         <div className="space-y-0.5">
-                          <p className="font-bold text-slate-900">{isRtl ? p.nameAr : p.nameEn}</p>
-                          <p className="text-[10px] text-slate-400">{p.patientNumber} · {p.nationalId || ""}</p>
+                          <p className="font-bold text-foreground">{isRtl ? p.nameAr : p.nameEn}</p>
+                          <p className="text-[10px] text-muted-foreground">{p.patientNumber} · {p.nationalId || ""}</p>
                         </div>
-                        <Badge className="bg-blue-100 text-blue-800 rounded-full text-[10px] font-black border-none px-2 py-0.5">
+                        <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-black border-none px-2 py-0.5">
                           {isRtl ? "اختر" : "Select"}
                         </Badge>
                       </button>
@@ -851,7 +851,7 @@ export default function AdmissionsDashboardClient({
                 )}
 
                 {patientQuery.trim() && !isSearchingPatients && searchResults.length === 0 && (
-                  <p className="text-[10px] text-slate-400 italic ps-1 mt-1">
+                  <p className="text-[10px] text-muted-foreground italic ps-1 mt-1">
                     {isRtl ? "لا توجد نتائج بحث مطابقة." : "No matching patient folders found."}
                   </p>
                 )}
@@ -861,13 +861,13 @@ export default function AdmissionsDashboardClient({
 
           {/* Admitting Physician */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700">{t("selectDoctor")}</label>
+            <label className="text-xs font-bold text-foreground/90">{t("selectDoctor")}</label>
             <Select value={admittingDoctorId} onChange={(e) => setAdmittingDoctorId(e.target.value)}>
-              <option value="" disabled className="text-xs text-muted-foreground">
+              <option value="" disabled className="text-xs text-muted-foreground bg-background">
                 {isRtl ? "اختر الطبيب المسؤول..." : "Select admitting physician..."}
               </option>
               {doctors.map((doc) => (
-                <option key={doc.id} value={doc.id} className="text-xs">
+                <option key={doc.id} value={doc.id} className="text-xs bg-background text-foreground">
                   {isRtl ? doc.nameAr : doc.nameEn} {doc.licenseNumber ? `(${doc.licenseNumber})` : ""}
                 </option>
               ))}
@@ -876,12 +876,12 @@ export default function AdmissionsDashboardClient({
 
           {/* Admission Reason */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700">{t("admissionReason")}</label>
+            <label className="text-xs font-bold text-foreground/90">{t("admissionReason")}</label>
             <Textarea
               placeholder={isRtl ? "اكتب تفاصيل الشكوى الطبية والداعي للإدخال للقسم الداخلي..." : "Enter symptoms, medical indicators or notes justifying ward admission..."}
               value={admissionReason}
               onChange={(e) => setAdmissionReason(e.target.value)}
-              className="rounded-xl border-slate-200/80 shadow-sm min-h-20 text-xs text-start"
+              className="rounded-xl border-border/60 bg-background text-foreground shadow-sm min-h-20 text-xs text-start"
             />
           </div>
         </DialogContent>
@@ -890,7 +890,7 @@ export default function AdmissionsDashboardClient({
           <Button
             variant="outline"
             onClick={() => setIsAdmitOpen(false)}
-            className="rounded-xl border-slate-200/80 hover:bg-slate-50 text-xs h-10 px-5"
+            className="rounded-xl border-border/60 hover:bg-muted text-xs h-10 px-5 text-foreground"
           >
             {isRtl ? "إلغاء" : "Cancel"}
           </Button>
@@ -912,17 +912,17 @@ export default function AdmissionsDashboardClient({
       </Dialog>
 
       {/* DRAWER: Inpatient Clinical Portal */}
-      <Drawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)}>
-        <DrawerHeader onClose={() => setIsDrawerOpen(false)} className="text-start border-b border-slate-100 pb-4 px-6 sm:px-12 shrink-0">
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <DrawerHeader onClose={() => setIsDrawerOpen(false)} className="text-start border-b border-border/60 pb-4 px-6 sm:px-12 shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
             <div className="space-y-1 text-start">
-              <DrawerTitle className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <DrawerTitle className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
                 <span className="p-1.5 rounded-xl bg-blue-500/10 text-blue-600">
                   <Activity className="h-5 w-5 animate-pulse" />
                 </span>
                 {selectedBed ? (isRtl ? selectedBed.patientNameAr : selectedBed.patientNameEn) : ""}
               </DrawerTitle>
-              <DrawerDescription className="text-xs text-slate-500 font-medium">
+              <DrawerDescription className="text-xs text-muted-foreground font-medium">
                 {selectedBed ? (
                   isRtl 
                     ? `سرير ${selectedBed.bedNumber} · غرفة ${selectedBed.roomNumber} (${selectedBed.roomType})` 
@@ -933,14 +933,14 @@ export default function AdmissionsDashboardClient({
 
             {selectedBed && (
               <div className="flex flex-wrap gap-2 text-xs">
-                <Badge className="bg-blue-50 text-blue-800 border-none px-3 py-1 font-bold rounded-full">
+                <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-none px-3 py-1 font-bold rounded-full">
                   {selectedBed.patientNumber}
                 </Badge>
-                <Badge className="bg-slate-50 text-slate-600 border border-slate-100 px-3 py-1 font-medium rounded-full">
+                <Badge className="bg-muted text-muted-foreground border border-border/60 px-3 py-1 font-medium rounded-full">
                   {selectedBed.gender === "male" ? (isRtl ? "ذكر" : "Male") : (isRtl ? "أنثى" : "Female")} · {getAge(selectedBed.dob)}
                 </Badge>
                 {selectedBed.nationalId && (
-                  <Badge className="bg-slate-50 text-slate-600 border border-slate-100 px-3 py-1 font-mono rounded-full">
+                  <Badge className="bg-muted text-muted-foreground border border-border/60 px-3 py-1 font-mono rounded-full">
                     NID: {selectedBed.nationalId}
                   </Badge>
                 )}
@@ -956,7 +956,7 @@ export default function AdmissionsDashboardClient({
             {/* Left Column (2/3 width) - Vitals Flowsheet Historical Records */}
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
+                <h4 className="text-sm font-black text-foreground flex items-center gap-1.5 uppercase tracking-wider">
                   <Thermometer className="h-4.5 w-4.5 text-blue-500" />
                   {t("vitalsFlowsheet")}
                 </h4>
@@ -964,7 +964,7 @@ export default function AdmissionsDashboardClient({
                 <Button
                   onClick={() => setIsVitalsOpen(!isVitalsFormExpanded)}
                   variant="outline"
-                  className="rounded-xl border-blue-200 bg-blue-50/30 text-blue-700 hover:bg-blue-50 text-xs py-1 h-8 shadow-sm"
+                  className="rounded-xl border-blue-500/30 bg-blue-500/5 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 text-xs py-1 h-8 shadow-sm"
                 >
                   <Plus className="h-3.5 w-3.5 me-1" />
                   {isVitalsFormExpanded ? (isRtl ? "إغلاق النموذج" : "Close Form") : t("recordVitals")}
@@ -973,100 +973,100 @@ export default function AdmissionsDashboardClient({
 
               {/* RECORD VITALS: Collapsible Form panel */}
               {isVitalsFormExpanded && (
-                <Card className="rounded-2xl border border-blue-100 bg-blue-50/20 p-5 shadow-sm text-start animate-fade-in">
+                <Card className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5 shadow-sm text-start animate-fade-in">
                   <form onSubmit={handleRecordVitals} className="space-y-4">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       {/* Systolic BP */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">{isRtl ? "الضغط الانقباضي" : "Systolic BP"}</label>
+                        <label className="text-[11px] font-bold text-foreground/90">{isRtl ? "الضغط الانقباضي" : "Systolic BP"}</label>
                         <Input
                           placeholder="120"
                           type="number"
                           value={vitalsInput.bpSystolic}
                           onChange={(e) => setVitalsInput({ ...vitalsInput, bpSystolic: e.target.value })}
-                          className="rounded-lg bg-white border-slate-200 shadow-sm h-9 text-xs text-start"
+                          className="rounded-lg bg-background border-border/60 shadow-sm h-9 text-xs text-start text-foreground"
                         />
                       </div>
 
                       {/* Diastolic BP */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">{isRtl ? "الضغط الانبساطي" : "Diastolic BP"}</label>
+                        <label className="text-[11px] font-bold text-foreground/90">{isRtl ? "الضغط الانبساطي" : "Diastolic BP"}</label>
                         <Input
                           placeholder="80"
                           type="number"
                           value={vitalsInput.bpDiastolic}
                           onChange={(e) => setVitalsInput({ ...vitalsInput, bpDiastolic: e.target.value })}
-                          className="rounded-lg bg-white border-slate-200 shadow-sm h-9 text-xs text-start"
+                          className="rounded-lg bg-background border-border/60 shadow-sm h-9 text-xs text-start text-foreground"
                         />
                       </div>
 
                       {/* Heart Rate */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">{isRtl ? "نبض القلب" : "Heart Rate (bpm)"}</label>
+                        <label className="text-[11px] font-bold text-foreground/90">{isRtl ? "نبض القلب" : "Heart Rate (bpm)"}</label>
                         <Input
                           placeholder="72"
                           type="number"
                           value={vitalsInput.heartRate}
                           onChange={(e) => setVitalsInput({ ...vitalsInput, heartRate: e.target.value })}
-                          className="rounded-lg bg-white border-slate-200 shadow-sm h-9 text-xs text-start"
+                          className="rounded-lg bg-background border-border/60 shadow-sm h-9 text-xs text-start text-foreground"
                         />
                       </div>
 
                       {/* Respiratory Rate */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">{isRtl ? "معدل التنفس" : "Resp. Rate (bpm)"}</label>
+                        <label className="text-[11px] font-bold text-foreground/90">{isRtl ? "معدل التنفس" : "Resp. Rate (bpm)"}</label>
                         <Input
                           placeholder="16"
                           type="number"
                           value={vitalsInput.respiratoryRate}
                           onChange={(e) => setVitalsInput({ ...vitalsInput, respiratoryRate: e.target.value })}
-                          className="rounded-lg bg-white border-slate-200 shadow-sm h-9 text-xs text-start"
+                          className="rounded-lg bg-background border-border/60 shadow-sm h-9 text-xs text-start text-foreground"
                         />
                       </div>
 
                       {/* Temperature */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">{isRtl ? "درجة الحرارة" : "Body Temp (°C)"}</label>
+                        <label className="text-[11px] font-bold text-foreground/90">{isRtl ? "درجة الحرارة" : "Body Temp (°C)"}</label>
                         <Input
                           placeholder="36.8"
                           value={vitalsInput.temperature}
                           onChange={(e) => setVitalsInput({ ...vitalsInput, temperature: e.target.value })}
-                          className="rounded-lg bg-white border-slate-200 shadow-sm h-9 text-xs text-start"
+                          className="rounded-lg bg-background border-border/60 shadow-sm h-9 text-xs text-start text-foreground"
                         />
                       </div>
 
                       {/* Oxygen Saturation */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">{isRtl ? "الأكسجين SpO2" : "SpO2 (%)"}</label>
+                        <label className="text-[11px] font-bold text-foreground/90">{isRtl ? "الأكسجين SpO2" : "SpO2 (%)"}</label>
                         <Input
                           placeholder="98"
                           type="number"
                           value={vitalsInput.oxygenSaturation}
                           onChange={(e) => setVitalsInput({ ...vitalsInput, oxygenSaturation: e.target.value })}
-                          className="rounded-lg bg-white border-slate-200 shadow-sm h-9 text-xs text-start"
+                          className="rounded-lg bg-background border-border/60 shadow-sm h-9 text-xs text-start text-foreground"
                         />
                       </div>
 
                       {/* Weight */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">{isRtl ? "الوزن (كجم)" : "Weight (kg)"}</label>
+                        <label className="text-[11px] font-bold text-foreground/90">{isRtl ? "الوزن (كجم)" : "Weight (kg)"}</label>
                         <Input
                           placeholder="70"
                           value={vitalsInput.weightKg}
                           onChange={(e) => setVitalsInput({ ...vitalsInput, weightKg: e.target.value })}
-                          className="rounded-lg bg-white border-slate-200 shadow-sm h-9 text-xs text-start"
+                          className="rounded-lg bg-background border-border/60 shadow-sm h-9 text-xs text-start text-foreground"
                         />
                       </div>
 
                       {/* Height */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-700">{isRtl ? "الطول (سم)" : "Height (cm)"}</label>
+                        <label className="text-[11px] font-bold text-foreground/90">{isRtl ? "الطول (سم)" : "Height (cm)"}</label>
                         <Input
                           placeholder="170"
                           type="number"
                           value={vitalsInput.heightCm}
                           onChange={(e) => setVitalsInput({ ...vitalsInput, heightCm: e.target.value })}
-                          className="rounded-lg bg-white border-slate-200 shadow-sm h-9 text-xs text-start"
+                          className="rounded-lg bg-background border-border/60 shadow-sm h-9 text-xs text-start text-foreground"
                         />
                       </div>
                     </div>
@@ -1076,7 +1076,7 @@ export default function AdmissionsDashboardClient({
                         type="button"
                         variant="ghost"
                         onClick={() => setIsVitalsOpen(false)}
-                        className="rounded-xl hover:bg-slate-100 text-xs h-9 px-4"
+                        className="rounded-xl hover:bg-muted text-xs h-9 px-4 text-foreground"
                       >
                         {isRtl ? "إلغاء" : "Cancel"}
                       </Button>
@@ -1101,9 +1101,9 @@ export default function AdmissionsDashboardClient({
 
               {/* Vitals History Flowshet Timeline Log */}
               {selectedBed && selectedBed.patientId && combinedVitalsHistory[selectedBed.patientId]?.length > 0 ? (
-                <div className="border border-slate-100/80 rounded-2xl overflow-hidden bg-white shadow-sm overflow-x-auto text-start">
+                <div className="border border-border/60 rounded-2xl overflow-hidden bg-card shadow-sm overflow-x-auto text-start">
                   <table className="w-full text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-100 font-bold text-slate-600">
+                    <thead className="bg-muted/50 border-b border-border/40 font-bold text-muted-foreground">
                       <tr>
                         <th className="p-3 text-start">{isRtl ? "تاريخ القياس" : "Recorded At"}</th>
                         <th className="p-3 text-center">{isRtl ? "ضغط الدم" : "BP"}</th>
@@ -1115,33 +1115,33 @@ export default function AdmissionsDashboardClient({
                         <th className="p-3 text-start hidden sm:table-cell">{isRtl ? "بواسطة" : "Staff Member"}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-border/40">
                       {combinedVitalsHistory[selectedBed.patientId].map((v) => (
-                        <tr key={v.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="p-3 font-semibold text-slate-500 whitespace-nowrap">
+                        <tr key={v.id} className="hover:bg-muted/40 transition-colors">
+                          <td className="p-3 font-semibold text-muted-foreground whitespace-nowrap">
                             {formatDate(v.recordedAt)}
                           </td>
-                          <td className="p-3 text-center font-bold text-slate-800">
+                          <td className="p-3 text-center font-bold text-foreground">
                             {v.bloodPressureSystolic && v.bloodPressureDiastolic 
                               ? `${v.bloodPressureSystolic}/${v.bloodPressureDiastolic}`
                               : "—"}
                           </td>
-                          <td className="p-3 text-center font-bold text-blue-600">
+                          <td className="p-3 text-center font-bold text-blue-600 dark:text-blue-400">
                             {v.heartRate ? `${v.heartRate} bpm` : "—"}
                           </td>
-                          <td className="p-3 text-center text-slate-700">
+                          <td className="p-3 text-center text-foreground/90">
                             {v.respiratoryRate ? `${v.respiratoryRate}/m` : "—"}
                           </td>
-                          <td className="p-3 text-center font-bold text-amber-600">
+                          <td className="p-3 text-center font-bold text-amber-600 dark:text-amber-400">
                             {v.temperature ? `${v.temperature}°C` : "—"}
                           </td>
-                          <td className="p-3 text-center font-black text-emerald-600">
+                          <td className="p-3 text-center font-black text-emerald-600 dark:text-emerald-400">
                             {v.oxygenSaturation ? `${v.oxygenSaturation}%` : "—"}
                           </td>
-                          <td className="p-3 text-center text-slate-500 whitespace-nowrap">
+                          <td className="p-3 text-center text-muted-foreground whitespace-nowrap">
                             {v.weightKg ? `${v.weightKg}kg` : "—"} / {v.heightCm ? `${v.heightCm}cm` : "—"}
                           </td>
-                          <td className="p-3 text-start text-slate-400 truncate hidden sm:table-cell max-w-[120px]">
+                          <td className="p-3 text-start text-muted-foreground/80 truncate hidden sm:table-cell max-w-[120px]">
                             {isRtl ? v.recorderNameAr : v.recorderNameEn}
                           </td>
                         </tr>
@@ -1150,8 +1150,8 @@ export default function AdmissionsDashboardClient({
                   </table>
                 </div>
               ) : (
-                <div className="border border-dashed border-slate-200 rounded-2xl p-8 bg-slate-50/30 text-center text-slate-400">
-                  <Activity className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                <div className="border border-dashed border-border rounded-2xl p-8 bg-muted/20 text-center text-muted-foreground">
+                  <Activity className="h-8 w-8 mx-auto text-muted-foreground/60 mb-2" />
                   <p className="text-xs">{isRtl ? "لا توجد قياسات علامات حيوية مسجلة بعد لهذا المريض" : "No vital flowsheet measurements logged yet."}</p>
                 </div>
               )}
@@ -1159,27 +1159,27 @@ export default function AdmissionsDashboardClient({
 
             {/* Right Column (1/3 width) - Patient Admission Info and Discharging Form */}
             <div className="space-y-6">
-              <Card className="rounded-2xl border border-slate-100 bg-slate-50/40 p-5 shadow-sm text-start">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1">
-                  <FileText className="h-4 w-4 text-slate-500" />
+              <Card className="rounded-2xl border border-border/60 bg-muted/40 p-5 shadow-sm text-start">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-1">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                   {isRtl ? "تفاصيل حالة الإدخال" : "Admission Parameters"}
                 </h4>
 
                 {selectedBed && (
                   <div className="space-y-4 text-xs">
                     <div className="space-y-1">
-                      <label className="text-[10px] text-slate-400 font-bold uppercase">{t("admissionDate")}</label>
-                      <p className="font-bold text-slate-800">{formatDate(selectedBed.admissionDate)}</p>
+                      <label className="text-[10px] text-muted-foreground font-bold uppercase">{t("admissionDate")}</label>
+                      <p className="font-bold text-foreground">{formatDate(selectedBed.admissionDate)}</p>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] text-slate-400 font-bold uppercase">{t("admittingDoctor")}</label>
-                      <p className="font-bold text-slate-800">{isRtl ? selectedBed.doctorNameAr : selectedBed.doctorNameEn}</p>
+                      <label className="text-[10px] text-muted-foreground font-bold uppercase">{t("admittingDoctor")}</label>
+                      <p className="font-bold text-foreground">{isRtl ? selectedBed.doctorNameAr : selectedBed.doctorNameEn}</p>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] text-slate-400 font-bold uppercase">{t("admissionReason")}</label>
-                      <p className="text-slate-600 bg-white p-3 rounded-lg border border-slate-100 mt-1 shadow-sm leading-relaxed whitespace-pre-wrap">
+                      <label className="text-[10px] text-muted-foreground font-bold uppercase">{t("admissionReason")}</label>
+                      <p className="text-foreground bg-background p-3 rounded-lg border border-border/60 mt-1 shadow-sm leading-relaxed whitespace-pre-wrap">
                         {selectedBed.reason}
                       </p>
                     </div>
@@ -1188,8 +1188,8 @@ export default function AdmissionsDashboardClient({
               </Card>
 
               {/* DISCHARGE WORKFLOW WORKSPACE */}
-              <Card className="rounded-2xl border border-red-100 bg-red-50/10 p-5 shadow-sm text-start">
-                <h4 className="text-xs font-bold text-red-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <Card className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5 shadow-sm text-start">
+                <h4 className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
                   <LogOut className="h-4 w-4" />
                   {t("dischargePatient")}
                 </h4>
@@ -1197,54 +1197,54 @@ export default function AdmissionsDashboardClient({
                 <div className="space-y-4">
                   {/* Select Discharge Condition */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700">{t("dischargeCondition")}</label>
+                    <label className="text-[11px] font-bold text-foreground/90">{t("dischargeCondition")}</label>
                     <Select 
                       value={dischargeCondition} 
                       onChange={(e) => setDischargeCondition(e.target.value as "stable" | "improved" | "referred" | "deceased")}
                     >
-                      <option value="stable" className="text-xs">{t("conditionStable")}</option>
-                      <option value="improved" className="text-xs">{t("conditionImproved")}</option>
-                      <option value="referred" className="text-xs">{t("conditionReferred")}</option>
-                      <option value="deceased" className="text-xs">{t("conditionDeceased")}</option>
+                      <option value="stable" className="text-xs bg-background text-foreground">{t("conditionStable")}</option>
+                      <option value="improved" className="text-xs bg-background text-foreground">{t("conditionImproved")}</option>
+                      <option value="referred" className="text-xs bg-background text-foreground">{t("conditionReferred")}</option>
+                      <option value="deceased" className="text-xs bg-background text-foreground">{t("conditionDeceased")}</option>
                     </Select>
                   </div>
 
                   {/* Follow-up Instructions */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700">{t("followUpInstructions")}</label>
+                    <label className="text-[11px] font-bold text-foreground/90">{t("followUpInstructions")}</label>
                     <Textarea
                       placeholder={isRtl ? "اكتب الخطة العلاجية للمنزل ومواعيد المراجعة والأدوية المصروفة..." : "Enter patient discharge instructions, home medication plans and clinic revisits..."}
                       value={followUpInstructions}
                       onChange={(e) => setFollowUpInstructions(e.target.value)}
-                      className="rounded-xl border-slate-200 bg-white shadow-sm min-h-16 text-xs text-start leading-relaxed"
+                      className="rounded-xl border-border/60 bg-background text-foreground shadow-sm min-h-16 text-xs text-start leading-relaxed"
                     />
                   </div>
 
                   {/* Medical Summary Arabic (MOH Requirement) */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-foreground/90 flex items-center gap-1">
                       {t("summaryAr")}
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-500 rounded text-[9px] px-1 py-0 border-none font-bold">MOH</Badge>
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground rounded text-[9px] px-1 py-0 border-none font-bold">MOH</Badge>
                     </label>
                     <Textarea
                       placeholder="الملخص الطبي للحالة المرضية والإجراءات المتخذة بالتفصيل..."
                       value={summaryAr}
                       onChange={(e) => setSummaryAr(e.target.value)}
-                      className="rounded-xl border-slate-200 bg-white shadow-sm min-h-20 text-xs text-start leading-relaxed"
+                      className="rounded-xl border-border/60 bg-background text-foreground shadow-sm min-h-20 text-xs text-start leading-relaxed"
                     />
                   </div>
 
                   {/* Medical Summary English */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-foreground/90 flex items-center gap-1">
                       {t("summaryEn")}
-                      <Badge variant="secondary" className="bg-slate-100 text-slate-500 rounded text-[9px] px-1 py-0 border-none font-bold">MOH</Badge>
+                      <Badge variant="secondary" className="bg-muted text-muted-foreground rounded text-[9px] px-1 py-0 border-none font-bold">MOH</Badge>
                     </label>
                     <Textarea
                       placeholder="Comprehensive english medical case brief, treatment details and clinical decisions..."
                       value={summaryEn}
                       onChange={(e) => setSummaryEn(e.target.value)}
-                      className="rounded-xl border-slate-200 bg-white shadow-sm min-h-20 text-xs text-start leading-relaxed"
+                      className="rounded-xl border-border/60 bg-background text-foreground shadow-sm min-h-20 text-xs text-start leading-relaxed"
                     />
                   </div>
 
@@ -1273,10 +1273,10 @@ export default function AdmissionsDashboardClient({
           </div>
         </DrawerContent>
 
-        <DrawerFooter className="border-t border-slate-100 py-4 px-6 sm:px-12 shrink-0 flex flex-row justify-end" dir={isRtl ? "rtl" : "ltr"}>
+        <DrawerFooter className="border-t border-border/60 py-4 px-6 sm:px-12 shrink-0 flex flex-row justify-end" dir={isRtl ? "rtl" : "ltr"}>
           <Button 
             variant="outline" 
-            className="rounded-xl border-slate-200 text-xs h-10 px-6"
+            className="rounded-xl border-border/60 text-xs h-10 px-6 text-foreground hover:bg-muted"
             onClick={() => setIsDrawerOpen(false)}
           >
             {isRtl ? "إغلاق النافذة" : "Close Portal"}

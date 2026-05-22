@@ -87,8 +87,8 @@ export default async function SuperAdminPage({
   }));
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto bg-white rounded-3xl border border-gray-100/80 shadow-sm p-6 sm:p-8">
+    <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto bg-card rounded-3xl border border-border/60 shadow-sm p-6 sm:p-8">
         <SuperAdminDashboardClient
           initialHospitals={typedHospitals}
           mrrWordsAr={mrrWordsAr}

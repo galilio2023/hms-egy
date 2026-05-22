@@ -1,32 +1,86 @@
 [
-  {"code":"99203","nameEn":"Office visit, new patient, moderate complexity","nameAr":"زيارة عيادة — مريض جديد — تعقيد متوسط","category":"Office Visit","egyptInsurancePrice":250},
-  {"code":"99213","nameEn":"Office visit, established patient, moderate complexity","nameAr":"زيارة عيادة — مريض سابق — تعقيد متوسط","category":"Office Visit","egyptInsurancePrice":180},
-  {"code":"99204","nameEn":"Office visit, new patient, high complexity","nameAr":"زيارة عيادة — مريض جديد — تعقيد عالٍ","category":"Office Visit","egyptInsurancePrice":350},
-  {"code":"99214","nameEn":"Office visit, established patient, high complexity","nameAr":"زيارة عيادة — مريض سابق — تعقيد عالٍ","category":"Office Visit","egyptInsurancePrice":280},
-  {"code":"99243","nameEn":"Office consultation, moderate complexity","nameAr":"استشارة عيادة — تعقيد متوسط","category":"Consultation","egyptInsurancePrice":400},
-  {"code":"44950","nameEn":"Appendectomy","nameAr":"استئصال الزائدة الدودية","category":"Surgery","egyptInsurancePrice":3500},
-  {"code":"47562","nameEn":"Laparoscopic cholecystectomy","nameAr":"استئصال المرارة بالمنظار","category":"Surgery","egyptInsurancePrice":5500},
-  {"code":"49505","nameEn":"Repair initial inguinal hernia, age 5 years or older","nameAr":"إصلاح فتق إربي أولي، سن 5 سنوات أو أكبر","category":"Surgery","egyptInsurancePrice":3000},
-  {"code":"59510","nameEn":"Routine obstetric care including antepartum care, cesarean delivery, and postpartum care","nameAr":"رعاية ولادة قيصرية روتينية تشمل رعاية ما قبل وبعد الولادة","category":"Obstetrics","egyptInsurancePrice":7000},
-  {"code":"59400","nameEn":"Routine obstetric care including antepartum care, vaginal delivery, and postpartum care","nameAr":"رعاية ولادة طبيعية روتينية تشمل رعاية ما قبل وبعد الولادة","category":"Obstetrics","egyptInsurancePrice":5000},
-  {"code":"93000","nameEn":"Electrocardiogram (ECG), routine, with at least 12 leads; with interpretation and report","nameAr":"رسم قلب (ECG) روتيني، 12 قناة على الأقل، مع التفسير والتقرير","category":"Diagnostic","egyptInsurancePrice":150},
-  {"code":"93306","nameEn":"Echocardiography, transthoracic, real-time with image documentation (2D), includes M-mode recording, when performed, complete, with spectral Doppler and color flow Doppler","nameAr":"أشعة موجات صوتية على القلب (إيكو) كاملة مع دوبلر ملون","category":"Diagnostic","egyptInsurancePrice":600},
-  {"code":"45378","nameEn":"Colonoscopy, flexible; diagnostic","nameAr":"منظار قولون مرن تشخيصي","category":"Diagnostic","egyptInsurancePrice":2500},
-  {"code":"43235","nameEn":"Upper gastrointestinal endoscopy, flexible; diagnostic","nameAr":"منظار جهاز هضمي علوي مرن تشخيصي","category":"Diagnostic","egyptInsurancePrice":1800},
-  {"code":"96360","nameEn":"Intravenous infusion, hydration; initial, 31 minutes to 1 hour","nameAr":"حقن وريدي، تعويض سوائل، أول ساعة","category":"Therapeutic","egyptInsurancePrice":100},
-  {"code":"97597","nameEn":"Debridement, open wound, (e.g., fibrin, devitalized tissue, slough), first 20 sq cm or less","nameAr":"تنظيف جرح مفتوح، أول 20 سم مربع أو أقل","category":"Therapeutic","egyptInsurancePrice":300},
-  {"code":"12001","nameEn":"Simple repair of superficial wounds of scalp, neck, axillae, external genitalia, trunk and/or extremities; 2.5 cm or less","nameAr":"خياطة بسيطة لجرح سطحي، 2.5 سم أو أقل","category":"Surgery","egyptInsurancePrice":200},
-  {"code":"12002","nameEn":"Simple repair of superficial wounds; 2.6 cm to 7.5 cm","nameAr":"خياطة بسيطة لجرح سطحي، من 2.6 سم إلى 7.5 سم","category":"Surgery","egyptInsurancePrice":350},
-  {"code":"71045","nameEn":"Radiologic examination, chest; single view","nameAr":"أشعة سينية على الصدر، عرض واحد","category":"Diagnostic","egyptInsurancePrice":180},
-  {"code":"71046","nameEn":"Radiologic examination, chest; 2 views","nameAr":"أشعة سينية على الصدر، عرضين","category":"Diagnostic","egyptInsurancePrice":250},
-  {"code":"74177","nameEn":"Computed tomography, abdomen and pelvis; with contrast material(s)","nameAr":"أشعة مقطعية على البطن والحوض بالصبغة","category":"Diagnostic","egyptInsurancePrice":1800},
-  {"code":"70450","nameEn":"Computed tomography, head or brain; without contrast material","nameAr":"أشعة مقطعية على الرأس أو المخ بدون صبغة","category":"Diagnostic","egyptInsurancePrice":900},
-  {"code":"72141","nameEn":"Magnetic resonance (e.g., proton) imaging, spinal canal and contents, cervical; without contrast material","nameAr":"أشعة رنين مغناطيسي على الفقرات العنقية بدون صبغة","category":"Diagnostic","egyptInsurancePrice":1500},
-  {"code":"72148","nameEn":"Magnetic resonance (e.g., proton) imaging, spinal canal and contents, lumbar; without contrast material","nameAr":"أشعة رنين مغناطيسي على الفقرات القطنية بدون صبغة","category":"Diagnostic","egyptInsurancePrice":1500},
-  {"code":"20610","nameEn":"Arthrocentesis, aspiration and/or injection, major joint or bursa (eg, shoulder, hip, knee, subacromial bursa); without ultrasound guidance","nameAr":"بذل أو حقن مفصل كبير (مثل الكتف، الورك، الركبة) بدون توجيه أشعة","category":"Therapeutic","egyptInsurancePrice":400},
-  {"code":"29881","nameEn":"Arthroscopy, knee, surgical; with meniscectomy (medial OR lateral, including any meniscal shaving)","nameAr":"منظار ركبة جراحي مع استئصال غضروف هلالي","category":"Surgery","egyptInsurancePrice":4500},
-  {"code":"58150","nameEn":"Total abdominal hysterectomy (corpus and cervix), with or without removal of tube(s), with or without removal of ovary(s)","nameAr":"استئصال الرحم الكلي عن طريق البطن","category":"Surgery","egyptInsurancePrice":6500},
-  {"code":"36415","nameEn":"Collection of venous blood by venipuncture","nameAr":"سحب عينة دم وريدي","category":"Laboratory","egyptInsurancePrice":30},
-  {"code":"80053","nameEn":"Comprehensive metabolic panel","nameAr":"لوحة تمثيل غذائي شاملة","category":"Laboratory","egyptInsurancePrice":450},
-  {"code":"85025","nameEn":"Complete blood count (CBC), automated","nameAr":"صورة دم كاملة (CBC) آلية","category":"Laboratory","egyptInsurancePrice":120}
+  {
+    "code": "99203",
+    "descriptionEn": "Office visit, new patient, low complexity",
+    "descriptionAr": "زيارة عيادة - مريض جديد - تعقيد منخفض",
+    "category": "Office Visit",
+    "egyptInsurancePrice": 120
+  },
+  {
+    "code": "99213",
+    "descriptionEn": "Office visit, established patient, moderate complexity",
+    "descriptionAr": "زيارة عيادة - مريض سابق - تعقيد متوسط",
+    "category": "Office Visit",
+    "egyptInsurancePrice": 150
+  },
+  {
+    "code": "47562",
+    "descriptionEn": "Laparoscopic Cholecystectomy",
+    "descriptionAr": "استئصال المرارة بالمنظار",
+    "category": "Surgery",
+    "egyptInsurancePrice": 4500
+  },
+  {
+    "code": "44970",
+    "descriptionEn": "Laparoscopic Appendectomy",
+    "descriptionAr": "استئصال الزائدة الدودية بالمنظار",
+    "category": "Surgery",
+    "egyptInsurancePrice": 4000
+  },
+  {
+    "code": "59400",
+    "descriptionEn": "Normal Vaginal Delivery",
+    "descriptionAr": "ولادة طبيعية",
+    "category": "Obstetrics",
+    "egyptInsurancePrice": 3500
+  },
+  {
+    "code": "59510",
+    "descriptionEn": "Cesarean Section",
+    "descriptionAr": "ولادة قيصرية",
+    "category": "Obstetrics",
+    "egyptInsurancePrice": 6000
+  },
+  {
+    "code": "93000",
+    "descriptionEn": "Electrocardiogram (ECG)",
+    "descriptionAr": "رسم قلب",
+    "category": "Cardiology",
+    "egyptInsurancePrice": 100
+  },
+  {
+    "code": "93306",
+    "descriptionEn": "Echocardiogram",
+    "descriptionAr": "أشعة تليفزيونية على القلب (إيكو)",
+    "category": "Cardiology",
+    "egyptInsurancePrice": 450
+  },
+  {
+    "code": "70450",
+    "descriptionEn": "CT Head without Contrast",
+    "descriptionAr": "أشعة مقطعية على المخ بدون صبغة",
+    "category": "Radiology",
+    "egyptInsurancePrice": 600
+  },
+  {
+    "code": "74177",
+    "descriptionEn": "CT Abdomen and Pelvis with Contrast",
+    "descriptionAr": "أشعة مقطعية على البطن والحوض بالصبغة",
+    "category": "Radiology",
+    "egyptInsurancePrice": 1200
+  },
+  {
+    "code": "80053",
+    "descriptionEn": "Comprehensive Metabolic Panel (CMP)",
+    "descriptionAr": "تحليل كيميائي شامل للدم",
+    "category": "Laboratory",
+    "egyptInsurancePrice": 250
+  },
+  {
+    "code": "85025",
+    "descriptionEn": "Complete Blood Count (CBC)",
+    "descriptionAr": "صورة دم كاملة",
+    "category": "Laboratory",
+    "egyptInsurancePrice": 80
+  }
 ]

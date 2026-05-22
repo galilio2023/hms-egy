@@ -162,12 +162,11 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
 
         {/* Floating Local Fuzzy Search Results Dropdown */}
         {isFocused && query.trim() !== "" && (
-          <div 
+          <div
             onMouseDown={(e) => e.preventDefault()} // Prevents focus loss on the input when clicking results
-            className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl border border-border/40 bg-background/95 backdrop-blur-md shadow-lg scrollbar-none animate-in fade-in duration-100"
+            className="absolute z-50 start-0 end-0 mt-1 max-h-72 overflow-y-auto rounded-xl border border-border/40 bg-background/95 backdrop-blur-md shadow-lg scrollbar-none animate-in fade-in duration-100"
           >
-            {results.length === 0 ? (
-              <div className="p-4 text-center text-xs font-semibold text-muted-foreground">
+            {results.length === 0 ? (              <div className="p-4 text-center text-xs font-semibold text-muted-foreground">
                 {isRtl ? "لا توجد نتائج مطابقة" : "No matching diagnosis found"}
               </div>
             ) : (

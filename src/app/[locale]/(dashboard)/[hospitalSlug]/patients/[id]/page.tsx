@@ -1,10 +1,10 @@
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
 import { patients } from "@db/schema/patients";
-import { hospitals, staff, operatingRooms } from "@db/schema/core";
+import { hospitals, staff, operatingRooms, departments } from "@db/schema/core";
 import { surgicalCases } from "@db/schema/surgical";
-import { medicalRecords, vitalsFlowsheet } from "@db/schema/clinical";
-import { and, eq, desc, aliasedTable } from "drizzle-orm";
+import { medicalRecords, vitalsFlowsheet, internalReferrals, medicalCertificates } from "@db/schema/clinical";
+import { and, eq, desc, aliasedTable, sql } from "drizzle-orm";
 import { getHospitalBySlug } from "@/lib/db/cache";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
@@ -145,7 +145,91 @@ export default async function PatientProfilePage({
       .orderBy(desc(vitalsFlowsheet.recordedAt))
       .limit(20);
 
-    return { patient, patientSurgeries, patientRecords, patientVitals };
+    // 5. Fetch internal referrals
+    const referringStaff = aliasedTable(staff, "referringStaff");
+    const targetStaff = aliasedTable(staff, "targetStaff");
+    const patientReferrals = await tx
+      .select({
+        id: internalReferrals.id,
+        reason: internalReferrals.reason,
+        urgency: internalReferrals.urgency,
+        status: internalReferrals.status,
+        notes: internalReferrals.notes,
+        createdAt: internalReferrals.createdAt,
+        targetDepartmentNameAr: departments.nameAr,
+        targetDepartmentNameEn: departments.nameEn,
+        referringDoctorNameAr: referringStaff.nameAr,
+        referringDoctorNameEn: referringStaff.nameEn,
+        targetDoctorNameAr: targetStaff.nameAr,
+        targetDoctorNameEn: targetStaff.nameEn,
+      })
+      .from(internalReferrals)
+      .leftJoin(departments, eq(internalReferrals.targetDepartmentId, departments.id))
+      .leftJoin(referringStaff, eq(internalReferrals.referringDoctorId, referringStaff.id))
+      .leftJoin(targetStaff, eq(internalReferrals.targetDoctorId, targetStaff.id))
+      .where(and(eq(internalReferrals.patientId, id), eq(internalReferrals.hospitalId, hospitalId)))
+      .orderBy(desc(internalReferrals.createdAt));
+
+    // 6. Fetch medical certificates
+    const certDoctor = aliasedTable(staff, "certDoctor");
+    const patientCertificates = await tx
+      .select({
+        id: medicalCertificates.id,
+        serialNumber: medicalCertificates.serialNumber,
+        certificateType: medicalCertificates.certificateType,
+        diagnosis: medicalCertificates.diagnosis,
+        startDate: medicalCertificates.startDate,
+        endDate: medicalCertificates.endDate,
+        restDays: medicalCertificates.restDays,
+        notes: medicalCertificates.notes,
+        createdAt: medicalCertificates.createdAt,
+        doctorNameAr: certDoctor.nameAr,
+        doctorNameEn: certDoctor.nameEn,
+      })
+      .from(medicalCertificates)
+      .leftJoin(certDoctor, eq(medicalCertificates.doctorId, certDoctor.id))
+      .where(and(eq(medicalCertificates.patientId, id), eq(medicalCertificates.hospitalId, hospitalId)))
+      .orderBy(desc(medicalCertificates.createdAt));
+
+    // 7. Fetch active departments for select options
+    const activeDepartments = await tx
+      .select({
+        id: departments.id,
+        nameAr: departments.nameAr,
+        nameEn: departments.nameEn,
+      })
+      .from(departments)
+      .where(and(eq(departments.hospitalId, hospitalId), eq(departments.isActive, true)))
+      .orderBy(departments.nameAr);
+
+    // 8. Fetch active doctors/surgeons for select options
+    const activeDoctors = await tx
+      .select({
+        id: staff.id,
+        nameAr: staff.nameAr,
+        nameEn: staff.nameEn,
+        role: staff.role,
+      })
+      .from(staff)
+      .where(
+        and(
+          eq(staff.hospitalId, hospitalId),
+          eq(staff.isActive, true),
+          sql`${staff.role} IN ('DOCTOR', 'SURGEON', 'ANESTHESIOLOGIST')`
+        )
+      )
+      .orderBy(staff.nameAr);
+
+    return { 
+      patient, 
+      patientSurgeries, 
+      patientRecords, 
+      patientVitals,
+      patientReferrals,
+      patientCertificates,
+      activeDepartments,
+      activeDoctors
+    };
   });
 
   if (!data) {
@@ -211,6 +295,35 @@ export default async function PatientProfilePage({
     heightCm: v.heightCm || undefined,
   }));
 
+  const mappedReferrals = data.patientReferrals.map((ref) => ({
+    id: ref.id,
+    reason: ref.reason,
+    urgency: ref.urgency,
+    status: ref.status,
+    notes: ref.notes || undefined,
+    createdAt: ref.createdAt,
+    targetDepartmentNameAr: ref.targetDepartmentNameAr || undefined,
+    targetDepartmentNameEn: ref.targetDepartmentNameEn || undefined,
+    referringDoctorNameAr: ref.referringDoctorNameAr || undefined,
+    referringDoctorNameEn: ref.referringDoctorNameEn || undefined,
+    targetDoctorNameAr: ref.targetDoctorNameAr || undefined,
+    targetDoctorNameEn: ref.targetDoctorNameEn || undefined,
+  }));
+
+  const mappedCertificates = data.patientCertificates.map((cert) => ({
+    id: cert.id,
+    serialNumber: cert.serialNumber,
+    certificateType: cert.certificateType,
+    diagnosis: cert.diagnosis,
+    startDate: cert.startDate,
+    endDate: cert.endDate,
+    restDays: cert.restDays,
+    notes: cert.notes || undefined,
+    createdAt: cert.createdAt,
+    doctorNameAr: cert.doctorNameAr || undefined,
+    doctorNameEn: cert.doctorNameEn || undefined,
+  }));
+
   return (
     <div className="min-h-screen bg-gray-50/10 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -231,8 +344,13 @@ export default async function PatientProfilePage({
           records={mappedRecords}
           vitals={mappedVitals}
           hospitalSlug={hospitalSlug} 
+          departments={data.activeDepartments}
+          doctors={data.activeDoctors}
+          referrals={mappedReferrals}
+          certificates={mappedCertificates}
         />
       </div>
     </div>
   );
 }
+

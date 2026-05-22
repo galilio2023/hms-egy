@@ -657,7 +657,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
           {/* Accompanying Vitals Flows Panel */}
           <div className="space-y-6">
             <Card className="border border-border/40 bg-card rounded-3xl shadow-md overflow-hidden relative">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
+              <div className="absolute top-0 start-0 end-0 h-1 bg-emerald-500" />
               <CardContent className="p-6 space-y-5">
                 
                 <h3 className="text-sm font-black text-foreground flex items-center gap-2 border-b pb-3.5 border-border/30">

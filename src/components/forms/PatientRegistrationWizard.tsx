@@ -267,7 +267,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
     <div className="w-full max-w-4xl mx-auto space-y-8">
       {/* Wizard Header Progress Bar */}
       <div className="relative flex justify-between items-center w-full px-4 sm:px-8">
-        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border -translate-y-1/2 -z-1" />
+        <div className="absolute top-1/2 start-0 end-0 h-0.5 bg-border -translate-y-1/2 -z-1" />
         
         {steps.map((step, idx) => {
           const StepIcon = step.icon;

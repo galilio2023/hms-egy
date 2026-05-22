@@ -7,15 +7,15 @@ import { cn } from "@/lib/utils";
 import { useLocale } from "next-intl";
 
 interface DialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
 }
 
-export function Dialog({ isOpen, onClose, children }: DialogProps) {
+export function Dialog({ open, onOpenChange, children }: DialogProps) {
   // Prevent scrolling when dialog is open
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
@@ -23,18 +23,18 @@ export function Dialog({ isOpen, onClose, children }: DialogProps) {
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, [open]);
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop Blur Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={() => onOpenChange(false)}
             className="fixed inset-0 bg-background/80 backdrop-blur-sm"
           />
 
@@ -68,10 +68,7 @@ export function DialogHeader({ className, children, onClose, ...props }: DialogH
       {onClose && (
         <button
           onClick={onClose}
-          className={cn(
-            "p-1.5 hover:bg-muted/80 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer",
-            isRtl ? "margin-right-auto" : "margin-left-auto"
-          )}
+          className="p-1.5 hover:bg-muted/80 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer ms-auto"
         >
           <X className="h-4 w-4" />
         </button>

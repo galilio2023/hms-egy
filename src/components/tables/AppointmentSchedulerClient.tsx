@@ -624,7 +624,7 @@ export function AppointmentSchedulerClient({
         )}
       </div>
 
-      <Drawer isOpen={isDetailDrawerOpen} onClose={() => setIsDetailDrawerOpen(false)}>
+      <Drawer open={isDetailDrawerOpen} onOpenChange={setIsDetailDrawerOpen}>
         <DrawerContent className="text-start">
           <div className="mx-auto w-full max-w-lg p-6">
             {selectedAppointment && (
@@ -760,7 +760,7 @@ export function AppointmentSchedulerClient({
         </DrawerContent>
       </Drawer>
 
-      <Dialog isOpen={!!selectedWaitingEntry} onClose={() => setSelectedWaitingEntry(null)}>
+      <Dialog open={!!selectedWaitingEntry} onOpenChange={(open) => !open && setSelectedWaitingEntry(null)}>
         <DialogContent className="sm:max-w-md text-start">
           <DialogHeader className="text-start">
             <DialogTitle className="text-lg font-black text-foreground">

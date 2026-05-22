@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { loginAction } from "@/lib/actions/auth";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Activity, Lock, Mail, Loader2, Stethoscope, HeartPulse, Globe } from "lucide-react";
 import { toast } from "sonner";
+import { useSession } from "@/lib/auth/client";
 
 export default function LoginPage() {
   const t = useTranslations();
@@ -15,7 +16,20 @@ export default function LoginPage() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const { data: sessionState } = useSession();
+
+  useEffect(() => {
+    if (sessionState?.user) {
+      router.replace(`/${locale}`);
+    }
+  }, [sessionState, locale, router]);
+
   const isRtl = locale === "ar";
+
+  if (sessionState?.user) {
+    return null;
+  }
+
 
   const handleToggleLocale = () => {
     const nextLocale = locale === "ar" ? "en" : "ar";
@@ -49,9 +63,9 @@ export default function LoginPage() {
     <div className="relative min-h-screen flex items-center justify-center bg-[#090d16] text-slate-100 overflow-hidden px-4 selection:bg-teal-500/30">
       
       {/* ── BREATHTAKING AMBIENT BACKGROUND ────────────────── */}
-      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-teal-900/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-900/10 blur-[120px] pointer-events-none" />
-      <div className="absolute top-[40%] right-[20%] w-[300px] h-[300px] rounded-full bg-amber-900/5 blur-[100px] pointer-events-none" />
+      <div className="absolute top-[-20%] start-[-10%] w-[600px] h-[600px] rounded-full bg-teal-900/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] end-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-900/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[40%] end-[20%] w-[300px] h-[300px] rounded-full bg-amber-900/5 blur-[100px] pointer-events-none" />
 
       {/* Grid Pattern Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b08_1px,transparent_1px),linear-gradient(to_bottom,#1e293b08_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
@@ -60,20 +74,20 @@ export default function LoginPage() {
       <motion.div 
         animate={{ y: [0, -15, 0], rotate: [0, 5, 0] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-20 left-[15%] text-teal-500/20 hidden md:block"
+        className="absolute top-20 start-[15%] text-teal-500/20 hidden md:block"
       >
         <Stethoscope size={44} />
       </motion.div>
       <motion.div 
         animate={{ y: [0, 15, 0], scale: [1, 1.05, 1] }}
         transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute bottom-20 right-[15%] text-emerald-500/20 hidden md:block"
+        className="absolute bottom-20 end-[15%] text-emerald-500/20 hidden md:block"
       >
         <HeartPulse size={48} />
       </motion.div>
 
       {/* ── TOP NAV / LANGUAGE TOGGLE ─────────────────────── */}
-      <div className="absolute top-6 left-6 right-6 flex justify-between items-center z-20 max-w-7xl mx-auto">
+      <div className="absolute top-6 start-6 end-6 flex justify-between items-center z-20 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-gradient-to-tr from-teal-500/20 to-emerald-500/20 rounded-xl border border-teal-500/20 shadow-lg shadow-teal-500/5">
             <Activity className="h-6 w-6 text-teal-400 animate-pulse" />
