@@ -293,7 +293,10 @@ export async function completeTelemedicineConsultation(
             .where(and(
               eq(labTests.hospitalId, hospitalId),
               eq(labTests.isActive, true),
-              sql`lower(${labTests.nameEn}) IN ${labNames.map(name => name.toLowerCase())}`
+              inArray(
+                sql`lower(${labTests.nameEn})`, 
+                labNames.map(name => name.toLowerCase())
+              )
             ));
 
           const labMap = new Map(existingLabs.map(l => [l.nameEn.toLowerCase(), l.id]));
@@ -563,7 +566,10 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
             .where(and(
               eq(labTests.hospitalId, hospitalId),
               eq(labTests.isActive, true),
-              sql`lower(${labTests.nameEn}) IN ${labNames.map(name => name.toLowerCase())}`
+              inArray(
+                sql`lower(${labTests.nameEn})`, 
+                labNames.map(name => name.toLowerCase())
+              )
             ));
 
           const labMap = new Map(existingLabs.map(l => [l.nameEn.toLowerCase(), l.id]));

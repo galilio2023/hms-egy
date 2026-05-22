@@ -31,12 +31,8 @@ function generateSerialNumber(): string {
   const day = String(d.getDate()).padStart(2, "0");
   const dateStr = `${year}${month}${day}`;
   
-  // 4 characters random code
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let randomPart = "";
-  for (let i = 0; i < 4; i++) {
-    randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+  // 4 secure hex characters code
+  const randomPart = randomBytes(2).toString("hex").toUpperCase();
   
   return `MC-${dateStr}-${randomPart}`;
 }
@@ -127,5 +123,8 @@ export async function getPatientCertificatesAction(patientId: string) {
   } catch (error) {
     console.error("[GET_CERTIFICATES_ERROR]", error);
     return { success: false, error: "فشل استرداد الشهادات الطبية." };
+  }
+}
+alse, error: "فشل استرداد الشهادات الطبية." };
   }
 }
