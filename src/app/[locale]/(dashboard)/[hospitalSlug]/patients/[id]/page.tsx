@@ -4,7 +4,7 @@ import { patients } from "@db/schema/patients";
 import { hospitals, staff, operatingRooms, departments } from "@db/schema/core";
 import { surgicalCases } from "@db/schema/surgical";
 import { medicalRecords, vitalsFlowsheet, internalReferrals, medicalCertificates } from "@db/schema/clinical";
-import { and, eq, desc, aliasedTable, sql } from "drizzle-orm";
+import { and, eq, desc, aliasedTable, sql, inArray } from "drizzle-orm";
 import { getHospitalBySlug } from "@/lib/db/cache";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";

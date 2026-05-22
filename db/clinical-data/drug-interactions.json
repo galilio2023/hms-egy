@@ -7,6 +7,7 @@
     "mechanismAr": "زيادة خطر النزيف بسبب التأثير المشترك لمضادات التخثر ومضادات الصفائح الدموية.",
     "clinicalEffectEn": "Potential for life-threatening hemorrhage.",
     "clinicalEffectAr": "احتمال حدوث نزيف يهدد الحياة.",
+    "managementEn": "Avoid concurrent use unless strictly necessary; monitor INR closely.",
     "managementAr": "تجنب الجمع بينهما إلا في حالات خاصة وتحت مراقبة دقيقة لنسبة السيولة (INR).",
     "category": "Anticoagulant interaction"
   },
@@ -18,6 +19,7 @@
     "mechanismAr": "خطر حدوث حموضة لاكتية إذا تسببت الصبغة في فشل كلوي أثناء تناول الميتفورمين.",
     "clinicalEffectEn": "Lactic acidosis, renal failure.",
     "clinicalEffectAr": "حموضة لاكتية، فشل كلوي.",
+    "managementEn": "Discontinue metformin 48 hours prior to procedure; resume only after renal function is confirmed.",
     "managementAr": "يجب إيقاف الميتفورمين قبل الأشعة بالصبغة بـ 48 ساعة وعدم استئنافه إلا بعد التأكد من وظائف الكلى.",
     "category": "Diabetic drug interaction"
   },
@@ -29,6 +31,7 @@
     "mechanismAr": "انخفاض حاد في ضغط الدم بسبب التأثيرات التآزرية الموسعة للأوعية.",
     "clinicalEffectEn": "Severe hypotension, myocardial infarction, death.",
     "clinicalEffectAr": "انخفاض شديد في ضغط الدم، نوبة قلبية، وفاة.",
+    "managementEn": "Strictly contraindicated; do not combine under any circumstances.",
     "managementAr": "يمنع تماماً استخدام السيلدينافيل مع أي نوع من أنواع النيترات.",
     "category": "Cardiac drug interaction"
   },
@@ -40,6 +43,7 @@
     "mechanismAr": "زيادة مستويات السيمفاستاتين بسبب تثبيط تمثيلها الغذائي.",
     "clinicalEffectEn": "Increased risk of myopathy and rhabdomyolysis.",
     "clinicalEffectAr": "زيادة خطر حدوث اعتلال عضلي وتحلل العضلات.",
+    "managementEn": "Temporarily suspend simvastatin while on the antibiotic.",
     "managementAr": "يجب إيقاف السيمفاستاتين مؤقتاً أثناء تناول المضاد الحيوي.",
     "category": "Statin interaction"
   },
@@ -51,6 +55,7 @@
     "mechanismAr": "تأثير تآزري على احتجاز البوتاسيوم.",
     "clinicalEffectEn": "Hyperkalemia.",
     "clinicalEffectAr": "ارتفاع مستويات البوتاسيوم في الدم.",
+    "managementEn": "Monitor serum potassium levels regularly.",
     "managementAr": "مراقبة مستويات البوتاسيوم في الدم بانتظام.",
     "category": "Electrolyte interaction"
   }

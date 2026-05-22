@@ -136,6 +136,3 @@ export async function getPatientCertificatesAction(patientId: string) {
     return { success: false, error: "فشل استرداد الشهادات الطبية." };
   }
 }
-alse, error: "فشل استرداد الشهادات الطبية." };
-  }
-}

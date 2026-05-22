@@ -55,13 +55,12 @@ export default async function AppointmentsPage({
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
   const currentHospitalId = session.activeHospitalId || session.user.hospitalId;
   
-  // Allow matching against either the UUID ID or the Slug (useful for mock/dev sessions)
-  const isAuthorized = isSuperAdmin || 
-                       currentHospitalId === dbHospital.id || 
-                       currentHospitalId === dbHospital.slug;
+  // Strict authorization check: Only allow proceed if we have a matching UUID or are Super Admin.
+  // We do NOT use the slug here to avoid fatal ::uuid cast crashes in SQL queries.
+  const isAuthorized = isSuperAdmin || currentHospitalId === dbHospital.id;
 
   if (!isAuthorized) {
-    notFound(); // Return 404 to avoid exposing that the slug exists
+    notFound(); 
   }
 
 
