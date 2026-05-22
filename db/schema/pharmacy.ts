@@ -22,7 +22,8 @@ export const medications = pgTable("medications", {
 }, (table) => {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
-    hospitalMedIdx: uniqueIndex("med_hospital_name_idx").on(table.hospitalId, table.nameEn),
+    hospitalMedEnIdx: uniqueIndex("med_hospital_name_en_idx").on(table.hospitalId, table.nameEn),
+    hospitalMedArIdx: uniqueIndex("med_hospital_name_ar_idx").on(table.hospitalId, table.nameAr),
     barcodeIdx: index("med_barcode_idx").on(table.barcode),
   };
 }).enableRLS();

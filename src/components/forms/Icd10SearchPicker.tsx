@@ -136,10 +136,7 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
 
       {/* Search Input wrapper */}
       <div className="relative">
-        <div className={cn(
-          "absolute top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground transition-colors duration-200",
-          isRtl ? "right-3.5" : "left-3.5"
-        )}>
+        <div className="absolute top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground transition-colors duration-200 start-3.5">
           <Search className="w-4 h-4" />
         </div>
         <Input
@@ -149,10 +146,7 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setTimeout(() => setIsFocused(false), 200)} // delay to allow clicks on search results
-          className={cn(
-            "w-full h-11 bg-background/50 border-border/50 text-xs font-semibold focus:ring-primary/20 transition-all duration-300 rounded-xl",
-            isRtl ? "pr-10 pl-4 text-right" : "pl-10 pr-4 text-left"
-          )}
+          className="w-full h-11 bg-background/50 border-border/50 text-xs font-semibold focus:ring-primary/20 transition-all duration-300 rounded-xl ps-10 pe-4 text-start"
         />
 
         {/* Floating Local Fuzzy Search Results Dropdown */}

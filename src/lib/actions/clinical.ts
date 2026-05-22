@@ -379,6 +379,11 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
     const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
     if (data.orderSetMedications && data.orderSetMedications.length > 0) {
       for (const item of data.orderSetMedications) {
+        // SECURITY: Strict validation of seeding payload to prevent catalog corruption
+        if (!item.nameEn || !item.nameAr || !item.genericName || !item.form || !item.strength) {
+          continue; // Skip malformed seeding items
+        }
+
         // Self-seed missing medication in hospital catalog with high-entropy cryptographic barcode
         // Using onConflictDoUpdate to handle potential race conditions atomically
         const [med] = await db
@@ -418,6 +423,11 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
     const resolvedLabItems: string[] = [];
     if (data.orderSetLabs && data.orderSetLabs.length > 0) {
       for (const item of data.orderSetLabs) {
+        // SECURITY: Strict validation of seeding payload to prevent catalog corruption
+        if (!item.nameEn || !item.nameAr) {
+          continue; // Skip malformed seeding items
+        }
+
         // Self-seed missing lab test in hospital catalog
         // Using onConflictDoUpdate to handle potential race conditions atomically
         const [test] = await db

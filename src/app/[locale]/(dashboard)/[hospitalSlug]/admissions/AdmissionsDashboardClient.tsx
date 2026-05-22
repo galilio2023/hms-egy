@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
@@ -157,10 +157,17 @@ export default function AdmissionsDashboardClient({
 
   // Compute the combined flowsheet dynamically in-render
   const combinedVitalsHistory = useMemo(() => {
-    const result = { ...vitalsHistory };
+    const result: Record<string, VitalRecord[]> = { ...vitalsHistory };
+    
     Object.keys(clientAddedVitals).forEach((patientId) => {
-      result[patientId] = [...(clientAddedVitals[patientId] || []), ...(result[patientId] || [])];
+      const allRecords = [...(clientAddedVitals[patientId] || []), ...(result[patientId] || [])];
+      
+      // Deduplicate on-the-fly by record ID to prevent double-rendering after router.refresh()
+      result[patientId] = Array.from(
+        new Map(allRecords.map(item => [item.id, item])).values()
+      ).sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
     });
+    
     return result;
   }, [vitalsHistory, clientAddedVitals]);
   
@@ -214,13 +221,15 @@ export default function AdmissionsDashboardClient({
   });
 
   // Patient Search function inside Admission Modal
-  const handleSearchPatients = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!patientQuery.trim()) return;
+  const handleSearchPatients = useCallback(async (e?: React.FormEvent | string) => {
+    if (typeof e !== "string" && e) e.preventDefault();
+    const query = typeof e === "string" ? e : patientQuery;
+    
+    if (!query.trim()) return;
 
     setIsSearchingPatients(true);
     try {
-      const res = await searchPatientsAction(patientQuery) as { success: boolean; data?: SearchedPatient[]; error?: string };
+      const res = await searchPatientsAction(query) as { success: boolean; data?: SearchedPatient[]; error?: string };
       if (res.success && res.data) {
         setSearchResults(res.data);
       } else {
@@ -231,7 +240,7 @@ export default function AdmissionsDashboardClient({
     } finally {
       setIsSearchingPatients(false);
     }
-  };
+  }, [patientQuery]);
 
   // Trigger search on typing debounce or enter
   useEffect(() => {
@@ -242,12 +251,11 @@ export default function AdmissionsDashboardClient({
       return () => clearTimeout(timer);
     }
     const delayDebounceFn = setTimeout(() => {
-      handleSearchPatients();
+      handleSearchPatients(patientQuery);
     }, 400);
 
     return () => clearTimeout(delayDebounceFn);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientQuery]);
+  }, [patientQuery, handleSearchPatients]);
 
   // Admit patient handler
   const handleAdmitPatient = async () => {
@@ -785,18 +793,14 @@ export default function AdmissionsDashboardClient({
             ) : (
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className={cn("absolute top-3.5 h-4 w-4 text-slate-400", isRtl ? "right-3" : "left-3")} />
+                  <Search className="absolute top-3.5 h-4 w-4 text-slate-400 start-3" />
                   <Input
                     placeholder={t("searchPlaceholder")}
                     value={patientQuery}
                     onChange={(e) => setPatientQuery(e.target.value)}
-                    className={cn(
-                      "rounded-xl border-slate-200/80 shadow-sm h-11 text-xs text-start",
-                      isRtl ? "pr-9 pl-4" : "pl-9 pr-4"
-                    )}
+                    className="rounded-xl border-slate-200/80 shadow-sm h-11 text-xs text-start ps-9 pe-4"
                   />
                 </div>
-
                 {isSearchingPatients && (
                   <div className="text-xs text-slate-400 italic ps-1 flex items-center gap-1.5 mt-1">
                     <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
