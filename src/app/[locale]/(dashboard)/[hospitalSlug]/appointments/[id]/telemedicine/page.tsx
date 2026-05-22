@@ -96,6 +96,26 @@ export default async function TelemedicinePage({
     notFound();
   }
 
+  // Enforce doctor assignment ownership check (only the assigned doctor or SUPER_ADMIN can enter)
+  let isAssignedDoctor = false;
+
+  if (!isSuperAdmin) {
+    const currentStaff = await db
+      .select()
+      .from(staff)
+      .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+      .limit(1)
+      .then((res) => res[0]);
+
+    if (currentStaff && appointment.doctorId === currentStaff.id) {
+      isAssignedDoctor = true;
+    }
+  }
+
+  if (!isSuperAdmin && !isAssignedDoctor) {
+    notFound(); // Prevent unauthorized hospital staff from viewing the room or charts
+  }
+
   // If already completed or cancelled, prevent entering the call room to maintain record integrity
   if (appointment.status !== "scheduled") {
     redirect(`/${locale}/${hospitalSlug}/appointments`);

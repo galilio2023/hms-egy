@@ -245,18 +245,18 @@ const SHIFTING_HOLIDAYS_DB: Record<number, { month: number; day: number; nameAr:
  */
 export function getPublicHolidays(year: number) {
   const fixed = [
-    { date: new Date(year, 0, 7), nameAr: "عيد الميلاد المجيد", nameEn: "Coptic Christmas Day", isIslamic: false },
-    { date: new Date(year, 0, 25), nameAr: "ثورة ٢٥ يناير / عيد الشرطة", nameEn: "Revolution Day / Police Day", isIslamic: false },
-    { date: new Date(year, 3, 25), nameAr: "عيد تحرير سيناء", nameEn: "Sinai Liberation Day", isIslamic: false },
-    { date: new Date(year, 4, 1), nameAr: "عيد العمال", nameEn: "Labor Day", isIslamic: false },
-    { date: new Date(year, 5, 30), nameAr: "ثورة ٣٠ يونيو", nameEn: "June 30 Revolution Day", isIslamic: false },
-    { date: new Date(year, 6, 23), nameAr: "عيد الثورة", nameEn: "Revolution Day", isIslamic: false },
-    { date: new Date(year, 9, 6), nameAr: "عيد القوات المسلحة", nameEn: "Armed Forces Day", isIslamic: false },
+    { date: new Date(Date.UTC(year, 0, 7)), nameAr: "عيد الميلاد المجيد", nameEn: "Coptic Christmas Day", isIslamic: false },
+    { date: new Date(Date.UTC(year, 0, 25)), nameAr: "ثورة ٢٥ يناير / عيد الشرطة", nameEn: "Revolution Day / Police Day", isIslamic: false },
+    { date: new Date(Date.UTC(year, 3, 25)), nameAr: "عيد تحرير سيناء", nameEn: "Sinai Liberation Day", isIslamic: false },
+    { date: new Date(Date.UTC(year, 4, 1)), nameAr: "عيد العمال", nameEn: "Labor Day", isIslamic: false },
+    { date: new Date(Date.UTC(year, 5, 30)), nameAr: "ثورة ٣٠ يونيو", nameEn: "June 30 Revolution Day", isIslamic: false },
+    { date: new Date(Date.UTC(year, 6, 23)), nameAr: "عيد الثورة", nameEn: "Revolution Day", isIslamic: false },
+    { date: new Date(Date.UTC(year, 9, 6)), nameAr: "عيد القوات المسلحة", nameEn: "Armed Forces Day", isIslamic: false },
   ];
 
   const shifting = SHIFTING_HOLIDAYS_DB[year] || [];
   const shiftingMapped = shifting.map((h) => ({
-    date: new Date(year, h.month, h.day),
+    date: new Date(Date.UTC(year, h.month, h.day)),
     nameAr: h.nameAr,
     nameEn: h.nameEn,
     isIslamic: h.nameAr !== "شم النسيم",
@@ -277,11 +277,11 @@ export function isEgyptianPublicHoliday(date: Date): { isHoliday: boolean; nameA
 
   const holidays = getPublicHolidays(year);
   for (const h of holidays) {
-    const hDate = h.date;
+    const hZoned = toZonedTime(h.date, "Africa/Cairo");
     if (
-      hDate.getFullYear() === year &&
-      hDate.getMonth() === month &&
-      hDate.getDate() === day
+      hZoned.getFullYear() === year &&
+      hZoned.getMonth() === month &&
+      hZoned.getDate() === day
     ) {
       return { isHoliday: true, nameAr: h.nameAr, nameEn: h.nameEn };
     }

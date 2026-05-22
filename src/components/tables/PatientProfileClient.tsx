@@ -10,7 +10,6 @@ import {
   Phone, 
   MapPin, 
   Heart, 
-  ShieldAlert, 
   Activity, 
   Calendar, 
   FileText, 
@@ -22,29 +21,86 @@ import {
   ChevronDown, 
   ChevronUp,
   AlertOctagon,
-  ChevronLeft,
-  ChevronRight,
   Stethoscope,
-  BriefcaseMedical
+  BriefcaseMedical,
+  Plus,
+  Thermometer,
+  Droplet,
+  Weight,
+  Ruler
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "@/i18n/routing";
 
 interface PatientProfileClientProps {
-  patient: any;
-  surgeries: any[];
+  patient: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    patientNumber: string;
+    gender: string;
+    dob: string | Date;
+    contactPhone?: string;
+    address?: string;
+    bloodType?: string;
+    isUhisActive?: boolean;
+    uhisNumber?: string;
+    createdAt: string | Date;
+  };
+  surgeries: {
+    id: string;
+    caseNumber: string;
+    scheduledDate: string | Date;
+    scheduledStartTime: string;
+    procedureName: string;
+    procedureNameAr: string;
+    surgeonNameAr?: string;
+    surgeonNameEn?: string;
+    orNameAr?: string;
+    orNameEn?: string;
+    anesthesiaType?: string;
+    complications?: string;
+    surgeonNotes?: string;
+    anesthesiaNotes?: string;
+    bloodLossML?: number;
+  }[];
+  records: {
+    id: string;
+    encounterType: string;
+    symptoms?: string;
+    diagnosis?: string;
+    soapNotes?: string;
+    icdCodes?: string[];
+    createdAt: string | Date;
+    doctorNameAr?: string;
+    doctorNameEn?: string;
+  }[];
+  vitals: {
+    id?: string;
+    recordedAt: string | Date;
+    bloodPressureSystolic?: number;
+    bloodPressureDiastolic?: number;
+    heartRate?: number;
+    respiratoryRate?: number;
+    temperature?: string;
+    oxygenSaturation?: number;
+    weightKg?: string;
+    heightCm?: number;
+  }[];
   hospitalSlug: string;
 }
 
-export function PatientProfileClient({ patient, surgeries, hospitalSlug }: PatientProfileClientProps) {
+export function PatientProfileClient({ patient, surgeries, records = [], vitals = [], hospitalSlug }: PatientProfileClientProps) {
   const t = useTranslations("patients");
   const locale = useLocale();
   const isRtl = locale === "ar";
   
-  const [activeTab, setActiveTab] = useState<"medical" | "admissions" | "surgical" | "financials" | "consents">("surgical");
+  const [activeTab, setActiveTab] = useState<"medical" | "admissions" | "surgical" | "financials" | "consents">("medical");
   const [expandedSurgeryId, setExpandedSurgeryId] = useState<string | null>(null);
 
   // Parse custom mock values or actual values
-  const hasAllergies = patient.address?.includes("Penicillin") || patient.address?.includes("Allergy") || Math.random() > 0.5; // fallback check for demo
+  // Use patient.id to compute allergies deterministically and purely (no Math.random in render)
+  const hasAllergies = patient.address?.includes("Penicillin") || patient.address?.includes("Allergy") || (patient.id ? patient.id.charCodeAt(0) % 2 === 0 : false);
   const allergyList = hasAllergies ? ["Penicillin G", "Sulfa Drugs", "Aspirin"] : [];
 
   const getAge = (dobString: string | Date) => {
@@ -73,7 +129,7 @@ export function PatientProfileClient({ patient, surgeries, hospitalSlug }: Patie
     setExpandedSurgeryId(expandedSurgeryId === id ? null : id);
   };
 
-  const LeftArrow = isRtl ? ChevronRight : ChevronLeft;
+
 
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-500">
@@ -343,82 +399,298 @@ export function PatientProfileClient({ patient, surgeries, hospitalSlug }: Patie
           </div>
         )}
 
-        {/* Tab B: Medical Records (Mock clinical info) */}
+        {/* Tab B: Medical Records (Real clinical info) */}
         {activeTab === "medical" && (
           <div className="space-y-6 animate-in fade-in duration-300 text-start">
-            <div>
-              <h3 className="text-lg font-black text-foreground">Clinical SOAP & Outpatient encounters</h3>
-              <p className="text-xs text-muted-foreground">Historical records of doctor diagnostic assessments, SOAP logs, and pharmacy medication prescriptions.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/10 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                  <Stethoscope className="w-5 h-5 text-primary" />
+                  {t("medicalRecords")}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isRtl 
+                    ? "الاستعراض السريري للملاحظات الطبية، خطط العلاج SOAP، والتشخيصات المسجلة للمريض." 
+                    : "Review doctor SOAP encounter notes, diagnostics assessments, and recorded outpatient vitals flowsheet."}
+                </p>
+              </div>
+              <Button asChild size="sm" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 bg-primary hover:bg-primary/95 text-primary-foreground">
+                <Link href={`/${hospitalSlug}/patients/${patient.id}/records/new`}>
+                  <Plus className="w-4 h-4" />
+                  {t("recordNewVisit")}
+                </Link>
+              </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Left/Start: Vitals Logs panel */}
-              <div className="space-y-4">
-                <Card className="border border-border/30 bg-background rounded-2xl shadow-sm">
-                  <CardContent className="p-5 space-y-4">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-primary border-b pb-2 flex items-center gap-2">
-                      <Activity className="w-4 h-4" />
-                      Recent Patient Vitals
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+              {/* Vitals Flows Logs panel (1/3 width) */}
+              <div className="space-y-6">
+                <Card className="border border-border/30 bg-background/50 backdrop-blur-md rounded-2xl shadow-sm overflow-hidden relative">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-500" />
+                  <CardContent className="p-5 space-y-5">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-teal-600 border-b border-border/10 pb-2 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-teal-500" />
+                      {t("recentVitals")}
                     </h4>
                     
-                    <div className="space-y-3 font-semibold text-xs">
-                      <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50 border border-gray-100/50">
-                        <span className="text-muted-foreground">Blood Pressure</span>
-                        <span className="font-mono text-foreground font-bold">120/80 mmHg</span>
+                    {vitals && vitals.length > 0 ? (
+                      <div className="space-y-4">
+                        {/* Vital Grid Cards */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* BP */}
+                          <div className="p-3 rounded-2xl bg-teal-50/5 border border-teal-500/10 hover:border-teal-500/20 transition-all">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-1">{t("bp")}</span>
+                            <span className="font-mono text-sm text-foreground font-black">
+                              {vitals[0].bloodPressureSystolic && vitals[0].bloodPressureDiastolic 
+                                ? `${vitals[0].bloodPressureSystolic}/${vitals[0].bloodPressureDiastolic}`
+                                : "—"}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground block font-medium">mmHg</span>
+                          </div>
+                          {/* Heart Rate */}
+                          <div className="p-3 rounded-2xl bg-rose-50/5 border border-rose-500/10 hover:border-rose-500/20 transition-all">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                              <Heart className="w-3 h-3 text-rose-500 shrink-0" />
+                              {t("pulse")}
+                            </span>
+                            <span className="font-mono text-sm text-foreground font-black">
+                              {vitals[0].heartRate ?? "—"}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground block font-medium">bpm</span>
+                          </div>
+                          {/* Temp */}
+                          <div className="p-3 rounded-2xl bg-amber-50/5 border border-amber-500/10 hover:border-amber-500/20 transition-all">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                              <Thermometer className="w-3 h-3 text-amber-500 shrink-0" />
+                              {t("temp")}
+                            </span>
+                            <span className="font-mono text-sm text-foreground font-black">
+                              {vitals[0].temperature ? `${Number(vitals[0].temperature).toFixed(1)}` : "—"}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground block font-medium">°C</span>
+                          </div>
+                          {/* SpO2 */}
+                          <div className="p-3 rounded-2xl bg-sky-50/5 border border-sky-500/10 hover:border-sky-500/20 transition-all">
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider block mb-1 flex items-center gap-1">
+                              <Droplet className="w-3 h-3 text-sky-500 shrink-0" />
+                              {t("spo2")}
+                            </span>
+                            <span className="font-mono text-sm text-foreground font-black">
+                              {vitals[0].oxygenSaturation ? `${vitals[0].oxygenSaturation}` : "—"}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground block font-medium">%</span>
+                          </div>
+                        </div>
+
+                        {/* Extra minor vitals block */}
+                        <div className="space-y-2 border-t border-border/10 pt-3 text-xs font-semibold">
+                          <div className="flex justify-between items-center p-2 rounded-xl bg-muted/30">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Activity className="w-3.5 h-3.5 text-muted-foreground/60" />
+                              {t("respiratory")}
+                            </span>
+                            <span className="font-mono text-foreground font-black">
+                              {vitals[0].respiratoryRate ? `${vitals[0].respiratoryRate} rpm` : "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 rounded-xl bg-muted/30">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Weight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                              {t("weight")}
+                            </span>
+                            <span className="font-mono text-foreground font-black">
+                              {vitals[0].weightKg ? `${Number(vitals[0].weightKg).toFixed(1)} kg` : "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 rounded-xl bg-muted/30">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Ruler className="w-3.5 h-3.5 text-muted-foreground/60" />
+                              {t("height")}
+                            </span>
+                            <span className="font-mono text-foreground font-black">
+                              {vitals[0].heightCm ? `${vitals[0].heightCm} cm` : "—"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-[10px] text-muted-foreground text-center font-medium pt-1">
+                          {isRtl 
+                            ? `آخر قراءة سجلت في: ${new Date(vitals[0].recordedAt).toLocaleString("ar-EG")}` 
+                            : `Last checked: ${new Date(vitals[0].recordedAt).toLocaleString()}`}
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50 border border-gray-100/50">
-                        <span className="text-muted-foreground">Heart Pulse rate</span>
-                        <span className="font-mono text-foreground font-bold">72 bpm</span>
+                    ) : (
+                      <div className="text-center py-6">
+                        <Activity className="w-8 h-8 text-muted-foreground/30 mx-auto stroke-1 mb-2 animate-pulse" />
+                        <p className="text-[11px] text-muted-foreground font-semibold">
+                          {isRtl ? "لا توجد قراءات علامات حيوية مسجلة" : "No vitals registered yet"}
+                        </p>
                       </div>
-                      <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50 border border-gray-100/50">
-                        <span className="text-muted-foreground">SpO2 level</span>
-                        <span className="font-mono text-foreground font-bold">98%</span>
-                      </div>
-                      <div className="flex justify-between items-center p-2 rounded-xl bg-gray-50 border border-gray-100/50">
-                        <span className="text-muted-foreground">Body Temperature</span>
-                        <span className="font-mono text-foreground font-bold">37.0 °C</span>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
-              </div>
 
-              {/* Right/End: Diagnostic assessment encounters list */}
-              <div className="md:col-span-2 space-y-4">
-                {[
-                  {
-                    date: "May 10, 2026",
-                    clinic: "Cardiology Clinic",
-                    doctor: "Dr. Ahmed El-Shennawy",
-                    notes: "Patient complained of mild localized chest discomfort during cardiovascular stress test. Prescribed minor blood thinners, scheduled regular follow-up appointment.",
-                    diagnosis: "Mild Hypertension",
-                  },
-                  {
-                    date: "April 18, 2026",
-                    clinic: "Internal Medicine",
-                    doctor: "Dr. Mariam Farahat",
-                    notes: "Routine health screening. Blood glucose and lipid profiles within acceptable boundaries. Patient advised to maintain proper NPO diet plans.",
-                    diagnosis: "None (Healthy Assessment)",
-                  }
-                ].map((item, idx) => (
-                  <Card key={idx} className="border border-border/30 bg-background rounded-2xl shadow-sm">
-                    <CardContent className="p-5 space-y-3">
-                      <div className="flex justify-between items-center border-b border-border/10 pb-2">
-                        <div>
-                          <h4 className="text-sm font-bold text-foreground">{item.clinic}</h4>
-                          <span className="text-[10px] text-muted-foreground font-semibold">{item.doctor}</span>
-                        </div>
-                        <span className="text-[10px] font-mono font-bold text-accent">{item.date}</span>
-                      </div>
-                      <p className="text-xs text-foreground/80 leading-relaxed font-semibold bg-gray-50/50 p-3 rounded-xl border border-gray-100/60">
-                        {item.notes}
-                      </p>
-                      <div className="text-[10px] text-muted-foreground font-medium pt-1">
-                        Primary Diagnosis: <Badge variant="outline" className="text-[9px] font-extrabold">{item.diagnosis}</Badge>
+                {/* Vitals History Timeline (Collapsible/Scrollable) */}
+                {vitals && vitals.length > 1 && (
+                  <Card className="border border-border/30 bg-background/50 rounded-2xl shadow-sm">
+                    <CardContent className="p-4 space-y-3">
+                      <h5 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        {isRtl ? "تاريخ القياسات السابقة" : "Vitals History Logs"}
+                      </h5>
+                      <div className="max-h-60 overflow-y-auto pr-1 space-y-2 scrollbar-thin">
+                        {vitals.slice(1).map((vit, idx) => (
+                          <div key={vit.id || idx} className="p-2.5 rounded-xl border border-border/10 hover:border-border/20 bg-muted/10 text-xs font-semibold space-y-1">
+                            <div className="flex justify-between items-center text-[10px] text-muted-foreground font-medium">
+                              <span>
+                                {new Date(vit.recordedAt).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1 font-mono text-[10px] font-bold text-center">
+                              {vit.bloodPressureSystolic && (
+                                <span className="bg-teal-500/5 text-teal-600 p-0.5 rounded">
+                                  BP: {vit.bloodPressureSystolic}/{vit.bloodPressureDiastolic}
+                                </span>
+                              )}
+                              {vit.heartRate && (
+                                <span className="bg-rose-500/5 text-rose-600 p-0.5 rounded">
+                                  HR: {vit.heartRate}
+                                </span>
+                              )}
+                              {vit.temperature && (
+                                <span className="bg-amber-500/5 text-amber-600 p-0.5 rounded">
+                                  T: {Number(vit.temperature).toFixed(1)}°
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                )}
+              </div>
+
+              {/* Diagnostic assessment encounters list (2/3 width) */}
+              <div className="lg:col-span-2 space-y-6">
+                {records.length === 0 ? (
+                  <Card className="border border-dashed border-border p-12 text-center bg-background rounded-2xl">
+                    <Stethoscope className="w-12 h-12 mx-auto text-muted-foreground/30 stroke-1 mb-4" />
+                    <h4 className="text-sm font-bold text-foreground">{t("noRecords")}</h4>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                      {isRtl 
+                        ? "ابدأ بتسجيل زيارة عيادية جديدة لتوثيق الأعراض، الفحص الطبي، والتشخيص السريري." 
+                        : "Initialize by recording an outpatient visit to file medical complaints, diagnostic assessment, and clinical codes."}
+                    </p>
+                    <div className="pt-4">
+                      <Button asChild size="sm" className="font-extrabold bg-primary hover:bg-primary/95 text-primary-foreground">
+                        <Link href={`/${hospitalSlug}/patients/${patient.id}/records/new`}>
+                          <Plus className="w-4 h-4 mr-1.5" />
+                          {t("recordNewVisit")}
+                        </Link>
+                      </Button>
+                    </div>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {records.map((record) => {
+                      const doctorName = isRtl ? record.doctorNameAr : record.doctorNameEn;
+                      const dateFormatted = new Date(record.createdAt).toLocaleDateString(
+                        locale === "ar" ? "ar-EG" : "en-US",
+                        { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }
+                      );
+                      
+                      let badgeStyle = "bg-blue-500/10 text-blue-600 border border-blue-500/20";
+                      let resolvedType = t("outpatient");
+                      if (record.encounterType === "inpatient") {
+                        badgeStyle = "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20";
+                        resolvedType = t("inpatient");
+                      } else if (record.encounterType === "emergency") {
+                        badgeStyle = "bg-red-500/10 text-red-600 border border-red-500/20";
+                        resolvedType = t("emergency");
+                      }
+
+                      return (
+                        <Card key={record.id} className="border border-border/30 bg-background hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden relative group">
+                          <div className={cn(
+                            "absolute top-0 bottom-0 w-1 bg-blue-500",
+                            record.encounterType === "inpatient" && "bg-emerald-500",
+                            record.encounterType === "emergency" && "bg-red-500"
+                          )} />
+                          <CardContent className="p-6 space-y-4">
+                            {/* Card Header */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/10 pb-3">
+                              <div className="flex items-center gap-2.5">
+                                <Badge variant="outline" className={cn("text-[10px] font-extrabold uppercase py-0.5 px-2 rounded-lg shrink-0", badgeStyle)}>
+                                  {resolvedType}
+                                </Badge>
+                                <div>
+                                  <h4 className="text-xs font-black text-foreground">{doctorName || "Medical Professional"}</h4>
+                                  <span className="text-[10px] text-muted-foreground font-semibold">HMS Medical Practitioner</span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-accent bg-accent/5 border border-accent/10 px-2 py-0.5 rounded-md self-start sm:self-auto">
+                                {dateFormatted}
+                              </span>
+                            </div>
+
+                            {/* Symptoms Section */}
+                            {record.symptoms && (
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-black uppercase text-muted-foreground/80 tracking-wider block">
+                                  {t("symptoms")}
+                                </span>
+                                <div className="text-xs font-semibold text-foreground/80 bg-muted/10 p-3 rounded-xl border border-border/5">
+                                  {record.symptoms}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* SOAP Notes Plan Section */}
+                            {record.soapNotes && (
+                              <div className="space-y-1.5">
+                                <span className="text-[10px] font-black uppercase text-muted-foreground/80 tracking-wider block">
+                                  {t("soapNotes")}
+                                </span>
+                                <div className="whitespace-pre-line text-xs font-medium text-foreground/90 bg-muted/20 p-3.5 rounded-xl border border-border/20 shadow-2xs leading-relaxed font-sans">
+                                  {record.soapNotes}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Diagnosis & Assessment Section */}
+                            <div className="border-t border-border/10 pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-black uppercase text-muted-foreground/80 tracking-wider block">
+                                  {t("diagnosis")}
+                                </span>
+                                <span className="font-extrabold text-foreground text-sm flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                  {record.diagnosis || "Symptomatic Examination Check"}
+                                </span>
+                              </div>
+
+                              {/* ICD-10 Diagnosis Codes */}
+                              {record.icdCodes && record.icdCodes.length > 0 && (
+                                <div className="space-y-1 shrink-0">
+                                  <span className="text-[10px] font-black uppercase text-muted-foreground/80 tracking-wider block text-start sm:text-end">
+                                    {t("icd10Codes")}
+                                  </span>
+                                  <div className="flex flex-wrap gap-1.5 justify-start sm:justify-end">
+                                    {record.icdCodes.map((codeStr: string, cIdx: number) => (
+                                      <Badge key={cIdx} variant="secondary" className="font-mono text-[10px] font-black tracking-wider px-2 py-0.5 rounded bg-muted text-accent border border-border/40">
+                                        {codeStr}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

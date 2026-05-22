@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useTransition, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
@@ -140,7 +140,9 @@ export function TelemedicineClientRoom({
 
   // Jitsi Room URL
   const jitsiRoomName = secureRoomName;
-  const jitsiIframeUrl = `https://meet.jit.si/${jitsiRoomName}#config.startWithAudioMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.TOOLBAR_BUTTONS=["microphone","camera","closedcaptions","desktop","fullscreen","factions","hangup","profile","chat","raisehand","videoquality","tileview"]`;
+  const jitsiIframeUrl = useMemo(() => {
+    return `https://meet.jit.si/${jitsiRoomName}#config.startWithAudioMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.TOOLBAR_BUTTONS=["microphone","camera","closedcaptions","desktop","fullscreen","factions","hangup","profile","chat","raisehand","videoquality","tileview"]`;
+  }, [jitsiRoomName]);
 
   // Start call timer
   useEffect(() => {
@@ -371,7 +373,7 @@ ${plan}
                 <span className="text-[10px] text-accent font-black uppercase tracking-wide block">
                   {isRtl ? "الشكوى المقدمة عند الحجز" : "Initial Symptom Description"}
                 </span>
-                <p className="text-slate-300 italic font-medium leading-relaxed">"{appointment.notes}"</p>
+                <p className="text-slate-300 italic font-medium leading-relaxed">{"\""}{appointment.notes}{"\""}</p>
               </div>
             )}
           </div>

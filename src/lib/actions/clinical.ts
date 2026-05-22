@@ -1,9 +1,10 @@
 "use server";
-
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
-import { appointments, medicalRecords, vitalsFlowsheet } from "@db/schema/clinical";
-import { prescriptions, prescriptionItems } from "@db/schema/pharmacy";
+import { appointments, medicalRecords, vitalsFlowsheet, admissions } from "@db/schema/clinical";
+import { prescriptions, prescriptionItems, medications } from "@db/schema/pharmacy";
+import { labTests, labOrders, labOrderItems } from "@db/schema/laboratory";
+import { radiologyOrders } from "@db/schema/radiology";
 import { hospitals, staff } from "@db/schema/core";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
@@ -29,6 +30,44 @@ interface VitalsInput {
   oxygenSaturation?: number;
   weightKg?: string; // Stored as decimal in DB, but passed as string/number
   heightCm?: number;
+}
+
+/**
+ * Performs clinical boundary/range validation on vitals signs inputs to prevent typographical errors.
+ */
+export function validateVitals(vitals?: VitalsInput) {
+  if (!vitals) return { success: true };
+
+  const SystolicRange = { min: 40, max: 260 };
+  const DiastolicRange = { min: 30, max: 150 };
+  const TempRange = { min: 30.0, max: 45.0 };
+  const HeartRateRange = { min: 20, max: 300 };
+  const RespRateRange = { min: 4, max: 80 };
+  const OxygenSatRange = { min: 50, max: 100 };
+
+  if (vitals.bloodPressureSystolic && (vitals.bloodPressureSystolic < SystolicRange.min || vitals.bloodPressureSystolic > SystolicRange.max)) {
+    return { success: false, error: `Invalid systolic blood pressure reading: ${vitals.bloodPressureSystolic} (must be between 40 and 260 mmHg).` };
+  }
+  if (vitals.bloodPressureDiastolic && (vitals.bloodPressureDiastolic < DiastolicRange.min || vitals.bloodPressureDiastolic > DiastolicRange.max)) {
+    return { success: false, error: `Invalid diastolic blood pressure reading: ${vitals.bloodPressureDiastolic} (must be between 30 and 150 mmHg).` };
+  }
+  if (vitals.temperature) {
+    const tVal = parseFloat(vitals.temperature);
+    if (!isNaN(tVal) && (tVal < TempRange.min || tVal > TempRange.max)) {
+      return { success: false, error: `Invalid temperature reading: ${vitals.temperature}°C (must be between 30.0°C and 45.0°C).` };
+    }
+  }
+  if (vitals.heartRate && (vitals.heartRate < HeartRateRange.min || vitals.heartRate > HeartRateRange.max)) {
+    return { success: false, error: `Invalid heart rate reading: ${vitals.heartRate} bpm (must be between 20 and 300 bpm).` };
+  }
+  if (vitals.respiratoryRate && (vitals.respiratoryRate < RespRateRange.min || vitals.respiratoryRate > RespRateRange.max)) {
+    return { success: false, error: `Invalid respiratory rate: ${vitals.respiratoryRate} breaths/min (must be between 4 and 80 breaths/min).` };
+  }
+  if (vitals.oxygenSaturation && (vitals.oxygenSaturation < OxygenSatRange.min || vitals.oxygenSaturation > OxygenSatRange.max)) {
+    return { success: false, error: `Invalid oxygen saturation: ${vitals.oxygenSaturation}% (must be between 50% and 100%).` };
+  }
+
+  return { success: true };
 }
 
 /**
@@ -92,6 +131,12 @@ export async function completeTelemedicineConsultation(
     return { success: false, error: "Forbidden: Only the assigned medical professional or a super administrator can complete this encounter." };
   }
 
+  // 4. Validate vitals bounds to avoid corrupted historical logs
+  const vitalsValidation = validateVitals(vitals);
+  if (!vitalsValidation.success) {
+    return { success: false, error: vitalsValidation.error };
+  }
+
   try {
     const cleanTemperature = vitals?.temperature && !isNaN(parseFloat(vitals.temperature))
       ? parseFloat(vitals.temperature).toFixed(1)
@@ -102,36 +147,47 @@ export async function completeTelemedicineConsultation(
       : null;
 
     return await withTenantContext(hospitalId, async (tx) => {
-      // A. Update appointment status to completed
+      // A. Fetch and row-lock the appointment inside the transaction to prevent concurrent race conditions
+      const [lockedAppointment] = await tx
+        .select()
+        .from(appointments)
+        .where(and(eq(appointments.id, appointmentId), eq(appointments.status, "scheduled")))
+        .for("update");
+
+      if (!lockedAppointment) {
+        throw new AppError(ErrorCode.VALIDATION_ERROR, "Appointment is already completed, cancelled, or processed.");
+      }
+
+      // B. Update appointment status to completed
       await tx
         .update(appointments)
         .set({ status: "completed", updatedAt: new Date() })
         .where(eq(appointments.id, appointmentId));
 
-      // B. Insert the clinical encounter SOAP medical record
+      // C. Insert the clinical encounter SOAP medical record
       const [medRecord] = await tx
         .insert(medicalRecords)
         .values({
           hospitalId,
-          patientId: appointment.patientId,
-          doctorId: appointment.doctorId,
+          patientId: lockedAppointment.patientId,
+          doctorId: lockedAppointment.doctorId,
           encounterType: "outpatient",
-          symptoms: appointment.notes || "",
+          symptoms: lockedAppointment.notes || "",
           diagnosis: diagnosis || "Telemedicine Consult Completed",
           soapNotes,
           isArchived: false,
         })
         .returning();
 
-      // C. If medication prescriptions are supplied, create the prescription and its items
+      // D. If medication prescriptions are supplied, create the prescription and its items
       let prescriptionId: string | undefined = undefined;
       if (prescriptionItemsList && prescriptionItemsList.length > 0) {
         const [newPrescription] = await tx
           .insert(prescriptions)
           .values({
             hospitalId,
-            patientId: appointment.patientId,
-            doctorId: appointment.doctorId,
+            patientId: lockedAppointment.patientId,
+            doctorId: lockedAppointment.doctorId,
             status: "active",
             notes: prescriptionNotes || null,
           })
@@ -157,7 +213,7 @@ export async function completeTelemedicineConsultation(
         await tx.insert(prescriptionItems).values(itemsToInsert);
       }
 
-      // D. If vitals are recorded, save them to the flowsheet
+      // E. If vitals are recorded, save them to the flowsheet
       let vitalsId: string | undefined = undefined;
       const hasVitals = vitals && (
         vitals.bloodPressureSystolic ||
@@ -175,8 +231,8 @@ export async function completeTelemedicineConsultation(
           .insert(vitalsFlowsheet)
           .values({
             hospitalId,
-            patientId: appointment.patientId,
-            recordedBy: appointment.doctorId,
+            patientId: lockedAppointment.patientId,
+            recordedBy: lockedAppointment.doctorId,
             recordedAt: new Date(),
             bloodPressureSystolic: vitals.bloodPressureSystolic || null,
             bloodPressureDiastolic: vitals.bloodPressureDiastolic || null,
@@ -204,12 +260,12 @@ export async function completeTelemedicineConsultation(
 
       const activeLocale = locale || "ar";
       revalidatePath(`/${activeLocale}/${hospitalSlug}/appointments`);
-      revalidatePath(`/${activeLocale}/${hospitalSlug}/patients/${appointment.patientId}`);
+      revalidatePath(`/${activeLocale}/${hospitalSlug}/patients/${lockedAppointment.patientId}`);
 
       // Purge mirrored translation routes to prevent stale UI states across languages
       const altLocale = activeLocale === "ar" ? "en" : "ar";
       revalidatePath(`/${altLocale}/${hospitalSlug}/appointments`);
-      revalidatePath(`/${altLocale}/${hospitalSlug}/patients/${appointment.patientId}`);
+      revalidatePath(`/${altLocale}/${hospitalSlug}/patients/${lockedAppointment.patientId}`);
 
       return { 
         success: true, 
@@ -226,3 +282,384 @@ export async function completeTelemedicineConsultation(
     return { success: false, error: "An unexpected error occurred while completing the consultation." };
   }
 }
+
+interface CreateMedicalRecordInput {
+  patientId: string;
+  encounterType: string;
+  symptoms?: string;
+  diagnosis?: string;
+  soapNotes?: string;
+  icdCodes?: string[];
+  vitals?: VitalsInput;
+  locale?: string;
+  appliedOrderSetId?: string;
+  orderSetMedications?: Array<{
+    nameAr: string;
+    nameEn: string;
+    genericName: string;
+    form: string;
+    strength: string;
+    dosage: string;
+    frequency: string;
+    durationDays: number;
+    instructions: string;
+  }>;
+  orderSetLabs?: Array<{
+    nameAr: string;
+    nameEn: string;
+    loincCode: string;
+    cptCode: string;
+    normalRange: string;
+    unit: string;
+    priority: "routine" | "urgent" | "stat";
+    instructions: string;
+  }>;
+  orderSetRadiology?: Array<{
+    procedureNameAr: string;
+    procedureNameEn: string;
+    cptCode: string;
+    priority: "routine" | "urgent" | "stat";
+    clinicalNotes: string;
+  }>;
+}
+
+/**
+ * Creates a standard clinical encounter (SOAP note) and optional vitals entries.
+ * Scoped to active tenant hospital from session.
+ */
+export async function createMedicalRecord(data: CreateMedicalRecordInput) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: "Unauthorized: Please log in." };
+  }
+
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!hospitalId) {
+    return { success: false, error: "No active hospital found in session." };
+  }
+
+  // 1. Verify medical records write permission for the active hospital
+  const isAuthorized = hasPermission(session.user as unknown as User, "medical_records:create", {
+    hospitalId,
+  });
+
+  if (!isAuthorized) {
+    return { success: false, error: "Forbidden: You do not have permission to create medical records." };
+  }
+
+  // 2. Resolve Doctor (Staff) ID of the current user for this hospital
+  const doctor = await db
+    .select()
+    .from(staff)
+    .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+    .limit(1)
+    .then((res) => res[0]);
+
+  if (!doctor) {
+    return { success: false, error: "Clinical Profile Error: Doctor profile not found for current user." };
+  }
+
+  // 3. Validate vitals bounds to avoid corrupted historical logs
+  const vitalsValidation = validateVitals(data.vitals);
+  if (!vitalsValidation.success) {
+    return { success: false, error: vitalsValidation.error };
+  }
+
+  try {
+    const cleanTemperature = data.vitals?.temperature && !isNaN(parseFloat(data.vitals.temperature))
+      ? parseFloat(data.vitals.temperature).toFixed(1)
+      : null;
+
+    const cleanWeight = data.vitals?.weightKg && !isNaN(parseFloat(data.vitals.weightKg))
+      ? parseFloat(data.vitals.weightKg).toFixed(1)
+      : null;
+
+    return await withTenantContext(hospitalId, async (tx) => {
+      // A. Create the medical record
+      const [medRecord] = await tx
+        .insert(medicalRecords)
+        .values({
+          hospitalId,
+          patientId: data.patientId,
+          doctorId: doctor.id,
+          encounterType: data.encounterType,
+          symptoms: data.symptoms || null,
+          diagnosis: data.diagnosis || null,
+          soapNotes: data.soapNotes || null,
+          icdCodes: data.icdCodes || null,
+          isArchived: false,
+        })
+        .returning();
+
+      if (!medRecord) {
+        throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create medical record.");
+      }
+
+      // B. Create vitals if provided and contain at least one value
+      let vitalsId: string | undefined = undefined;
+      const hasVitals = data.vitals && (
+        data.vitals.bloodPressureSystolic ||
+        data.vitals.bloodPressureDiastolic ||
+        data.vitals.heartRate ||
+        data.vitals.respiratoryRate ||
+        data.vitals.temperature ||
+        data.vitals.oxygenSaturation ||
+        data.vitals.weightKg ||
+        data.vitals.heightCm
+      );
+
+      if (hasVitals && data.vitals) {
+        const [newVitals] = await tx
+          .insert(vitalsFlowsheet)
+          .values({
+            hospitalId,
+            patientId: data.patientId,
+            recordedBy: doctor.id,
+            recordedAt: new Date(),
+            bloodPressureSystolic: data.vitals.bloodPressureSystolic || null,
+            bloodPressureDiastolic: data.vitals.bloodPressureDiastolic || null,
+            heartRate: data.vitals.heartRate || null,
+            respiratoryRate: data.vitals.respiratoryRate || null,
+            temperature: cleanTemperature,
+            oxygenSaturation: data.vitals.oxygenSaturation || null,
+            weightKg: cleanWeight,
+            heightCm: data.vitals.heightCm || null,
+          })
+          .returning();
+
+        if (newVitals) {
+          vitalsId = newVitals.id;
+        }
+      }
+
+      // C. Active Admission Resolution
+      const activeAdmission = await tx
+        .select({ id: admissions.id })
+        .from(admissions)
+        .where(
+          and(
+            eq(admissions.patientId, data.patientId),
+            eq(admissions.hospitalId, hospitalId),
+            eq(admissions.status, "active")
+          )
+        )
+        .limit(1)
+        .then((res) => res[0]);
+
+      const admissionId = activeAdmission?.id || null;
+
+      // D. Process Order Set Medications
+      let prescriptionId: string | undefined = undefined;
+      if (data.orderSetMedications && data.orderSetMedications.length > 0) {
+        const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
+
+        for (const item of data.orderSetMedications) {
+          let [med] = await tx
+            .select()
+            .from(medications)
+            .where(
+              and(
+                eq(medications.hospitalId, hospitalId),
+                eq(medications.nameEn, item.nameEn)
+              )
+            )
+            .limit(1);
+
+          if (!med) {
+            // Self-seed missing medication in hospital catalog
+            [med] = await tx
+              .insert(medications)
+              .values({
+                hospitalId,
+                nameAr: item.nameAr,
+                nameEn: item.nameEn,
+                genericName: item.genericName,
+                form: item.form,
+                strength: item.strength,
+                barcode: `AUTO-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+                stockCount: 100,
+                minStockLevel: 10,
+                price: "50.00",
+                isActive: true,
+              })
+              .returning();
+          }
+
+          if (med) {
+            resolvedMedicationItems.push({
+              medicationId: med.id,
+              dosage: item.dosage,
+              frequency: item.frequency,
+              durationDays: item.durationDays,
+              instructions: item.instructions,
+            });
+          }
+        }
+
+        if (resolvedMedicationItems.length > 0) {
+          const [presc] = await tx
+            .insert(prescriptions)
+            .values({
+              hospitalId,
+              patientId: data.patientId,
+              doctorId: doctor.id,
+              admissionId,
+              status: "active",
+              notes: data.appliedOrderSetId ? `Applied via protocol: ${data.appliedOrderSetId}` : "Applied via Order Set",
+              hasDdiOverride: false,
+            })
+            .returning();
+
+          if (presc) {
+            prescriptionId = presc.id;
+            for (const rxItem of resolvedMedicationItems) {
+              await tx.insert(prescriptionItems).values({
+                hospitalId,
+                prescriptionId: presc.id,
+                medicationId: rxItem.medicationId,
+                dosage: rxItem.dosage,
+                frequency: rxItem.frequency,
+                durationDays: rxItem.durationDays,
+                instructions: rxItem.instructions,
+                dispensedCount: 0,
+                status: "pending",
+              });
+            }
+          }
+        }
+      }
+
+      // E. Process Order Set Labs
+      let labOrderId: string | undefined = undefined;
+      if (data.orderSetLabs && data.orderSetLabs.length > 0) {
+        const resolvedLabItems: string[] = [];
+
+        for (const item of data.orderSetLabs) {
+          let [test] = await tx
+            .select()
+            .from(labTests)
+            .where(
+              and(
+                eq(labTests.hospitalId, hospitalId),
+                eq(labTests.nameEn, item.nameEn)
+              )
+            )
+            .limit(1);
+
+          if (!test) {
+            // Self-seed missing lab test in hospital catalog
+            [test] = await tx
+              .insert(labTests)
+              .values({
+                hospitalId,
+                nameAr: item.nameAr,
+                nameEn: item.nameEn,
+                loincCode: item.loincCode,
+                cptCode: item.cptCode,
+                normalRange: item.normalRange,
+                unit: item.unit,
+                price: "150.00",
+                isActive: true,
+              })
+              .returning();
+          }
+
+          if (test) {
+            resolvedLabItems.push(test.id);
+          }
+        }
+
+        if (resolvedLabItems.length > 0) {
+          let orderPriority: "routine" | "urgent" | "stat" = "routine";
+          if (data.orderSetLabs.some((l) => l.priority === "stat")) {
+            orderPriority = "stat";
+          } else if (data.orderSetLabs.some((l) => l.priority === "urgent")) {
+            orderPriority = "urgent";
+          }
+
+          const [labOrd] = await tx
+            .insert(labOrders)
+            .values({
+              hospitalId,
+              patientId: data.patientId,
+              doctorId: doctor.id,
+              admissionId,
+              priority: orderPriority,
+              status: "pending",
+              clinicalNotes: data.appliedOrderSetId ? `Applied via protocol: ${data.appliedOrderSetId}` : "Applied via Order Set",
+            })
+            .returning();
+
+          if (labOrd) {
+            labOrderId = labOrd.id;
+            for (const testId of resolvedLabItems) {
+              await tx.insert(labOrderItems).values({
+                hospitalId,
+                labOrderId: labOrd.id,
+                labTestId: testId,
+                status: "pending",
+                isCritical: false,
+              });
+            }
+          }
+        }
+      }
+
+      // F. Process Order Set Radiology
+      const createdRadiologyOrderIds: string[] = [];
+      if (data.orderSetRadiology && data.orderSetRadiology.length > 0) {
+        for (const item of data.orderSetRadiology) {
+          const [radOrd] = await tx
+            .insert(radiologyOrders)
+            .values({
+              hospitalId,
+              patientId: data.patientId,
+              doctorId: doctor.id,
+              admissionId,
+              procedureNameAr: item.procedureNameAr,
+              procedureNameEn: item.procedureNameEn,
+              cptCode: item.cptCode,
+              priority: item.priority,
+              status: "pending",
+              clinicalNotes: item.clinicalNotes || (data.appliedOrderSetId ? `Applied via protocol: ${data.appliedOrderSetId}` : "Applied via Order Set"),
+              price: "350.00",
+            })
+            .returning();
+          if (radOrd) {
+            createdRadiologyOrderIds.push(radOrd.id);
+          }
+        }
+      }
+
+      // G. Revalidate cache paths for the patient file in both languages
+      const [hospital] = await tx
+        .select({ slug: hospitals.slug })
+        .from(hospitals)
+        .where(eq(hospitals.id, hospitalId))
+        .limit(1);
+      const hospitalSlug = hospital?.slug || hospitalId;
+
+      const activeLocale = data.locale || "ar";
+      revalidatePath(`/${activeLocale}/${hospitalSlug}/patients/${data.patientId}`);
+
+      const altLocale = activeLocale === "ar" ? "en" : "ar";
+      revalidatePath(`/${altLocale}/${hospitalSlug}/patients/${data.patientId}`);
+
+      return {
+        success: true,
+        medicalRecordId: medRecord.id,
+        vitalsId,
+        prescriptionId,
+        labOrderId,
+        radiologyOrderIds: createdRadiologyOrderIds.length > 0 ? createdRadiologyOrderIds : undefined,
+      };
+    });
+  } catch (error) {
+    console.error("[CLINICAL_ACTION] createMedicalRecord failed:", error);
+    if (error instanceof AppError) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: "An unexpected error occurred while saving the clinical record." };
+  }
+}
+

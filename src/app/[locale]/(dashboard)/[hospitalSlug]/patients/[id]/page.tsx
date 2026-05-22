@@ -3,6 +3,7 @@ import { withTenantContext } from "@/lib/db/tenant";
 import { patients } from "@db/schema/patients";
 import { hospitals, staff, operatingRooms } from "@db/schema/core";
 import { surgicalCases } from "@db/schema/surgical";
+import { medicalRecords, vitalsFlowsheet } from "@db/schema/clinical";
 import { and, eq, desc, aliasedTable } from "drizzle-orm";
 import { getHospitalBySlug } from "@/lib/db/cache";
 import { notFound, redirect } from "next/navigation";
@@ -117,12 +118,98 @@ export default async function PatientProfilePage({
       .where(and(eq(surgicalCases.patientId, id), eq(surgicalCases.hospitalId, hospitalId)))
       .orderBy(desc(surgicalCases.scheduledDate));
 
-    return { patient, patientSurgeries };
+    // 3. Fetch real clinical SOAP records
+    const recordDoctor = aliasedTable(staff, "recordDoctor");
+    const patientRecords = await tx
+      .select({
+        id: medicalRecords.id,
+        encounterType: medicalRecords.encounterType,
+        symptoms: medicalRecords.symptoms,
+        diagnosis: medicalRecords.diagnosis,
+        soapNotes: medicalRecords.soapNotes,
+        icdCodes: medicalRecords.icdCodes,
+        createdAt: medicalRecords.createdAt,
+        doctorNameAr: recordDoctor.nameAr,
+        doctorNameEn: recordDoctor.nameEn,
+      })
+      .from(medicalRecords)
+      .leftJoin(recordDoctor, eq(medicalRecords.doctorId, recordDoctor.id))
+      .where(and(eq(medicalRecords.patientId, id), eq(medicalRecords.hospitalId, hospitalId)))
+      .orderBy(desc(medicalRecords.createdAt));
+
+    // 4. Fetch recent vitals flowsheet history
+    const patientVitals = await tx
+      .select()
+      .from(vitalsFlowsheet)
+      .where(and(eq(vitalsFlowsheet.patientId, id), eq(vitalsFlowsheet.hospitalId, hospitalId)))
+      .orderBy(desc(vitalsFlowsheet.recordedAt))
+      .limit(20);
+
+    return { patient, patientSurgeries, patientRecords, patientVitals };
   });
 
   if (!data) {
     notFound();
   }
+
+  // Map database nulls into undefined/optional types for PatientProfileClientProps
+  const mappedPatient = {
+    id: data.patient.id,
+    nameAr: data.patient.nameAr,
+    nameEn: data.patient.nameEn,
+    patientNumber: data.patient.patientNumber,
+    gender: data.patient.gender || "male",
+    dob: data.patient.dob,
+    contactPhone: data.patient.contactPhone || undefined,
+    address: data.patient.address || undefined,
+    bloodType: undefined,
+    isUhisActive: data.patient.isUhisActive ?? false,
+    uhisNumber: data.patient.uhisNumber || undefined,
+    createdAt: data.patient.createdAt,
+  };
+
+  const mappedSurgeries = data.patientSurgeries.map((s) => ({
+    id: s.id,
+    caseNumber: s.caseNumber,
+    scheduledDate: s.scheduledDate,
+    scheduledStartTime: s.scheduledStartTime,
+    procedureName: s.procedureName,
+    procedureNameAr: s.procedureNameAr,
+    surgeonNameAr: s.surgeonNameAr || undefined,
+    surgeonNameEn: s.surgeonNameEn || undefined,
+    orNameAr: s.orNameAr || undefined,
+    orNameEn: s.orNameEn || undefined,
+    anesthesiaType: s.anesthesiaType || undefined,
+    complications: s.complications || undefined,
+    surgeonNotes: s.surgeonNotes || undefined,
+    anesthesiaNotes: s.anesthesiaNotes || undefined,
+    bloodLossML: s.bloodLossML || undefined,
+  }));
+
+  const mappedRecords = data.patientRecords.map((r) => ({
+    id: r.id,
+    encounterType: r.encounterType,
+    symptoms: r.symptoms || undefined,
+    diagnosis: r.diagnosis || undefined,
+    soapNotes: r.soapNotes || undefined,
+    icdCodes: r.icdCodes || undefined,
+    createdAt: r.createdAt,
+    doctorNameAr: r.doctorNameAr || undefined,
+    doctorNameEn: r.doctorNameEn || undefined,
+  }));
+
+  const mappedVitals = data.patientVitals.map((v) => ({
+    id: v.id,
+    recordedAt: v.recordedAt,
+    bloodPressureSystolic: v.bloodPressureSystolic || undefined,
+    bloodPressureDiastolic: v.bloodPressureDiastolic || undefined,
+    heartRate: v.heartRate || undefined,
+    respiratoryRate: v.respiratoryRate || undefined,
+    temperature: v.temperature || undefined,
+    oxygenSaturation: v.oxygenSaturation || undefined,
+    weightKg: v.weightKg || undefined,
+    heightCm: v.heightCm || undefined,
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50/10 py-8 px-4 sm:px-6 lg:px-8">
@@ -139,8 +226,10 @@ export default async function PatientProfilePage({
         </header>
 
         <PatientProfileClient 
-          patient={data.patient} 
-          surgeries={data.patientSurgeries} 
+          patient={mappedPatient} 
+          surgeries={mappedSurgeries} 
+          records={mappedRecords}
+          vitals={mappedVitals}
           hospitalSlug={hospitalSlug} 
         />
       </div>
