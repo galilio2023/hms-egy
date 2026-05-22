@@ -75,7 +75,7 @@ export default async function SuperAdminPage({
   const calculatedMRR = Number(mrrResult?.mrr || 0);
 
   // Convert MRR to Arabic words (Tafgeet)
-  const mrrWordsAr = await amountToArabicWords(calculatedMRR);
+  const mrrWordsAr = amountToArabicWords(calculatedMRR);
   
   // Format English words representation
   const mrrWordsEn = `${new Intl.NumberFormat("en-US", { style: "currency", currency: "EGP" }).format(calculatedMRR)} Monthly Recurring Revenue`;

@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { tafqeet } from "@/lib/utils/tafqeet";
 import { 
   Video, 
   Clock, 
@@ -36,7 +35,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Fuse from "fuse.js";
-import { safeParseInt } from "@/lib/utils/formatting";
+import { amountToArabicWords, safeParseInt } from "@/lib/utils/formatting";
 import { completeTelemedicineConsultation } from "@/lib/actions/clinical";
 import { ORDER_SETS } from "@/lib/clinical/order-sets";
 
@@ -265,24 +264,8 @@ export function TelemedicineClientRoom({
   // Calculate prescription estimated cost
   const getPrescriptionCost = () => {
     const rawTotal = prescriptionItems.reduce((acc, cur) => acc + cur.price, 0);
-    // Round to 2 decimal places to prevent float precision errors in financial calculations (e.g. 19.99 + 10.10)
     const total = Math.round(rawTotal * 100) / 100;
-    
-    // Separate pounds and piastres for precise Tafqeet
-    const pounds = Math.floor(total);
-    const piastres = Math.round((total - pounds) * 100);
-    
-    let textAr = "";
-    if (pounds > 0) {
-      textAr = tafqeet(pounds);
-      if (piastres > 0) {
-        textAr = textAr.replace(" فقط لا غير", "");
-        textAr += ` و${piastres} قرشاً فقط لا غير`;
-      }
-    } else if (piastres > 0) {
-      textAr = `${piastres} قرشاً فقط لا غير`;
-    }
-    
+    const textAr = amountToArabicWords(total);
     return { total, textAr };
   };
 
@@ -917,7 +900,7 @@ ${plan}
                         <CardContent className="p-4 space-y-2 text-xs">
                           <div className="flex justify-between font-bold text-slate-400">
                             <span>{isRtl ? "رسوم الأدوية المقدرة بالصيدلية" : "Estimated Rx Price at Dispensary"}</span>
-                            <span className="font-mono text-slate-100">{costInfo.total}.00 EGP</span>
+                            <span className="font-mono text-slate-100">{costInfo.total.toFixed(2)} EGP</span>
                           </div>
                           {costInfo.total > 0 && (
                             isRtl ? (
@@ -926,7 +909,7 @@ ${plan}
                               </div>
                             ) : (
                               <div className="text-[10px] text-slate-500 font-bold text-start">
-                                Equivalent to: {costInfo.total}.00 Egyptian Pounds
+                                Equivalent to: {costInfo.total.toFixed(2)} Egyptian Pounds
                               </div>
                             )
                           )}

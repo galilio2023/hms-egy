@@ -310,13 +310,14 @@ export async function searchPatientsAction(query: string) {
     return { success: false, error: "System Error: Hospital session context missing." };
   }
 
-  const trimmedQuery = query?.trim() || "";
+  // Normalize the incoming query for Arabic text consistency
+  const normalizedQuery = normalizeArabic(query?.trim() || "");
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
       let results;
 
-      if (!trimmedQuery) {
+      if (!normalizedQuery) {
         // If query is empty, return latest 20 patients
         results = await tx
           .select()
@@ -333,12 +334,12 @@ export async function searchPatientsAction(query: string) {
             and(
               eq(patients.hospitalId, hospitalId),
               or(
-                ilike(patients.patientNumber, `%${trimmedQuery}%`),
-                ilike(patients.nameAr, `%${trimmedQuery}%`),
-                ilike(patients.nameEn, `%${trimmedQuery}%`),
-                ilike(patients.contactPhone, `%${trimmedQuery}%`),
-                ilike(patients.nationalId || "", `%${trimmedQuery}%`),
-                ilike(patients.passportNumber || "", `%${trimmedQuery}%`)
+                ilike(patients.patientNumber, `%${normalizedQuery}%`),
+                ilike(patients.nameAr, `%${normalizedQuery}%`),
+                ilike(patients.nameEn, `%${normalizedQuery}%`),
+                ilike(patients.contactPhone, `%${normalizedQuery}%`),
+                ilike(patients.nationalId || "", `%${normalizedQuery}%`),
+                ilike(patients.passportNumber || "", `%${normalizedQuery}%`)
               )
             )
           )
