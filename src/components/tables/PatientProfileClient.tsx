@@ -41,7 +41,6 @@ import { Link } from "@/i18n/routing";
 import { createReferralAction, updateReferralStatusAction } from "@/lib/actions/referrals";
 import { createCertificateAction } from "@/lib/actions/certificates";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -1253,9 +1252,10 @@ export function PatientProfileClient({
             <DialogContent className="px-6 py-4 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground/80 block">{isRtl ? "القسم المستهدف *" : "Target Department *"}</label>
-                <Select 
+                <select 
                   value={referralTargetDept} 
                   onChange={(e) => setReferralTargetDept(e.target.value)}
+                  className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
                   required
                 >
                   <option value="">{isRtl ? "-- اختر القسم --" : "-- Select Department --"}</option>
@@ -1269,9 +1269,10 @@ export function PatientProfileClient({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground/80 block">{isRtl ? "الطبيب المستهدف (اختياري)" : "Target Doctor (Optional)"}</label>
-                <Select 
+                <select 
                   value={referralTargetDoc} 
                   onChange={(e) => setReferralTargetDoc(e.target.value)}
+                  className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
                 >
                   <option value="">{isRtl ? "-- اختر الطبيب (اختياري) --" : "-- Select Doctor (Optional) --"}</option>
                   {doctors.map((doc) => (
@@ -1284,9 +1285,10 @@ export function PatientProfileClient({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground/80 block">{isRtl ? "درجة الاستعجال *" : "Urgency Level *"}</label>
-                <Select 
+                <select 
                   value={referralUrgency} 
                   onChange={(e) => setReferralUrgency(e.target.value as any)}
+                  className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
                   required
                 >
                   <option value="routine">{isRtl ? "روتينية (عادية)" : "Routine"}</option>
@@ -1362,9 +1364,10 @@ export function PatientProfileClient({
             <DialogContent className="px-6 py-4 space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground/80 block">{isRtl ? "نوع الشهادة *" : "Certificate Type *"}</label>
-                <Select 
+                <select 
                   value={certificateType} 
                   onChange={(e) => setCertificateType(e.target.value as any)}
+                  className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
                   required
                 >
                   <option value="sick_leave">{isRtl ? "إجازة مرضية" : "Sick Leave"}</option>

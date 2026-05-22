@@ -46,10 +46,10 @@ export async function validateVitals(vitals?: VitalsInput) {
   const RespRateRange = { min: 4, max: 80 };
   const OxygenSatRange = { min: 50, max: 100 };
 
-  if (vitals.bloodPressureSystolic !== undefined && vitals.bloodPressureSystolic !== 0 && (vitals.bloodPressureSystolic < SystolicRange.min || vitals.bloodPressureSystolic > SystolicRange.max)) {
+  if (vitals.bloodPressureSystolic && (vitals.bloodPressureSystolic < SystolicRange.min || vitals.bloodPressureSystolic > SystolicRange.max)) {
     return { success: false, error: `Invalid systolic blood pressure reading: ${vitals.bloodPressureSystolic} (must be between 40 and 260 mmHg).` };
   }
-  if (vitals.bloodPressureDiastolic !== undefined && vitals.bloodPressureDiastolic !== 0 && (vitals.bloodPressureDiastolic < DiastolicRange.min || vitals.bloodPressureDiastolic > DiastolicRange.max)) {
+  if (vitals.bloodPressureDiastolic && (vitals.bloodPressureDiastolic < DiastolicRange.min || vitals.bloodPressureDiastolic > DiastolicRange.max)) {
     return { success: false, error: `Invalid diastolic blood pressure reading: ${vitals.bloodPressureDiastolic} (must be between 30 and 150 mmHg).` };
   }
   if (vitals.temperature) {
@@ -58,13 +58,13 @@ export async function validateVitals(vitals?: VitalsInput) {
       return { success: false, error: `Invalid temperature reading: ${vitals.temperature}°C (must be between 30.0°C and 45.0°C).` };
     }
   }
-  if (vitals.heartRate !== undefined && vitals.heartRate !== 0 && (vitals.heartRate < HeartRateRange.min || vitals.heartRate > HeartRateRange.max)) {
+  if (vitals.heartRate && (vitals.heartRate < HeartRateRange.min || vitals.heartRate > HeartRateRange.max)) {
     return { success: false, error: `Invalid heart rate reading: ${vitals.heartRate} bpm (must be between 20 and 300 bpm).` };
   }
-  if (vitals.respiratoryRate !== undefined && vitals.respiratoryRate !== 0 && (vitals.respiratoryRate < RespRateRange.min || vitals.respiratoryRate > RespRateRange.max)) {
+  if (vitals.respiratoryRate && (vitals.respiratoryRate < RespRateRange.min || vitals.respiratoryRate > RespRateRange.max)) {
     return { success: false, error: `Invalid respiratory rate: ${vitals.respiratoryRate} breaths/min (must be between 4 and 80 breaths/min).` };
   }
-  if (vitals.oxygenSaturation !== undefined && vitals.oxygenSaturation !== 0 && (vitals.oxygenSaturation < OxygenSatRange.min || vitals.oxygenSaturation > OxygenSatRange.max)) {
+  if (vitals.oxygenSaturation && (vitals.oxygenSaturation < OxygenSatRange.min || vitals.oxygenSaturation > OxygenSatRange.max)) {
     return { success: false, error: `Invalid oxygen saturation: ${vitals.oxygenSaturation}% (must be between 50% and 100%).` };
   }
 

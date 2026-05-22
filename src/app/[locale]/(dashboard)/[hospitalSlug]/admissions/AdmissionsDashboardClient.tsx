@@ -38,7 +38,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Drawer,
@@ -151,54 +150,6 @@ export default function AdmissionsDashboardClient({
   
   // Selection states
   const [selectedBed, setSelectedBed] = useState<BedDataRow | null>(null);
-  
-  // Track client-side added vitals to merge with server data without mirror-state anti-patterns
-  const [clientAddedVitals, setClientAddedVitals] = useState<Record<string, VitalRecord[]>>({});
-
-  // Compute the combined flowsheet dynamically in-render
-  const combinedVitalsHistory = useMemo(() => {
-    const result: Record<string, VitalRecord[]> = { ...vitalsHistory };
-    
-    Object.keys(clientAddedVitals).forEach((patientId) => {
-      const allRecords = [...(clientAddedVitals[patientId] || []), ...(result[patientId] || [])];
-      
-      // Deduplicate on-the-fly by record ID to prevent double-rendering after router.refresh()
-      result[patientId] = Array.from(
-        new Map(allRecords.map(item => [item.id, item])).values()
-      ).sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
-    });
-    
-    return result;
-  }, [vitalsHistory, clientAddedVitals]);
-
-  // Synchronize client-side added vitals with server data to clear stale local state after successful revalidation
-  useEffect(() => {
-    if (Object.keys(clientAddedVitals).length === 0) return;
-
-    setClientAddedVitals(prev => {
-      const newState = { ...prev };
-      let changed = false;
-
-      Object.keys(newState).forEach(patientId => {
-        const serverRecords = vitalsHistory[patientId] || [];
-        const serverIds = new Set(serverRecords.map(r => r.id));
-        
-        // Filter out client-side records that are now present in the server's history
-        const remainingClientRecords = newState[patientId].filter(r => !serverIds.has(r.id));
-        
-        if (remainingClientRecords.length !== newState[patientId].length) {
-          if (remainingClientRecords.length === 0) {
-            delete newState[patientId];
-          } else {
-            newState[patientId] = remainingClientRecords;
-          }
-          changed = true;
-        }
-      });
-
-      return changed ? newState : prev;
-    });
-  }, [vitalsHistory]); // Trigger sync whenever vitalsHistory (from server) changes
   
   // New Admission Dialog fields
   const [patientQuery, setPatientQuery] = useState("");
@@ -371,30 +322,8 @@ export default function AdmissionsDashboardClient({
           weightKg: "",
           heightCm: "",
         });
-        // Reload data
+        // Live updates via server action revalidation
         router.refresh();
-        // Update selectedBed reference to update the flowsheet panel on the fly
-        if (selectedBed.patientId) {
-          const recordToAppend: VitalRecord = {
-            id: (res as { vitalId?: string }).vitalId || Math.random().toString(),
-            patientId: selectedBed.patientId,
-            recordedAt: new Date(),
-            bloodPressureSystolic: safeParseInt(vitalsInput.bpSystolic) ?? null,
-            bloodPressureDiastolic: safeParseInt(vitalsInput.bpDiastolic) ?? null,
-            heartRate: safeParseInt(vitalsInput.heartRate) ?? null,
-            respiratoryRate: safeParseInt(vitalsInput.respiratoryRate) ?? null,
-            temperature: vitalsInput.temperature || null,
-            oxygenSaturation: safeParseInt(vitalsInput.oxygenSaturation) ?? null,
-            weightKg: vitalsInput.weightKg || null,
-            heightCm: safeParseInt(vitalsInput.heightCm) ?? null,
-            recorderNameAr: isRtl ? "الطاقم الطبي الحالي" : "Current Medical Staff",
-            recorderNameEn: "Current Medical Staff",
-          };
-          setClientAddedVitals(prev => ({
-            ...prev,
-            [selectedBed.patientId!]: [recordToAppend, ...(prev[selectedBed.patientId!] || [])]
-          }));
-        }
       } else {
         toast.error((res as { error?: string }).error || "Unknown error occurred.");
       }
@@ -775,7 +704,11 @@ export default function AdmissionsDashboardClient({
                 </Badge>
               </div>
             ) : (
-              <Select value={targetBedId} onChange={(e) => setTargetBedId(e.target.value)}>
+              <select 
+                value={targetBedId} 
+                onChange={(e) => setTargetBedId(e.target.value)}
+                className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
+              >
                 <option value="" disabled className="text-xs text-muted-foreground bg-background">
                   {isRtl ? "اختر سريراً متاحاً..." : "Select an available bed..."}
                 </option>
@@ -786,7 +719,7 @@ export default function AdmissionsDashboardClient({
                       : `Room ${b.roomNumber} · Bed ${b.bedNumber} (${b.roomType})`}
                   </option>
                 ))}
-              </Select>
+              </select>
             )}
           </div>
 
@@ -862,7 +795,11 @@ export default function AdmissionsDashboardClient({
           {/* Admitting Physician */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-foreground/90">{t("selectDoctor")}</label>
-            <Select value={admittingDoctorId} onChange={(e) => setAdmittingDoctorId(e.target.value)}>
+            <select 
+              value={admittingDoctorId} 
+              onChange={(e) => setAdmittingDoctorId(e.target.value)}
+              className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
+            >
               <option value="" disabled className="text-xs text-muted-foreground bg-background">
                 {isRtl ? "اختر الطبيب المسؤول..." : "Select admitting physician..."}
               </option>
@@ -1100,7 +1037,7 @@ export default function AdmissionsDashboardClient({
               )}
 
               {/* Vitals History Flowshet Timeline Log */}
-              {selectedBed && selectedBed.patientId && combinedVitalsHistory[selectedBed.patientId]?.length > 0 ? (
+              {selectedBed && selectedBed.patientId && vitalsHistory[selectedBed.patientId]?.length > 0 ? (
                 <div className="border border-border/60 rounded-2xl overflow-hidden bg-card shadow-sm overflow-x-auto text-start">
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50 border-b border-border/40 font-bold text-muted-foreground">
@@ -1116,7 +1053,7 @@ export default function AdmissionsDashboardClient({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/40">
-                      {combinedVitalsHistory[selectedBed.patientId].map((v) => (
+                      {vitalsHistory[selectedBed.patientId].map((v) => (
                         <tr key={v.id} className="hover:bg-muted/40 transition-colors">
                           <td className="p-3 font-semibold text-muted-foreground whitespace-nowrap">
                             {formatDate(v.recordedAt)}
@@ -1198,9 +1135,10 @@ export default function AdmissionsDashboardClient({
                   {/* Select Discharge Condition */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-foreground/90">{t("dischargeCondition")}</label>
-                    <Select 
+                    <select 
                       value={dischargeCondition} 
                       onChange={(e) => setDischargeCondition(e.target.value as "stable" | "improved" | "referred" | "deceased")}
+                      className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
                     >
                       <option value="stable" className="text-xs bg-background text-foreground">{t("conditionStable")}</option>
                       <option value="improved" className="text-xs bg-background text-foreground">{t("conditionImproved")}</option>

@@ -11,7 +11,6 @@ import { GOVERNORATES } from "@/lib/utils/egypt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
 import { AlertCircle, Building2, LayoutGrid, UserCog, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -177,7 +176,10 @@ export function HospitalOnboardingForm() {
                 <label className="text-xs font-black uppercase tracking-tight text-muted-foreground">
                   {t("governorate")}
                 </label>
-                <Select {...register("governorate")} className="h-11 font-bold">
+                <select 
+                  {...register("governorate")} 
+                  className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
+                >
                   <option value="" disabled>{t("placeholders.selectGov")}</option>
                   {Object.values(GOVERNORATES).map((gov) => (
                     <option key={gov.code} value={gov.code}>
@@ -192,7 +194,11 @@ export function HospitalOnboardingForm() {
                 <label className="text-xs font-black uppercase tracking-tight text-muted-foreground">
                   {t("type")}
                 </label>
-                <Select {...register("type")} className="h-11 font-bold" defaultValue="private">
+                <select 
+                  {...register("type")} 
+                  className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
+                  defaultValue="private"
+                >
                   {(["private", "government", "military", "ngo"] as const).map((type) => (
                     <option key={type} value={type}>
                       {t(`types.${type}`)}
