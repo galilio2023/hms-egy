@@ -254,30 +254,28 @@ export async function completeTelemedicineConsultation(
         }
       }
 
-      // Fetch hospital slug for path revalidation
-      const [hospital] = await tx
-        .select({ slug: hospitals.slug })
-        .from(hospitals)
-        .where(eq(hospitals.id, hospitalId))
-        .limit(1);
-      const hospitalSlug = hospital?.slug || hospitalId;
-
-      const activeLocale = locale || "ar";
-      revalidatePath(`/${activeLocale}/${hospitalSlug}/appointments`);
-      revalidatePath(`/${activeLocale}/${hospitalSlug}/patients/${lockedAppointment.patientId}`);
-
-      // Purge mirrored translation routes to prevent stale UI states across languages
-      const altLocale = activeLocale === "ar" ? "en" : "ar";
-      revalidatePath(`/${altLocale}/${hospitalSlug}/appointments`);
-      revalidatePath(`/${altLocale}/${hospitalSlug}/patients/${lockedAppointment.patientId}`);
-
       return { 
         success: true, 
         medicalRecordId: medRecord.id,
+        patientId: lockedAppointment.patientId,
         prescriptionId,
         vitalsId
       };
     });
+
+    if (result.success) {
+      const hospital = await getHospitalBySlug(hospitalSlug);
+      const hSlug = hospital?.slug || hospitalSlug;
+      const activeLocale = locale || "ar";
+      revalidatePath(`/${activeLocale}/${hSlug}/appointments`);
+      revalidatePath(`/${activeLocale}/${hSlug}/patients/${result.patientId}`);
+
+      const altLocale = activeLocale === "ar" ? "en" : "ar";
+      revalidatePath(`/${altLocale}/${hSlug}/appointments`);
+      revalidatePath(`/${altLocale}/${hSlug}/patients/${result.patientId}`);
+    }
+
+    return result;
   } catch (error) {
     console.error("[CLINICAL_ACTION] completeTelemedicineConsultation failed:", error);
     if (error instanceof AppError) {
@@ -629,29 +627,28 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
         radOrders.forEach(o => createdRadiologyOrderIds.push(o.id));
       }
 
-      // G. Revalidate cache paths for the patient file in both languages
-      const [hospital] = await tx
-        .select({ slug: hospitals.slug })
-        .from(hospitals)
-        .where(eq(hospitals.id, hospitalId))
-        .limit(1);
-      const hospitalSlug = hospital?.slug || hospitalId;
-
-      const activeLocale = data.locale || "ar";
-      revalidatePath(`/${activeLocale}/${hospitalSlug}/patients/${data.patientId}`);
-
-      const altLocale = activeLocale === "ar" ? "en" : "ar";
-      revalidatePath(`/${altLocale}/${hospitalSlug}/patients/${data.patientId}`);
-
       return {
         success: true,
         medicalRecordId: medRecord.id,
+        patientId: data.patientId,
         vitalsId,
         prescriptionId,
         labOrderId,
         radiologyOrderIds: createdRadiologyOrderIds.length > 0 ? createdRadiologyOrderIds : undefined,
       };
     });
+
+    if (result.success) {
+      const hospital = await getHospitalBySlug(hospitalSlug);
+      const hSlug = hospital?.slug || hospitalSlug;
+      const activeLocale = data.locale || "ar";
+      revalidatePath(`/${activeLocale}/${hSlug}/patients/${result.patientId}`);
+
+      const altLocale = activeLocale === "ar" ? "en" : "ar";
+      revalidatePath(`/${altLocale}/${hSlug}/patients/${result.patientId}`);
+    }
+
+    return result;
   } catch (error) {
     console.error("[CLINICAL_ACTION] createMedicalRecord failed:", error);
     if (error instanceof AppError) {

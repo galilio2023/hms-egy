@@ -26,8 +26,16 @@ export const patientSchema = z.object({
   insuranceProviderId: z.string().optional(),
   insuranceNumber: z.string().optional(),
   guardianName: z.string().optional(),
-  guardianNid: z.string().optional().refine((val) => !val || val === "" || validateNationalId(val), {
-    message: "Invalid Egyptian National ID format or check digits for guardian.",
+  guardianNid: z.string().optional().refine((val) => {
+    if (!val || val === "") return true;
+    // If it looks like an Egyptian National ID (14 digits), validate strictly
+    if (/^\d{14}$/.test(val)) {
+      return validateNationalId(val);
+    }
+    // Otherwise, treat as a foreign passport (basic alphanumeric format check)
+    return /^[A-Z0-9]{6,20}$/i.test(val);
+  }, {
+    message: "Invalid Guardian Identity format: Must be a 14-digit National ID or a valid Passport Number.",
   }),
   guardianPhone: egyptianPhoneSchema.optional().or(z.literal("")),
 }).refine((data) => {

@@ -57,73 +57,111 @@ export default async function AdmissionsPage({
 
   // Wrap all data fetching in tenant context to ensure RLS compliance
   const dashboardData = await withTenantContext(hospital.id, async (tx) => {
-    // Fetch all rooms in the hospital
-    const roomsList = await tx
-      .select({
-        id: rooms.id,
-        roomNumber: rooms.roomNumber,
-        type: rooms.type,
-        floor: rooms.floor,
-        wing: rooms.wing,
-        isActive: rooms.isActive,
-      })
-      .from(rooms)
-      .where(eq(rooms.hospitalId, hospital.id))
-      .orderBy(rooms.roomNumber);
+    // Execute all independent dashboard queries concurrently to optimize performance
+    const [
+      roomsList,
+      bedsWithAdmissions,
+      doctorsList,
+      housekeepingRes
+    ] = await Promise.all([
+      // Fetch all rooms in the hospital
+      tx
+        .select({
+          id: rooms.id,
+          roomNumber: rooms.roomNumber,
+          type: rooms.type,
+          floor: rooms.floor,
+          wing: rooms.wing,
+          isActive: rooms.isActive,
+        })
+        .from(rooms)
+        .where(eq(rooms.hospitalId, hospital.id))
+        .orderBy(rooms.roomNumber),
 
-    // Fetch all beds joined with rooms, active admissions, patients, and admitting doctor
-    const bedsWithAdmissions = await tx
-      .select({
-        bedId: beds.id,
-        bedNumber: beds.bedNumber,
-        status: beds.status,
-        lastDischargedAt: beds.lastDischargedAt,
-        cleaningRequestedAt: beds.cleaningRequestedAt,
-        
-        roomId: rooms.id,
-        roomNumber: rooms.roomNumber,
-        roomType: rooms.type,
-        floor: rooms.floor,
-        wing: rooms.wing,
+      // Fetch all beds joined with rooms, active admissions, patients, and admitting doctor
+      tx
+        .select({
+          bedId: beds.id,
+          bedNumber: beds.bedNumber,
+          status: beds.status,
+          lastDischargedAt: beds.lastDischargedAt,
+          cleaningRequestedAt: beds.cleaningRequestedAt,
+          
+          roomId: rooms.id,
+          roomNumber: rooms.roomNumber,
+          roomType: rooms.type,
+          floor: rooms.floor,
+          wing: rooms.wing,
 
-        admissionId: admissions.id,
-        admissionDate: admissions.admissionDate,
-        reason: admissions.reason,
-        admissionStatus: admissions.status,
+          admissionId: admissions.id,
+          admissionDate: admissions.admissionDate,
+          reason: admissions.reason,
+          admissionStatus: admissions.status,
 
-        patientId: patients.id,
-        patientNameAr: patients.nameAr,
-        patientNameEn: patients.nameEn,
-        patientNumber: patients.patientNumber,
-        nationalId: patients.nationalId,
-        gender: patients.gender,
-        dob: patients.dob,
+          patientId: patients.id,
+          patientNameAr: patients.nameAr,
+          patientNameEn: patients.nameEn,
+          patientNumber: patients.patientNumber,
+          nationalId: patients.nationalId,
+          gender: patients.gender,
+          dob: patients.dob,
 
-        doctorId: staff.id,
-        doctorNameAr: staff.nameAr,
-        doctorNameEn: staff.nameEn,
-        doctorLicense: staff.licenseNumber,
-      })
-      .from(beds)
-      .innerJoin(rooms, eq(beds.roomId, rooms.id))
-      .leftJoin(
-        admissions,
-        and(
-          eq(beds.id, admissions.bedId),
-          eq(admissions.status, "active")
+          doctorId: staff.id,
+          doctorNameAr: staff.nameAr,
+          doctorNameEn: staff.nameEn,
+          doctorLicense: staff.licenseNumber,
+        })
+        .from(beds)
+        .innerJoin(rooms, eq(beds.roomId, rooms.id))
+        .leftJoin(
+          admissions,
+          and(
+            eq(beds.id, admissions.bedId),
+            eq(admissions.status, "active")
+          )
         )
-      )
-      .leftJoin(patients, eq(admissions.patientId, patients.id))
-      .leftJoin(staff, eq(admissions.admittingDoctorId, staff.id))
-      .where(eq(beds.hospitalId, hospital.id))
-      .orderBy(beds.bedNumber);
+        .leftJoin(patients, eq(admissions.patientId, patients.id))
+        .leftJoin(staff, eq(admissions.admittingDoctorId, staff.id))
+        .where(eq(beds.hospitalId, hospital.id))
+        .orderBy(beds.bedNumber),
+
+      // Fetch active admitting doctors list
+      tx
+        .select({
+          id: staff.id,
+          nameAr: staff.nameAr,
+          nameEn: staff.nameEn,
+          licenseNumber: staff.licenseNumber,
+        })
+        .from(staff)
+        .where(
+          and(
+            eq(staff.hospitalId, hospital.id),
+            eq(staff.isActive, true),
+            or(eq(staff.role, "DOCTOR"), eq(staff.role, "SURGEON"))
+          )
+        )
+        .orderBy(staff.nameEn),
+
+      // Count pending cleaning housekeeping tasks
+      tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(housekeepingTasks)
+        .where(
+          and(
+            eq(housekeepingTasks.hospitalId, hospital.id),
+            eq(housekeepingTasks.status, "pending")
+          )
+        )
+        .then((res) => res[0])
+    ]);
 
     // Extract patient IDs with active admissions to load vitals history
     const activePatientIds = bedsWithAdmissions
       .map((row) => row.patientId)
       .filter((id): id is string => !!id);
 
-    // Fetch historic vitals for the currently admitted inpatients
+    // Fetch historic vitals for the currently admitted inpatients (dependent query, run after beds resolution)
     const inpatientsVitals = activePatientIds.length > 0
       ? await tx
           .select({
@@ -162,34 +200,6 @@ export default async function AdmissionsPage({
       vitalsByPatient[patientId].push(record);
     }
 
-    // Fetch active admitting doctors list
-    const doctorsList = await tx
-      .select({
-        id: staff.id,
-        nameAr: staff.nameAr,
-        nameEn: staff.nameEn,
-        licenseNumber: staff.licenseNumber,
-      })
-      .from(staff)
-      .where(
-        and(
-          eq(staff.hospitalId, hospital.id),
-          eq(staff.isActive, true),
-          or(eq(staff.role, "DOCTOR"), eq(staff.role, "SURGEON"))
-        )
-      )
-      .orderBy(staff.nameEn);
-
-    // Count pending cleaning housekeeping tasks
-    const [housekeepingRes] = await tx
-      .select({ count: sql<number>`count(*)::int` })
-      .from(housekeepingTasks)
-      .where(
-        and(
-          eq(housekeepingTasks.hospitalId, hospital.id),
-          eq(housekeepingTasks.status, "pending")
-        )
-      );
     const pendingCleaningCount = housekeepingRes?.count || 0;
 
     return {

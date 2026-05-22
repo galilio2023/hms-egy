@@ -15,6 +15,10 @@ interface Icd10Code {
   category: string;
 }
 
+// Module-level caching to prevent expensive re-parsing and index re-building on component re-mounts
+let cachedIcdData: Icd10Code[] | null = null;
+let cachedFuse: Fuse<Icd10Code> | null = null;
+
 interface Icd10SearchPickerProps {
   selectedCodes: string[];
   onChange: (codes: string[]) => void;
@@ -39,14 +43,20 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<Icd10Code[]>([]);
   const [isFocused, setIsFocused] = useState(false);
-  const [icdData, setIcdData] = useState<Icd10Code[]>([]);
-  const [fuse, setFuse] = useState<Fuse<Icd10Code> | null>(null);
+  const [icdData, setIcdData] = useState<Icd10Code[]>(cachedIcdData || []);
+  const [fuse, setFuse] = useState<Fuse<Icd10Code> | null>(cachedFuse);
 
   // Initialize Fuse.js once by dynamically importing the dataset
   useEffect(() => {
     const loadData = async () => {
+      // If already cached in module memory, skip expensive import and index building
+      if (cachedIcdData && cachedFuse) {
+        return;
+      }
+
       try {
         const data = (await import("@db/clinical-data/icd10-ar.json")).default as Icd10Code[];
+        cachedIcdData = data;
         setIcdData(data);
         
         const fuseInstance = new Fuse(data, {
@@ -58,6 +68,7 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
           threshold: 0.35,
           ignoreLocation: true
         });
+        cachedFuse = fuseInstance;
         setFuse(fuseInstance);
       } catch (error) {
         console.error("Failed to load ICD-10 data:", error);
