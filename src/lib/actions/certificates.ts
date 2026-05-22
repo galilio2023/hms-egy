@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { randomBytes } from "crypto";
 import { withTenantContext } from "@/lib/db/tenant";
 import { medicalCertificates } from "@db/schema/clinical";
 import { staff } from "@db/schema/core";

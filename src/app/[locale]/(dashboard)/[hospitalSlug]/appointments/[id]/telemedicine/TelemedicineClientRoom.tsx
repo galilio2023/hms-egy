@@ -203,7 +203,8 @@ export function TelemedicineClientRoom({
   // Jitsi Room URL
   const jitsiRoomName = secureRoomName;
   const jitsiIframeUrl = useMemo(() => {
-    return `https://meet.jit.si/${jitsiRoomName}#config.startWithAudioMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.resolution=180&config.constraints.video.height.ideal=180&config.startAudioOnly=false&interfaceConfig.TOOLBAR_BUTTONS=["microphone","camera","closedcaptions","desktop","fullscreen","factions","hangup","profile","chat","raisehand","videoquality","tileview"]`;
+    const domain = process.env.NEXT_PUBLIC_JITSI_DOMAIN || "meet.jit.si";
+    return `https://${domain}/${jitsiRoomName}#config.startWithAudioMuted=true&config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.resolution=180&config.constraints.video.height.ideal=180&config.startAudioOnly=false&interfaceConfig.TOOLBAR_BUTTONS=["microphone","camera","closedcaptions","desktop","fullscreen","factions","hangup","profile","chat","raisehand","videoquality","tileview"]`;
   }, [jitsiRoomName]);
 
   // Start call timer

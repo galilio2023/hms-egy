@@ -192,7 +192,7 @@ export async function completeTelemedicineConsultation(
         }
       }
 
-      // Resolve assigned doctor status inside tenant context
+      // C. Resolve assigned doctor status inside tenant context
       let isAssignedDoctor = false;
       if (!isSuperAdmin) {
         const currentStaff = await tx
@@ -208,6 +208,23 @@ export async function completeTelemedicineConsultation(
 
         if (!isAssignedDoctor) {
           throw new AppError(ErrorCode.FORBIDDEN, "Forbidden: Only the assigned medical professional or a super administrator can complete this encounter.");
+        }
+      }
+
+      // 1.5 Validate manual prescription IDs for cross-tenant injection
+      if (prescriptionItemsList && prescriptionItemsList.length > 0) {
+        const manualMedIds = prescriptionItemsList.map(i => i.medicationId);
+        const validMedCount = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(medications)
+          .where(and(
+            eq(medications.hospitalId, hospitalId),
+            inArray(medications.id, manualMedIds)
+          ))
+          .then(res => res[0].count);
+
+        if (validMedCount !== manualMedIds.length) {
+          throw new AppError(ErrorCode.VALIDATION_ERROR, "Cross-tenant security violation: One or more prescribed medications do not belong to this hospital.");
         }
       }
 

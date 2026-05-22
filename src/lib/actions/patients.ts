@@ -9,7 +9,7 @@ import { patientSchema, type PatientSchema } from "@/lib/validations/patient.sch
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
-import { formatPatientNumber } from "@/lib/utils/egypt";
+import { formatPatientNumber, normalizeArabic } from "@/lib/utils/egypt";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -47,6 +47,9 @@ export async function registerPatient(data: PatientSchema) {
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital session context missing." };
   }
+
+  // Normalize Arabic name for storage consistency
+  const normalizedNameAr = normalizeArabic(validatedData.nameAr);
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
@@ -126,7 +129,7 @@ export async function registerPatient(data: PatientSchema) {
         .values({
           hospitalId,
           patientNumber,
-          nameAr: validatedData.nameAr.trim(),
+          nameAr: normalizedNameAr,
           nameEn: validatedData.nameEn.trim(),
           nationalId: validatedData.nationalId?.trim() || null,
           passportNumber: validatedData.passportNumber?.trim() || null,
@@ -192,6 +195,9 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
     return { success: false, error: "System Error: Hospital session context missing." };
   }
 
+  // Normalize Arabic name if provided
+  const normalizedNameAr = data.nameAr ? normalizeArabic(data.nameAr) : undefined;
+
   try {
     return await withTenantContext(hospitalId, async (tx) => {
       // Check duplicate National ID
@@ -219,7 +225,7 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
       await tx
         .update(patients)
         .set({
-          nameAr: data.nameAr?.trim(),
+          nameAr: normalizedNameAr,
           nameEn: data.nameEn?.trim(),
           nationalId: data.nationalId?.trim() || null,
           passportNumber: data.passportNumber?.trim() || null,

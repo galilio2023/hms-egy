@@ -315,3 +315,26 @@ export function parseCairoTime(timeStr: string, baseDate: Date = new Date()): Da
   
   return cairoDate;
 }
+
+/**
+ * Normalizes Arabic text for consistent indexing and searching.
+ * Handles common orthographic variations:
+ * - Alef with Hamza/Madda -> Plain Alef (أ إ آ -> ا)
+ * - Teh Marbuta -> Heh (ة -> ه)
+ * - Yeh/Alef Layena -> (ي -> ى)
+ * - Removes common Harakat (vocalization marks)
+ */
+export function normalizeArabic(text: string): string {
+  if (!text) return "";
+  
+  return text
+    .trim()
+    // Remove Harakat
+    .replace(/[\u064B-\u0652]/g, "")
+    // Normalize Alef
+    .replace(/[أإآ]/g, "ا")
+    // Normalize Teh Marbuta
+    .replace(/ة/g, "ه")
+    // Normalize Yeh
+    .replace(/ي/g, "ى");
+}

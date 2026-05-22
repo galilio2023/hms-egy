@@ -156,8 +156,8 @@ export default async function AdmissionsPage({
         )
         .then((res) => res[0]),
 
-      // E. Fetch recent vitals for ALL currently active inpatients in this hospital
-      // This eliminates the waterfall by not waiting for bedsWithAdmissions results
+      // E. Fetch recent vitals for ALL currently active inpatients in this hospital (last 48 hours)
+      // This eliminates the waterfall and prevents memory bloat for long-term admissions
       tx
         .select({
           id: vitalsFlowsheet.id,
@@ -184,7 +184,12 @@ export default async function AdmissionsPage({
           )
         )
         .leftJoin(staff, eq(vitalsFlowsheet.recordedBy, staff.id))
-        .where(eq(vitalsFlowsheet.hospitalId, hospital.id))
+        .where(
+          and(
+            eq(vitalsFlowsheet.hospitalId, hospital.id),
+            sql`${vitalsFlowsheet.recordedAt} > now() - interval '48 hours'`
+          )
+        )
         .orderBy(desc(vitalsFlowsheet.recordedAt))
     ]);
 
