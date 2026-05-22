@@ -7,18 +7,18 @@ import { cn } from "@/lib/utils";
 import { useLocale } from "next-intl";
 
 interface DrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
 }
 
-export function Drawer({ isOpen, onClose, children }: DrawerProps) {
+export function Drawer({ open, onOpenChange, children }: DrawerProps) {
   const locale = useLocale();
   const isRtl = locale === "ar";
 
   // Prevent scrolling when drawer is open
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
@@ -26,7 +26,7 @@ export function Drawer({ isOpen, onClose, children }: DrawerProps) {
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [isOpen]);
+  }, [open]);
 
   const slideDirection = isRtl 
     ? { initial: { x: "100%" }, animate: { x: 0 }, exit: { x: "100%" } } 
@@ -34,14 +34,14 @@ export function Drawer({ isOpen, onClose, children }: DrawerProps) {
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {open && (
         <div className="fixed inset-0 z-50 flex">
           {/* Backdrop Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={() => onOpenChange(false)}
             className="fixed inset-0 bg-background/80 backdrop-blur-sm"
           />
 
@@ -52,8 +52,7 @@ export function Drawer({ isOpen, onClose, children }: DrawerProps) {
             exit={slideDirection.exit}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className={cn(
-              "fixed top-0 bottom-0 w-full max-w-md bg-card text-card-foreground border-border shadow-2xl overflow-hidden glass-card flex flex-col z-10",
-              isRtl ? "right-0 border-l" : "left-0 border-r"
+              "fixed top-0 bottom-0 w-full max-w-md bg-card text-card-foreground border-border shadow-2xl overflow-hidden glass-card flex flex-col z-10 start-0 border-e"
             )}
           >
             {children}
@@ -78,10 +77,7 @@ export function DrawerHeader({ className, children, onClose, ...props }: DrawerH
       {onClose && (
         <button
           onClick={onClose}
-          className={cn(
-            "p-1.5 hover:bg-muted/80 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer",
-            isRtl ? "margin-right-auto" : "margin-left-auto"
-          )}
+          className="p-1.5 hover:bg-muted/80 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-150 cursor-pointer ms-auto"
         >
           <X className="h-4 w-4" />
         </button>

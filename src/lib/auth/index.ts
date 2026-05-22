@@ -1,5 +1,6 @@
 import { headers, cookies } from "next/headers";
 import { betterAuth } from "better-auth";
+import { nextCookies } from "better-auth/next-js";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db";
 import * as schema from "../../../db/schema";
@@ -68,6 +69,9 @@ export const authInstance = betterAuth({
       },
     },
   },
+  plugins: [
+    nextCookies(),
+  ],
 });
 
 /**
@@ -141,7 +145,7 @@ export async function auth(): Promise<Session | null> {
           email: "admin@alshifa.com.eg",
           name: "د. أحمد الشافعي",
           role: "ADMIN",
-          hospitalId: "default-hospital-id",
+          hospitalId: "al-shifa",
         },
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       };

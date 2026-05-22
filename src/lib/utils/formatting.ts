@@ -5,6 +5,7 @@
 
 import { format, formatDistanceToNow, differenceInDays, differenceInWeeks, differenceInMonths, differenceInYears } from "date-fns";
 import { arEG } from "date-fns/locale";
+import { tafqeet } from "./tafqeet";
 
 /**
  * Formats amount in Egyptian Pounds (EGP).
@@ -26,6 +27,17 @@ export function formatEGP(amount: number, options: { arabic?: boolean; compact?:
 export function toEasternArabicNumerals(n: number | string): string {
   const easternDigits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
   return n.toString().replace(/\d/g, (w) => easternDigits[parseInt(w)]);
+}
+
+/**
+ * Safely parses a string into an integer.
+ * Always uses radix 10 and returns undefined instead of NaN for invalid inputs.
+ */
+export function safeParseInt(val: string | number | undefined | null): number | undefined {
+  if (val === undefined || val === null || val === "") return undefined;
+  if (typeof val === "number") return isNaN(val) ? undefined : Math.floor(val);
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? undefined : parsed;
 }
 
 /**
@@ -129,27 +141,35 @@ export function formatAge(dob: Date, locale: "ar" | "en" = "ar"): string {
  * Converts amount to Arabic words (Tafgeet).
  * Used for invoices and financial reports to prevent tampering.
  */
-export async function amountToArabicWords(amount: number): Promise<string> {
+export function amountToArabicWords(amount: number): string {
   try {
-    // Round to 2 decimal places to prevent floating point issues (e.g. 150.700000002)
-    const roundedAmount = Math.round(amount * 100) / 100;
+    // Round to 2 decimal places to prevent floating point issues
+    const total = Math.round(amount * 100) / 100;
     
-    // Lazy load tafgeetjs to keep initial bundle size lean
-    const { default: Tafgeet } = await import("tafgeetjs");
-    const tafgeet = new Tafgeet(roundedAmount, "EGP");
-    return tafgeet.convert();
+    // Separate pounds and piastres
+    const pounds = Math.floor(total);
+    const piastres = Math.round((total - pounds) * 100);
+    
+    if (pounds === 0 && piastres === 0) {
+      return "صفر جنيه مصري فقط لا غير";
+    }
+
+    let result = "";
+    
+    if (pounds > 0) {
+      result = tafqeet(pounds);
+      if (piastres > 0) {
+        // Remove the " فقط لا غير" suffix from the pounds part if we have piastres
+        result = result.replace(" فقط لا غير", "");
+        result += ` و${piastres} قرشاً فقط لا غير`;
+      }
+    } else if (piastres > 0) {
+      result = `${piastres} قرشاً فقط لا غير`;
+    }
+    
+    return result;
   } catch (error) {
     console.error("Tafgeet conversion failed", error);
-    
-    const pounds = Math.floor(amount);
-    const piastres = Math.round((amount - pounds) * 100);
-    
-    let fallback = `فقط ${pounds} جنيه مصري`;
-    if (piastres > 0) {
-      fallback += ` و ${piastres} قرش`;
-    }
-    fallback += ` لا غير`;
-    
-    return fallback;
+    return "خطأ في تحويل العملة";
   }
 }

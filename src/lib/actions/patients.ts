@@ -9,7 +9,7 @@ import { patientSchema, type PatientSchema } from "@/lib/validations/patient.sch
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
-import { formatPatientNumber } from "@/lib/utils/egypt";
+import { formatPatientNumber, normalizeArabic } from "@/lib/utils/egypt";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -47,6 +47,9 @@ export async function registerPatient(data: PatientSchema) {
   if (!hospitalId) {
     return { success: false, error: "System Error: Hospital session context missing." };
   }
+
+  // Normalize Arabic name for indexed storage consistency
+  const normalizedNameAr = normalizeArabic(validatedData.nameAr);
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
@@ -126,7 +129,8 @@ export async function registerPatient(data: PatientSchema) {
         .values({
           hospitalId,
           patientNumber,
-          nameAr: validatedData.nameAr.trim(),
+          nameAr: validatedData.nameAr.trim(), // Legal name for compliance
+          normalizedNameAr, // Normalized copy for fast indexed search
           nameEn: validatedData.nameEn.trim(),
           nationalId: validatedData.nationalId?.trim() || null,
           passportNumber: validatedData.passportNumber?.trim() || null,
@@ -192,6 +196,9 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
     return { success: false, error: "System Error: Hospital session context missing." };
   }
 
+  // Normalize Arabic name if provided
+  const normalizedNameAr = data.nameAr ? normalizeArabic(data.nameAr) : undefined;
+
   try {
     return await withTenantContext(hospitalId, async (tx) => {
       // Check duplicate National ID
@@ -219,7 +226,8 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
       await tx
         .update(patients)
         .set({
-          nameAr: data.nameAr?.trim(),
+          nameAr: data.nameAr?.trim(), // Legal name for compliance
+          normalizedNameAr: normalizedNameAr, // Updated indexed copy
           nameEn: data.nameEn?.trim(),
           nationalId: data.nationalId?.trim() || null,
           passportNumber: data.passportNumber?.trim() || null,
@@ -304,13 +312,14 @@ export async function searchPatientsAction(query: string) {
     return { success: false, error: "System Error: Hospital session context missing." };
   }
 
-  const trimmedQuery = query?.trim() || "";
+  // Normalize the incoming query for Arabic text consistency
+  const normalizedQuery = normalizeArabic(query?.trim() || "");
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
       let results;
 
-      if (!trimmedQuery) {
+      if (!normalizedQuery) {
         // If query is empty, return latest 20 patients
         results = await tx
           .select()
@@ -319,7 +328,7 @@ export async function searchPatientsAction(query: string) {
           .orderBy(sql`${patients.createdAt} DESC`)
           .limit(20);
       } else {
-        // Run full database directory search
+        // Run full database directory search using optimized normalized column
         results = await tx
           .select()
           .from(patients)
@@ -327,12 +336,13 @@ export async function searchPatientsAction(query: string) {
             and(
               eq(patients.hospitalId, hospitalId),
               or(
-                ilike(patients.patientNumber, `%${trimmedQuery}%`),
-                ilike(patients.nameAr, `%${trimmedQuery}%`),
-                ilike(patients.nameEn, `%${trimmedQuery}%`),
-                ilike(patients.contactPhone, `%${trimmedQuery}%`),
-                ilike(patients.nationalId || "", `%${trimmedQuery}%`),
-                ilike(patients.passportNumber || "", `%${trimmedQuery}%`)
+                ilike(patients.patientNumber, `%${normalizedQuery}%`),
+                // Search against the pre-normalized B-Tree indexed column
+                ilike(patients.normalizedNameAr, `%${normalizedQuery}%`),
+                ilike(patients.nameEn, `%${normalizedQuery}%`),
+                ilike(patients.contactPhone, `%${normalizedQuery}%`),
+                ilike(patients.nationalId || "", `%${normalizedQuery}%`),
+                ilike(patients.passportNumber || "", `%${normalizedQuery}%`)
               )
             )
           )

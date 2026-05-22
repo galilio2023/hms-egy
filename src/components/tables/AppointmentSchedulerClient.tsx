@@ -41,7 +41,8 @@ import {
   BookOpen,
   Eye,
   Settings,
-  CalendarRange
+  CalendarRange,
+  Video
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toZonedTime } from "date-fns-tz";
@@ -623,7 +624,7 @@ export function AppointmentSchedulerClient({
         )}
       </div>
 
-      <Drawer isOpen={isDetailDrawerOpen} onClose={() => setIsDetailDrawerOpen(false)}>
+      <Drawer open={isDetailDrawerOpen} onOpenChange={setIsDetailDrawerOpen}>
         <DrawerContent className="text-start">
           <div className="mx-auto w-full max-w-lg p-6">
             {selectedAppointment && (
@@ -640,6 +641,80 @@ export function AppointmentSchedulerClient({
                 </DrawerHeader>
 
                 <div className="py-6 space-y-4">
+                  {/* Premium Appointment Details Overview */}
+                  <div className="p-4 bg-muted/20 border border-border/20 rounded-xl space-y-3 text-xs">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block uppercase font-bold">{isRtl ? "الطبيب المعالج" : "Doctor Specialist"}</span>
+                        <span className="font-bold text-foreground">
+                          {isRtl ? selectedAppointment.doctorNameAr : selectedAppointment.doctorNameEn}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block uppercase font-bold">{isRtl ? "القسم / العيادة" : "Department"}</span>
+                        <span className="font-semibold text-foreground">
+                          {isRtl ? selectedAppointment.departmentNameAr : selectedAppointment.departmentNameEn}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/10">
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block uppercase font-bold">{isRtl ? "تاريخ الحجز" : "Scheduled Date"}</span>
+                        <span className="font-mono font-bold text-foreground">
+                          {new Date(selectedAppointment.scheduledDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block uppercase font-bold">{isRtl ? "الفترة الزمنية" : "Time Slot"}</span>
+                        <span className="font-mono font-bold text-foreground">
+                          {selectedAppointment.startTime.substring(0, 5)} - {selectedAppointment.endTime.substring(0, 5)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {selectedAppointment.notes && (
+                      <div className="pt-2 border-t border-border/10 text-muted-foreground">
+                        <span className="text-[10px] block uppercase font-bold">{isRtl ? "شكوى المريض" : "Patient Complaint / Notes"}</span>
+                        <span className="italic">"{selectedAppointment.notes}"</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Telemedicine Room Entry Trigger */}
+                  {selectedAppointment.type === "telemedicine" && selectedAppointment.status === "scheduled" && (
+                    <div className="p-4 bg-accent/5 border border-accent/20 rounded-xl space-y-3 text-xs relative overflow-hidden">
+                      <div className="absolute top-0 end-0 h-16 w-14 bg-accent/5 rounded-full translate-x-4 -translate-y-4 flex items-center justify-center">
+                        <Video className="h-6 w-6 text-accent opacity-20" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] text-accent font-black tracking-wide block uppercase">
+                          {isRtl ? "الاستشارة الافتراضية نشطة حالياً" : "Virtual Clinic Active Now"}
+                        </span>
+                        <h4 className="font-black text-foreground">
+                          {isRtl ? "بوابة الاستشارة الطبية عن بعد" : "Outpatient Telemedicine Hub"}
+                        </h4>
+                        <p className="text-[10px] text-muted-foreground leading-normal">
+                          {isRtl
+                            ? "انضم للمكالمة مرئية آمنة مع المريض، وقم بتدوين سجل SOAP الطبي وإصدار الوصفات الدوائية من شاشة واحدة متكاملة."
+                            : "Launch encrypted video consult room, consult patient vitals, type clinical SOAP notes, and issue digital prescriptions."}
+                        </p>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setIsDetailDrawerOpen(false);
+                          router.push(`/${hospitalSlug}/appointments/${selectedAppointment.id}/telemedicine`);
+                        }}
+                        className="w-full text-xs font-black bg-accent text-accent-foreground hover:bg-accent/90 gap-1.5 h-9"
+                      >
+                        <Video className="h-4 w-4" />
+                        <span>{isRtl ? "دخول عيادة الاتصال المرئي" : "Launch Telemedicine Room"}</span>
+                      </Button>
+                    </div>
+                  )}
+
                   {selectedAppointment.status === "scheduled" && (
                     <div className="space-y-4 pt-4 border-t border-border/30">
                       <div className="space-y-2">
@@ -685,7 +760,7 @@ export function AppointmentSchedulerClient({
         </DrawerContent>
       </Drawer>
 
-      <Dialog isOpen={!!selectedWaitingEntry} onClose={() => setSelectedWaitingEntry(null)}>
+      <Dialog open={!!selectedWaitingEntry} onOpenChange={(open) => !open && setSelectedWaitingEntry(null)}>
         <DialogContent className="sm:max-w-md text-start">
           <DialogHeader className="text-start">
             <DialogTitle className="text-lg font-black text-foreground">

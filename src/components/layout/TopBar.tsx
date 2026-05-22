@@ -71,7 +71,7 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
     : "U";
 
   return (
-    <header className="h-20 bg-card/60 backdrop-blur-md border-b border-border/40 px-4 md:px-6 flex items-center justify-between relative z-10 w-full glass">
+    <header className="h-20 border-b border-border/40 px-4 md:px-6 flex items-center justify-between relative z-10 w-full glass">
       
       <div className="flex items-center gap-3 flex-1">
         {/* Mobile menu trigger button */}
@@ -160,10 +160,7 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
                 className="fixed inset-0 z-10" 
                 onClick={() => setIsDropdownOpen(false)}
               />
-              <div className={cn(
-                "absolute top-12 w-56 bg-card border border-border rounded-xl shadow-xl py-2 z-20 animate-slide-up glass-card",
-                isRtl ? "left-0 origin-top-left" : "right-0 origin-top-right"
-              )}>
+              <div className="absolute top-12 w-56 bg-card border border-border rounded-xl shadow-xl py-2 z-20 animate-slide-up glass-card end-0 origin-top-end">
                 {/* User Info Header */}
                 <div className="px-4 py-2 border-b border-border/40 mb-1">
                   <span className="block text-xs font-bold text-foreground">{user?.name}</span>

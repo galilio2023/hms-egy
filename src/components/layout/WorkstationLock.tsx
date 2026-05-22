@@ -74,8 +74,8 @@ export default function WorkstationLock() {
         className="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-3xl flex items-center justify-center p-4 overflow-hidden selection:bg-teal-500/20"
       >
         {/* Subtle Ambient Glows */}
-        <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-teal-500/5 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-rose-500/5 blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/4 start-1/4 w-[400px] h-[400px] rounded-full bg-teal-500/5 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 end-1/4 w-[400px] h-[400px] rounded-full bg-rose-500/5 blur-[120px] pointer-events-none" />
 
         <motion.div
           initial={{ scale: 0.92, y: 15 }}

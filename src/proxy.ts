@@ -8,7 +8,7 @@ const intlMiddleware = createMiddleware({
   localePrefix: "always",
 });
 
-export default function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Identify locale and segments
@@ -39,6 +39,11 @@ export default function middleware(request: NextRequest) {
                      ));
 
   // 3. Routing & Redirection Guards
+  if (isLoginPage && hasSession) {
+    // Authenticated, redirect away from login
+    return NextResponse.redirect(new URL(`/${locale}`, request.url));
+  }
+
   if (isDashboardRoute || isChangePasswordPage) {
     if (!hasSession) {
       // Unauthenticated, redirect to login
@@ -48,11 +53,6 @@ export default function middleware(request: NextRequest) {
     }
   }
 
-  if (isLoginPage && hasSession) {
-    // Authenticated user trying to access login, redirect to home or super-admin
-    // (Actual role-based dashboard landing pages are handled securely inside pages/layouts)
-    return NextResponse.redirect(new URL(`/${locale}`, request.url));
-  }
 
   // 4. Handle next-intl routing
   return intlMiddleware(request);
@@ -67,5 +67,3 @@ export const config = {
   // - /favicon.ico, /sitemap.xml (SEO)
   matcher: ["/((?!api|_next|_vercel|static|.*\\..*).*)"],
 };
-
-

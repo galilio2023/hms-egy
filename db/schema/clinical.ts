@@ -158,3 +158,53 @@ export const vitalsFlowsheet = pgTable("vitals_flowsheet", {
     hospitalVitalsIdx: index("vit_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
 }).enableRLS();
+
+export const internalReferrals = pgTable("internal_referrals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  patientId: uuid("patient_id").references(() => patients.id, { onDelete: "cascade" }).notNull(),
+  referringDoctorId: uuid("referring_doctor_id").references(() => staff.id, { onDelete: "restrict" }).notNull(),
+  targetDepartmentId: uuid("target_department_id").references(() => departments.id, { onDelete: "restrict" }).notNull(),
+  targetDoctorId: uuid("target_doctor_id").references(() => staff.id, { onDelete: "set null" }),
+  reason: text("reason").notNull(),
+  urgency: varchar("urgency", { length: 50 }).default("routine").notNull(), // routine, urgent, emergency
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, accepted, completed, cancelled
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { 
+      for: "all", 
+      to: "public", 
+      using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` 
+    }),
+    hospitalRefIdx: index("ref_hospital_patient_idx").on(table.hospitalId, table.patientId),
+  };
+}).enableRLS();
+
+export const medicalCertificates = pgTable("medical_certificates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  patientId: uuid("patient_id").references(() => patients.id, { onDelete: "cascade" }).notNull(),
+  doctorId: uuid("doctor_id").references(() => staff.id, { onDelete: "restrict" }).notNull(),
+  certificateType: varchar("certificate_type", { length: 50 }).default("sick_leave").notNull(), // sick_leave, fitness, companion
+  diagnosis: text("diagnosis").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  restDays: integer("rest_days").notNull(),
+  notes: text("notes"),
+  serialNumber: varchar("serial_number", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { 
+      for: "all", 
+      to: "public", 
+      using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` 
+    }),
+    hospitalCertIdx: index("cert_hospital_patient_idx").on(table.hospitalId, table.patientId),
+    hospitalCertSerialIdx: uniqueIndex("cert_hospital_serial_idx").on(table.hospitalId, table.serialNumber),
+  };
+}).enableRLS();

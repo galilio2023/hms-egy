@@ -8,6 +8,7 @@ export const patients = pgTable("patients", {
   hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull(),
   patientNumber: varchar("patient_number", { length: 50 }).notNull(),
   nameAr: text("name_ar").notNull(),
+  normalizedNameAr: text("normalized_name_ar").notNull(), // Pre-normalized copy for high-speed indexed searching
   nameEn: text("name_en").notNull(),
   nationalId: varchar("national_id", { length: 14 }),
   passportNumber: varchar("passport_number", { length: 50 }),
@@ -30,6 +31,7 @@ export const patients = pgTable("patients", {
     hospitalNidUnique: unique("pat_hospital_nid_unique").on(table.hospitalId, table.nationalId),
     hospitalPassportUnique: unique("pat_hospital_passport_unique").on(table.hospitalId, table.passportNumber),
     hospitalNumIdx: index("pat_hospital_num_idx").on(table.hospitalId, table.patientNumber),
+    normalizedNameArIdx: index("pat_normalized_name_ar_idx").on(table.normalizedNameAr), // B-Tree index for optimized ilike
     govIdx: index("pat_gov_idx").on(table.governorate),
     nationalIdNumericCheck: sql`CHECK (
       national_id IS NULL OR national_id ~ '^[23][0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])(0[1-4]|1[1-9]|2[1-9]|3[1-5]|88)[0-9]{4}[0-9]$'

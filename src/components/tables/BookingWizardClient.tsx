@@ -24,9 +24,10 @@ import {
   CalendarCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toZonedTime } from "date-fns-tz";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { createAppointment, addToWaitingList, getDoctorAvailability } from "@/lib/actions/appointments";
+import { isEgyptianPublicHoliday } from "@/lib/utils/egypt";
 
 interface BookingWizardClientProps {
   departments: { id: string; nameAr: string; nameEn: string }[];
@@ -66,6 +67,8 @@ export function BookingWizardClient({
   const [selectedSlot, setSelectedSlot] = useState("");
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isWeekendWarning, setIsWeekendWarning] = useState(false);
+  const [isHolidayWarning, setIsHolidayWarning] = useState(false);
+  const [holidayName, setHolidayName] = useState("");
   const [queueToWaitingList, setQueueToWaitingList] = useState(false);
 
   // Trigger patient lookup with 300ms debounce
@@ -90,12 +93,29 @@ export function BookingWizardClient({
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
       // 1. Cairo Timezone weekend check (Friday = 5, Saturday = 6)
-      // Safe split-parsing to bypass UTC timezone off-by-one shifts
+      // Standardize to UTC midnight before resolving to Cairo to avoid local browser timezone skew
       const [year, month, dayNum] = selectedDate.split("-").map(Number);
-      const day = new Date(year, month - 1, dayNum).getDay();
+      const dateToCheck = new Date(Date.UTC(year, month - 1, dayNum));
+      const cairoZoned = toZonedTime(dateToCheck, "Africa/Cairo");
+      
+      const day = cairoZoned.getDay();
       const isWeekend = day === 5 || day === 6;
       setIsWeekendWarning(isWeekend);
       setQueueToWaitingList(false);
+
+      // 2. Cairo Timezone holiday check
+      const holidayInfo = isEgyptianPublicHoliday(dateToCheck);
+      if (holidayInfo?.isHoliday) {
+        setIsHolidayWarning(true);
+        setHolidayName((locale === "ar" ? holidayInfo.nameAr : holidayInfo.nameEn) || "");
+        setAvailableSlots([]);
+        setQueueToWaitingList(false);
+        setLoadingSlots(false);
+        return;
+      } else {
+        setIsHolidayWarning(false);
+        setHolidayName("");
+      }
 
       setLoadingSlots(true);
       setSelectedSlot("");
@@ -183,10 +203,9 @@ export function BookingWizardClient({
         }
       });
     } else {
-      // Schedule Appointment Slot
-      const [h, m] = selectedSlot.split(":").map(Number);
-      const [year, month, dayNum] = selectedDate.split("-").map(Number);
-      const scheduledAt = new Date(year, month - 1, dayNum, h, m, 0, 0);
+      // Schedule Appointment Slot in Africa/Cairo timezone
+      // Ensures that 10:00 AM selected by a user in London or Dubai is booked as 10:00 AM Cairo time.
+      const scheduledAt = fromZonedTime(`${selectedDate} ${selectedSlot}:00`, "Africa/Cairo");
 
       const data = {
         patientId: selectedPatient.id,
@@ -447,6 +466,34 @@ export function BookingWizardClient({
                 </div>
               </div>
             )}
+
+            {/* Cairo Timezone Egyptian Public Holiday safeguards */}
+            {isHolidayWarning && (
+              <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-700 rounded-xl text-xs flex gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-black block mb-0.5">{isRtl ? "عطلة رسمية بالجمهورية" : "Official Public Holiday"}</span>
+                  {isRtl 
+                    ? `اليوم المختار يصادف عطلة رسمية بالدولة (${holidayName}). العيادات الخارجية مغلقة بالكامل ولا تقدم سوى الطوارئ.` 
+                    : `The selected date is an official public holiday (${holidayName}). Outpatient clinics are closed, and bookings are unavailable.`}
+                </div>
+              </div>
+            )}
+
+            {/* Egyptian Holiday Shifting Policy Advisory */}
+            <div className="p-3.5 bg-blue-500/5 border border-blue-500/10 text-blue-700 rounded-xl text-xs flex gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-blue-500" />
+              <div>
+                <span className="font-black block mb-0.5">
+                  {isRtl ? "سياسة ترحيل الإجازات الرسمية للجمهورية" : "Egyptian Cabinet Holiday Shifting Policy"}
+                </span>
+                <p className="leading-relaxed font-medium">
+                  {isRtl
+                    ? "تنبيه: قد يتم ترحيل الإجازات الرسمية التي تقع في منتصف الأسبوع إلى يوم الخميس التالي بقرار سيادي من مجلس الوزراء المصري، مما قد يؤثر على تفعيل الحجز الفعلي في الموعد المختار."
+                    : "Advisory: Official mid-week public holidays may be shifted to the following Thursday by Egyptian Cabinet decree, which may override and shift outpatient clinical schedules dynamically."}
+                </p>
+              </div>
+            </div>
 
             {/* Slot list buttons */}
             <div className="space-y-2">

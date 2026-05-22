@@ -26,17 +26,33 @@ export const patientSchema = z.object({
   insuranceProviderId: z.string().optional(),
   insuranceNumber: z.string().optional(),
   guardianName: z.string().optional(),
-  guardianNid: z.string().optional(),
+  guardianNid: z.string().optional().refine((val) => {
+    if (!val || val === "") return true;
+    // If it looks like an Egyptian National ID (14 digits), validate strictly
+    if (/^\d{14}$/.test(val)) {
+      return validateNationalId(val);
+    }
+    // Otherwise, treat as a foreign passport (basic alphanumeric format check)
+    return /^[A-Z0-9]{6,20}$/i.test(val);
+  }, {
+    message: "Invalid Guardian Identity format: Must be a 14-digit National ID or a valid Passport Number.",
+  }),
   guardianPhone: egyptianPhoneSchema.optional().or(z.literal("")),
 }).refine((data) => {
   if (data.insuranceProviderId === "uhis") {
     const govCode = getGovernorateCode(data.governorate);
     const provider = EGYPTIAN_INSURANCE_PROVIDERS.find(p => p.id === "uhis");
-    return !!(govCode && provider?.rolloutGovernorates?.includes(govCode));
+    const isEligibleGov = !!(govCode && provider?.rolloutGovernorates?.includes(govCode));
+    if (!isEligibleGov) return false;
+
+    // UHIS IDs must be exactly 12 numeric digits
+    if (data.insuranceNumber && !/^\d{12}$/.test(data.insuranceNumber)) {
+      return false;
+    }
   }
   return true;
 }, {
-  message: "UHIS is not yet rolled out in the patient's current residence/registration governorate.",
+  message: "UHIS is not yet available in your governorate or the provided UHIS ID is invalid (must be 12 digits).",
   path: ["insuranceProviderId"]
 }).superRefine((data, ctx) => {
   const hasNid = !!(data.nationalId && data.nationalId.trim() !== "");

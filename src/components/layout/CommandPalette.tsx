@@ -61,12 +61,9 @@ export function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProps) {
         className="fixed inset-0" 
         onClick={() => setIsOpen(false)} 
       />
-      <div className="fixed top-[15%] left-[50%] -translate-x-[1/2] w-full max-w-2xl px-4">
+      <div className="fixed top-[15%] start-[50%] -translate-x-[1/2] w-full max-w-2xl px-4">
         <Command 
-          className={cn(
-            "w-full bg-card text-card-foreground border border-border shadow-2xl rounded-2xl overflow-hidden glass-card transition-all duration-300",
-            isRtl ? "text-right" : "text-left"
-          )}
+          className="w-full bg-card text-card-foreground border border-border shadow-2xl rounded-2xl overflow-hidden glass-card transition-all duration-300 text-start"
           dir={isRtl ? "rtl" : "ltr"}
         >
           <div className="flex items-center px-4 border-b border-border/40 py-1">

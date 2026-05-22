@@ -21,7 +21,7 @@ function getIcdFuse() {
 function getCptFuse() {
   if (!cptFuse) {
     cptFuse = new Fuse(cptData as CptCode[], {
-      keys: ["nameEn", "nameAr", "code"],
+      keys: ["descriptionEn", "descriptionAr", "code"],
       threshold: 0.3,
     });
   }

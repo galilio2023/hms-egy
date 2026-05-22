@@ -206,10 +206,10 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
       
       <aside 
         className={cn(
-          "h-screen flex flex-col bg-primary text-primary-foreground border-border/10 transition-all duration-300 ease-in-out shadow-2xl z-50",
+          "h-screen flex flex-col bg-slate-950 text-slate-200 border-slate-900/50 transition-all duration-300 ease-in-out shadow-2xl z-50",
           "fixed lg:relative top-0 bottom-0",
           isCollapsed ? "lg:w-20 w-64" : "w-64",
-          isRtl ? "border-l" : "border-r",
+          "border-e",
           !isMobileOpen && (isRtl ? "translate-x-full lg:translate-x-0" : "-translate-x-full lg:translate-x-0"),
           isMobileOpen && "translate-x-0"
         )}
@@ -228,7 +228,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
         </div>
         <button 
           onClick={handleToggleCollapse}
-          className="p-1.5 hover:bg-white/10 rounded-lg text-primary-foreground/70 hover:text-white transition-colors duration-200 hidden md:block"
+          className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors duration-200 hidden md:block"
         >
           {isCollapsed ? (
             isRtl ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />
@@ -255,13 +255,13 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
                     "w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative",
                     isActive 
                       ? "bg-white/10 text-white shadow-[inset_0px_1px_1px_rgba(255,255,255,0.1)] border border-white/5" 
-                      : "text-primary-foreground/70 hover:text-white hover:bg-white/5"
+                      : "text-slate-400 hover:text-white hover:bg-white/5"
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <Icon className={cn(
                       "h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
-                      isActive ? "text-accent" : "text-primary-foreground/60 group-hover:text-white"
+                      isActive ? "text-accent" : "text-slate-400 group-hover:text-white"
                     )} />
                     {!isCollapsed && <span>{t(item.key)}</span>}
                   </div>
@@ -276,19 +276,13 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
                   )}
                   {/* Subtle active border glow */}
                   {isActive && !isCollapsed && (
-                    <div className={cn(
-                      "absolute top-0 bottom-0 w-1 bg-accent rounded-full",
-                      isRtl ? "right-0" : "left-0"
-                    )} />
+                    <div className="absolute top-0 bottom-0 w-1 bg-accent rounded-full start-0" />
                   )}
                 </button>
 
                 {/* Submenu Children container */}
                 {isSubMenuOpen && !isCollapsed && (
-                  <div className={cn(
-                    "space-y-1 py-1 transition-all duration-300 ease-in-out",
-                    isRtl ? "pr-8" : "pl-8"
-                  )}>
+                  <div className="space-y-1 py-1 transition-all duration-300 ease-in-out ps-8">
                     {item.subItems!.map((sub) => {
                       const isSubActive = pathname === sub.href;
                       const SubIcon = sub.icon;
@@ -305,12 +299,12 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
                             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 relative group",
                             isSubActive 
                               ? "bg-accent/20 text-white" 
-                              : "text-primary-foreground/60 hover:text-white hover:bg-white/5"
+                              : "text-slate-400 hover:text-white hover:bg-white/5"
                           )}
                         >
                           <SubIcon className={cn(
                             "h-4 w-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
-                            isSubActive ? "text-accent" : "text-primary-foreground/40 group-hover:text-white"
+                            isSubActive ? "text-accent" : "text-slate-500 group-hover:text-white"
                           )} />
                           <span>{t(sub.key)}</span>
                         </Link>
@@ -335,21 +329,18 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
                 "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative",
                 isActive 
                   ? "bg-white/10 text-white shadow-[inset_0px_1px_1px_rgba(255,255,255,0.1)] border border-white/5" 
-                  : "text-primary-foreground/70 hover:text-white hover:bg-white/5"
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
               )}
             >
               <Icon className={cn(
                 "h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
-                isActive ? "text-accent" : "text-primary-foreground/60 group-hover:text-white"
+                isActive ? "text-accent" : "text-slate-400 group-hover:text-white"
               )} />
               {!isCollapsed && <span>{t(item.key)}</span>}
               
               {/* Active glow enforcers */}
               {isActive && (
-                <div className={cn(
-                  "absolute top-0 bottom-0 w-1 bg-accent rounded-full",
-                  isRtl ? "right-0" : "left-0"
-                )} />
+                <div className="absolute top-0 bottom-0 w-1 bg-accent rounded-full start-0" />
               )}
             </Link>
           );
@@ -360,7 +351,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
       <div className="p-3 border-t border-white/5 space-y-1 h-36">
         <button
           onClick={handleLockScreen}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-primary-foreground/60 hover:text-accent hover:bg-accent/10 transition-all duration-200 group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-accent hover:bg-accent/10 transition-all duration-200 group"
           title={t("lockWorkstation")}
         >
           <Lock className="h-4.5 w-4.5 flex-shrink-0 transition-transform duration-200 group-hover:rotate-12 group-hover:scale-110" />
@@ -369,7 +360,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-destructive-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 group"
           title={t("logout")}
         >
           <LogOut className="h-4.5 w-4.5 flex-shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5 group-hover:scale-110" />

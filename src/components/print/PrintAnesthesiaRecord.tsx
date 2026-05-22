@@ -162,7 +162,7 @@ export function PrintAnesthesiaRecord({
           <p className="font-bold">ملاحظات الإفاقة والرعاية اللاحقة / Post-Op Recovery Notes:</p>
           <p className="text-slate-700 min-h-[40px] italic">{anesthesia.notes || "لا توجد ملاحظات إضافية."}</p>
         </div>
-        <div className="border-r border-black/15 pr-4 flex flex-col justify-center items-center text-center">
+        <div className="border-r border-black/15 pe-4 flex flex-col justify-center items-center text-center">
           <span className="font-bold block mb-1">مقياس الدريت للإفاقة / Aldrete Score</span>
           <div className="text-2xl font-black text-accent bg-accent/10 border border-accent/25 px-4 py-1.5 rounded-lg">
             {anesthesia.recoveryScore ?? "-"} / 10
