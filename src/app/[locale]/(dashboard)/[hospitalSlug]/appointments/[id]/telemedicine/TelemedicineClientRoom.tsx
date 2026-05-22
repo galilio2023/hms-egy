@@ -13,6 +13,7 @@ import { tafqeet } from "@/lib/utils/tafqeet";
 import { 
   Video, 
   Clock, 
+  Search,
   User, 
   Activity, 
   FileText, 
@@ -31,6 +32,7 @@ import {
   Pill
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Fuse from "fuse.js";
 import { safeParseInt } from "@/lib/utils/formatting";
 import { completeTelemedicineConsultation } from "@/lib/actions/clinical";
 
@@ -118,6 +120,27 @@ export function TelemedicineClientRoom({
   const [plan, setPlan] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
 
+  // Fuzzy Medication Search Logic
+  const [medQuery, setMedQuery] = useState("");
+  const [medResults, setMedSearchResults] = useState<MedicationProp[]>([]);
+  const [isMedSearching, setIsMedSearching] = useState(false);
+
+  const fuse = useMemo(() => {
+    return new Fuse(medications, {
+      keys: ["nameEn", "nameAr", "genericName", "barcode"],
+      threshold: 0.4,
+    });
+  }, [medications]);
+
+  useEffect(() => {
+    if (!medQuery.trim()) {
+      setMedSearchResults([]);
+      return;
+    }
+    const results = fuse.search(medQuery).map(r => r.item);
+    setMedSearchResults(results.slice(0, 10));
+  }, [medQuery, fuse]);
+
   // Prescription State
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([]);
   const [selectedMedId, setSelectedMedId] = useState("");
@@ -186,6 +209,8 @@ export function TelemedicineClientRoom({
 
     setPrescriptionItems((prev) => [...prev, newItem]);
     setSelectedMedId("");
+    setMedQuery("");
+    setIsMedSearching(false);
     // Reset defaults
     setCurDosage("1 tablet");
     setCurFrequency("3 times daily");
@@ -524,21 +549,48 @@ ${plan}
                 {/* Form to Select & Configure New Drug */}
                 <Card className="border border-slate-800 bg-slate-900/60 shadow-xs">
                   <CardContent className="p-4 space-y-3 text-xs">
-                    <div className="space-y-1">
+                    <div className="space-y-1.5 relative">
                       <label className="text-[10px] text-slate-400 font-bold block">{isRtl ? "اختر الدواء من الصيدلية" : "Select Available Medication"}</label>
-                      <select
-                        dir={isRtl ? "rtl" : "ltr"}
-                        value={selectedMedId}
-                        onChange={(e) => setSelectedMedId(e.target.value)}
-                        className="flex h-9 w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-1 text-xs shadow-sm transition-colors text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
-                      >
-                        <option value="" className="text-start">{isRtl ? "ابحث عن دواء بالاسم التجاري أو العلمي..." : "Search commercial/generic drug..."}</option>
-                        {medications.map((med) => (
-                          <option key={med.id} value={med.id}>
-                            {med.nameEn} ({med.strength} - {med.form}) - {med.price} EGP
-                          </option>
-                        ))}
-                      </select>
+                      
+                      <div className="relative">
+                        <Search className="absolute top-2.5 h-3.5 w-3.5 text-slate-500 start-3" />
+                        <Input
+                          placeholder={isRtl ? "ابحث بالاسم، الباركود أو المادة الفعالة..." : "Search drug by name, barcode..."}
+                          value={medQuery}
+                          onChange={(e) => {
+                            setMedQuery(e.target.value);
+                            setIsMedSearching(true);
+                          }}
+                          onFocus={() => setIsMedSearching(true)}
+                          className="bg-slate-900 border-slate-800 h-9 ps-8 text-xs text-slate-100 placeholder:text-slate-600 focus:border-accent"
+                        />
+                      </div>
+
+                      {/* Fuzzy Results Dropdown */}
+                      {isMedSearching && medResults.length > 0 && (
+                        <div className="absolute z-50 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl scrollbar-thin">
+                          {medResults.map((med) => (
+                            <button
+                              key={med.id}
+                              onClick={() => {
+                                setSelectedMedId(med.id);
+                                setMedQuery(isRtl ? med.nameAr : med.nameEn);
+                                setIsMedSearching(false);
+                              }}
+                              className={cn(
+                                "w-full p-2.5 text-start hover:bg-slate-800 border-b border-slate-800/50 flex flex-col gap-0.5",
+                                selectedMedId === med.id && "bg-accent/10"
+                              )}
+                            >
+                              <div className="font-black text-slate-200">{isRtl ? med.nameAr : med.nameEn}</div>
+                              <div className="text-[10px] text-slate-500 flex justify-between">
+                                <span>{med.strength} · {med.form}</span>
+                                <span className="font-mono text-accent">{med.price} EGP</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

@@ -422,19 +422,10 @@ export default function AdmissionsDashboardClient({
     } else if (bed.status === "occupied") {
       setIsDrawerOpen(true);
     } else if (bed.status === "pending_cleaning") {
-      toast.info(
-        isRtl 
-          ? "السرير قيد التنظيف والتعقيم حالياً من قبل فريق النظافة والتعقيم." 
-          : "This bed is currently pending cleaning by the housekeeping team."
-      );
+      toast.info(t("bedPendingCleaning"));
     } else {
-      toast.warning(
-        isRtl 
-          ? "السرير غير متاح حالياً للصيانة أو الحجر الصحي." 
-          : "This bed is currently unavailable due to maintenance or quarantine constraints."
-      );
-    }
-  };
+      toast.warning(t("bedUnavailable"));
+    }  };
 
   // Format date helper
   const formatDate = (date: Date | string | null) => {

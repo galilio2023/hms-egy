@@ -282,6 +282,10 @@
     "conditionStable": "Stable",
     "conditionImproved": "Improved",
     "conditionReferred": "Referred to another facility",
-    "conditionDeceased": "Deceased"
+    "conditionDeceased": "Deceased",
+    "currentMedicalStaff": "Current Medical Staff",
+    "mohSummaryWarning": "Please write the medical summary in both Arabic and English to comply with MOH requirements.",
+    "bedPendingCleaning": "This bed is currently pending cleaning by the housekeeping team.",
+    "bedUnavailable": "This bed is currently unavailable due to maintenance or quarantine constraints."
   }
 }

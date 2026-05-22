@@ -282,6 +282,10 @@
     "conditionStable": "مستقرة",
     "conditionImproved": "متحسنة",
     "conditionReferred": "محولة لمستشفى آخر",
-    "conditionDeceased": "وفاة"
+    "conditionDeceased": "وفاة",
+    "currentMedicalStaff": "الطاقم الطبي الحالي",
+    "mohSummaryWarning": "يرجى كتابة التلخيص الطبي باللغتين العربية والإنجليزية لضمان الالتزام بمعايير وزارة الصحة.",
+    "bedPendingCleaning": "السرير قيد التنظيف والتعقيم حالياً من قبل فريق النظافة والتعقيم.",
+    "bedUnavailable": "السرير غير متاح حالياً للصيانة أو الحجر الصحي."
   }
 }

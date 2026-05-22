@@ -24,7 +24,7 @@ import {
   CalendarCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toZonedTime } from "date-fns-tz";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { createAppointment, addToWaitingList, getDoctorAvailability } from "@/lib/actions/appointments";
 import { isEgyptianPublicHoliday } from "@/lib/utils/egypt";
@@ -93,15 +93,17 @@ export function BookingWizardClient({
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
       // 1. Cairo Timezone weekend check (Friday = 5, Saturday = 6)
-      // Safe split-parsing to bypass UTC timezone off-by-one shifts
+      // Standardize to UTC midnight before resolving to Cairo to avoid local browser timezone skew
       const [year, month, dayNum] = selectedDate.split("-").map(Number);
-      const day = new Date(year, month - 1, dayNum).getDay();
+      const dateToCheck = new Date(Date.UTC(year, month - 1, dayNum));
+      const cairoZoned = toZonedTime(dateToCheck, "Africa/Cairo");
+      
+      const day = cairoZoned.getDay();
       const isWeekend = day === 5 || day === 6;
       setIsWeekendWarning(isWeekend);
       setQueueToWaitingList(false);
 
       // 2. Cairo Timezone holiday check
-      const dateToCheck = new Date(year, month - 1, dayNum);
       const holidayInfo = isEgyptianPublicHoliday(dateToCheck);
       if (holidayInfo?.isHoliday) {
         setIsHolidayWarning(true);
@@ -201,10 +203,9 @@ export function BookingWizardClient({
         }
       });
     } else {
-      // Schedule Appointment Slot
-      const [h, m] = selectedSlot.split(":").map(Number);
-      const [year, month, dayNum] = selectedDate.split("-").map(Number);
-      const scheduledAt = new Date(year, month - 1, dayNum, h, m, 0, 0);
+      // Schedule Appointment Slot in Africa/Cairo timezone
+      // Ensures that 10:00 AM selected by a user in London or Dubai is booked as 10:00 AM Cairo time.
+      const scheduledAt = fromZonedTime(`${selectedDate} ${selectedSlot}:00`, "Africa/Cairo");
 
       const data = {
         patientId: selectedPatient.id,

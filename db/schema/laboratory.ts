@@ -20,8 +20,8 @@ export const labTests = pgTable("lab_tests", {
 }, (table) => {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
-    hospitalTestEnIdx: uniqueIndex("lab_hospital_name_en_idx").on(table.hospitalId, table.nameEn),
-    hospitalTestArIdx: uniqueIndex("lab_hospital_name_ar_idx").on(table.hospitalId, table.nameAr),
+    hospitalTestEnIdx: uniqueIndex("lab_hospital_name_en_idx").on(table.hospitalId, table.nameEn).where(sql`name_en IS NOT NULL AND name_en != ''`),
+    hospitalTestArIdx: uniqueIndex("lab_hospital_name_ar_idx").on(table.hospitalId, table.nameAr).where(sql`name_ar IS NOT NULL AND name_ar != ''`),
     loincIdx: index("lab_loinc_idx").on(table.loincCode),
   };
 }).enableRLS();
