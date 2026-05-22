@@ -126,15 +126,19 @@ export default async function TelemedicinePage({
       notFound();
     }
 
-    // Enforce doctor assignment ownership check (only the assigned doctor or SUPER_ADMIN can enter)
-    let isAssignedDoctor = false;
+    // Enforce doctor assignment ownership check (only the assigned doctor, support staff, or SUPER_ADMIN can enter)
+    let isAuthorizedToEnter = false;
+    const allowedSupportRoles = ["ADMIN", "NURSE"];
+    
     if (isSuperAdmin) {
-      isAssignedDoctor = true;
+      isAuthorizedToEnter = true;
     } else if (currentStaffRes && appointmentRes.doctorId === currentStaffRes.id) {
-      isAssignedDoctor = true;
+      isAuthorizedToEnter = true;
+    } else if (session.user.role && allowedSupportRoles.includes(session.user.role)) {
+      isAuthorizedToEnter = true;
     }
 
-    if (!isAssignedDoctor) {
+    if (!isAuthorizedToEnter) {
       notFound();
     }
 

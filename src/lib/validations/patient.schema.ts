@@ -42,11 +42,17 @@ export const patientSchema = z.object({
   if (data.insuranceProviderId === "uhis") {
     const govCode = getGovernorateCode(data.governorate);
     const provider = EGYPTIAN_INSURANCE_PROVIDERS.find(p => p.id === "uhis");
-    return !!(govCode && provider?.rolloutGovernorates?.includes(govCode));
+    const isEligibleGov = !!(govCode && provider?.rolloutGovernorates?.includes(govCode));
+    if (!isEligibleGov) return false;
+
+    // UHIS IDs must be exactly 12 numeric digits
+    if (data.insuranceNumber && !/^\d{12}$/.test(data.insuranceNumber)) {
+      return false;
+    }
   }
   return true;
 }, {
-  message: "UHIS is not yet rolled out in the patient's current residence/registration governorate.",
+  message: "UHIS is not yet available in your governorate or the provided UHIS ID is invalid (must be 12 digits).",
   path: ["insuranceProviderId"]
 }).superRefine((data, ctx) => {
   const hasNid = !!(data.nationalId && data.nationalId.trim() !== "");

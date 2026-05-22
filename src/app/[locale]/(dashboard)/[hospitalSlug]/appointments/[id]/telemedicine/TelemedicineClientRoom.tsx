@@ -43,7 +43,7 @@ import { ORDER_SETS } from "@/lib/clinical/order-sets";
 const JitsiStream = React.memo(({ url }: { url: string }) => (
   <iframe
     src={url}
-    allow="camera; microphone; fullscreen; display-capture"
+    allow="camera; microphone; fullscreen; display-capture; autoplay"
     sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
     className="w-full h-full border-none rounded-2xl flex-1 bg-slate-950"
   />

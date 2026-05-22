@@ -18,6 +18,7 @@ interface Icd10Code {
 // Module-level caching to prevent expensive re-parsing and index re-building on component re-mounts
 let cachedIcdData: Icd10Code[] | null = null;
 let cachedFuse: Fuse<Icd10Code> | null = null;
+let icdLoadingPromise: Promise<{ data: Icd10Code[], fuse: Fuse<Icd10Code> }> | null = null;
 
 interface Icd10SearchPickerProps {
   selectedCodes: string[];
@@ -54,24 +55,35 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
         return;
       }
 
+      if (!icdLoadingPromise) {
+        icdLoadingPromise = (async () => {
+          try {
+            const data = (await import("@db/clinical-data/icd10-ar.json")).default as Icd10Code[];
+            const fuseInstance = new Fuse(data, {
+              keys: [
+                { name: "code", weight: 0.6 },
+                { name: "nameEn", weight: 0.2 },
+                { name: "nameAr", weight: 0.2 }
+              ],
+              threshold: 0.35,
+              ignoreLocation: true
+            });
+            cachedIcdData = data;
+            cachedFuse = fuseInstance;
+            return { data, fuse: fuseInstance };
+          } catch (error) {
+            console.error("Failed to load ICD-10 data:", error);
+            throw error;
+          }
+        })();
+      }
+
       try {
-        const data = (await import("@db/clinical-data/icd10-ar.json")).default as Icd10Code[];
-        cachedIcdData = data;
+        const { data, fuse: fuseInstance } = await icdLoadingPromise;
         setIcdData(data);
-        
-        const fuseInstance = new Fuse(data, {
-          keys: [
-            { name: "code", weight: 0.6 },
-            { name: "nameEn", weight: 0.2 },
-            { name: "nameAr", weight: 0.2 }
-          ],
-          threshold: 0.35,
-          ignoreLocation: true
-        });
-        cachedFuse = fuseInstance;
         setFuse(fuseInstance);
-      } catch (error) {
-        console.error("Failed to load ICD-10 data:", error);
+      } catch {
+        // Error handled in promise
       }
     };
     

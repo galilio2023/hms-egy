@@ -313,6 +313,26 @@ export async function searchPatientsAction(query: string) {
   // Normalize the incoming query for Arabic text consistency
   const normalizedQuery = normalizeArabic(query?.trim() || "");
 
+  // SQL-level normalization helper for Arabic columns
+  const normalizeSql = (col: any) => sql`
+    REPLACE(
+      REPLACE(
+        REPLACE(
+          REPLACE(
+            REPLACE(
+              ${col},
+              'أ', 'ا'
+            ),
+            'إ', 'ا'
+          ),
+          'آ', 'ا'
+        ),
+        'ة', 'ه'
+      ),
+      'ي', 'ى'
+    )
+  `;
+
   try {
     return await withTenantContext(hospitalId, async (tx) => {
       let results;
@@ -335,7 +355,8 @@ export async function searchPatientsAction(query: string) {
               eq(patients.hospitalId, hospitalId),
               or(
                 ilike(patients.patientNumber, `%${normalizedQuery}%`),
-                ilike(patients.nameAr, `%${normalizedQuery}%`),
+                // Normalize DB name column on the fly to match normalized search query
+                sql`${normalizeSql(patients.nameAr)} ILIKE ${'%' + normalizedQuery + '%'}`,
                 ilike(patients.nameEn, `%${normalizedQuery}%`),
                 ilike(patients.contactPhone, `%${normalizedQuery}%`),
                 ilike(patients.nationalId || "", `%${normalizedQuery}%`),

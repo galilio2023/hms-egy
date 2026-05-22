@@ -131,7 +131,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
     startTransition(async () => {
       try {
         const activeOrderSet = ORDER_SETS.find((os) => os.id === selectedOrderSetId);
-        
+
         const orderSetMedications = activeOrderSet && selectedOrderSetId !== "none"
           ? activeOrderSet.medications.filter((_, idx) => checkedMeds[idx])
           : undefined;
