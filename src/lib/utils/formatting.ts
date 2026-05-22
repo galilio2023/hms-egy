@@ -148,7 +148,7 @@ export async function amountToArabicWords(amount: number): Promise<string> {
     // Lazy load tafgeetjs to keep initial bundle size lean
     const { default: Tafgeet } = await import("tafgeetjs");
     const tafgeet = new Tafgeet(roundedAmount, "EGP");
-    return tafgeet.parse();
+    return tafgeet.convert();
   } catch (error) {
     console.error("Tafgeet conversion failed", error);
     

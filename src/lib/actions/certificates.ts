@@ -51,17 +51,28 @@ export async function createCertificateAction(input: CertificateInput) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "يجب أن تكون مرتبطاً بمستشفى نشط لإصدار شهادة طبية.");
   }
 
-  const doctorId = session.user.id;
   const serialNumber = generateSerialNumber();
 
   try {
     const result = await withTenantContext(hospitalId, async (tx) => {
+      // Resolve Doctor (Staff) ID of the current user for this hospital
+      const currentStaff = await tx
+        .select()
+        .from(staff)
+        .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+        .limit(1)
+        .then((res) => res[0]);
+
+      if (!currentStaff) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Clinical Profile Error: Doctor profile not found for current user.");
+      }
+
       const [newCertificate] = await tx
         .insert(medicalCertificates)
         .values({
           hospitalId,
           patientId: input.patientId,
-          doctorId,
+          doctorId: currentStaff.id,
           certificateType: input.certificateType,
           diagnosis: input.diagnosis.trim(),
           startDate: new Date(input.startDate),

@@ -7,7 +7,7 @@ import { prescriptions, prescriptionItems, medications } from "@db/schema/pharma
 import { labTests, labOrders, labOrderItems } from "@db/schema/laboratory";
 import { radiologyOrders } from "@db/schema/radiology";
 import { hospitals, staff } from "@db/schema/core";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";

@@ -32,17 +32,27 @@ export async function createReferralAction(input: ReferralInput) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "يجب أن تكون مرتبطاً بمستشفى نشط لإجراء الإحالة.");
   }
 
-  const referringDoctorId = session.user.id;
-
   try {
     const result = await withTenantContext(hospitalId, async (tx) => {
+      // Resolve referring Doctor (Staff) ID
+      const currentStaff = await tx
+        .select()
+        .from(staff)
+        .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+        .limit(1)
+        .then((res) => res[0]);
+
+      if (!currentStaff) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Clinical Profile Error: Doctor profile not found.");
+      }
+
       // Create the internal referral
       const [newReferral] = await tx
         .insert(internalReferrals)
         .values({
           hospitalId,
           patientId: input.patientId,
-          referringDoctorId,
+          referringDoctorId: currentStaff.id,
           targetDepartmentId: input.targetDepartmentId,
           targetDoctorId: input.targetDoctorId || null,
           reason: input.reason.trim(),
