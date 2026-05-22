@@ -170,6 +170,35 @@ export default function AdmissionsDashboardClient({
     
     return result;
   }, [vitalsHistory, clientAddedVitals]);
+
+  // Synchronize client-side added vitals with server data to clear stale local state after successful revalidation
+  useEffect(() => {
+    if (Object.keys(clientAddedVitals).length === 0) return;
+
+    setClientAddedVitals(prev => {
+      const newState = { ...prev };
+      let changed = false;
+
+      Object.keys(newState).forEach(patientId => {
+        const serverRecords = vitalsHistory[patientId] || [];
+        const serverIds = new Set(serverRecords.map(r => r.id));
+        
+        // Filter out client-side records that are now present in the server's history
+        const remainingClientRecords = newState[patientId].filter(r => !serverIds.has(r.id));
+        
+        if (remainingClientRecords.length !== newState[patientId].length) {
+          if (remainingClientRecords.length === 0) {
+            delete newState[patientId];
+          } else {
+            newState[patientId] = remainingClientRecords;
+          }
+          changed = true;
+        }
+      });
+
+      return changed ? newState : prev;
+    });
+  }, [vitalsHistory]); // Trigger sync whenever vitalsHistory (from server) changes
   
   // New Admission Dialog fields
   const [patientQuery, setPatientQuery] = useState("");

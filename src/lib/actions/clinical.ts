@@ -366,44 +366,27 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
       : null;
 
     return await withTenantContext(hospitalId, async (tx) => {
-      // 1. Resolve/Seed Medications Catalog inside the transaction context for RLS compliance
+      // 1. Resolve Medications from Catalog inside the transaction context for RLS compliance
+      // Order Sets should map strictly to pre-existing active catalog items to maintain inventory audit integrity.
       const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
       if (data.orderSetMedications && data.orderSetMedications.length > 0) {
-        // Filter valid items and prepare bulk insert payload with trimmed names to handle empty strings correctly
-        const validMeds = data.orderSetMedications.filter(item =>
-          item.nameEn?.trim() && item.nameAr?.trim() && item.genericName?.trim() && item.form?.trim() && item.strength?.trim()
-        );
+        const medNames = data.orderSetMedications.map(item => item.nameEn.trim()).filter(Boolean);
+        
+        if (medNames.length > 0) {
+          // Fetch existing medications matching the requested names (case-insensitive)
+          const existingMeds = await tx
+            .select()
+            .from(medications)
+            .where(and(
+              eq(medications.hospitalId, hospitalId),
+              eq(medications.isActive, true),
+              inArray(sql`lower(${medications.nameEn})`, medNames.map(name => name.toLowerCase()))
+            ));
 
-        if (validMeds.length > 0) {
-          const medsToInsert = validMeds.map(item => ({
-            hospitalId,
-            nameAr: item.nameAr.trim(),
-            nameEn: item.nameEn.trim(),
-            genericName: item.genericName.trim(),
-            form: item.form.trim(),
-            strength: item.strength.trim(),
-            barcode: `AUTO-${randomBytes(4).toString("hex").toUpperCase()}`,
-            stockCount: 100,
-            minStockLevel: 10,
-            price: "50.00",
-            isActive: true,
-          }));
-
-          // Execute Bulk Insert with conflict resolution using transactional client tx
-          const insertedMeds = await tx
-            .insert(medications)
-            .values(medsToInsert)
-            .onConflictDoUpdate({
-              target: [medications.hospitalId, medications.nameEn],
-              targetWhere: sql`name_en IS NOT NULL AND name_en != ''`,
-              set: { updatedAt: new Date() } // Safe dummy update to return the existing row
-            })
-            .returning();
-
-          // Map back the resolved IDs to the items
-          const medMap = new Map(insertedMeds.map(m => [m.nameEn, m.id]));
-          validMeds.forEach(item => {
-            const medId = medMap.get(item.nameEn.trim());
+          const medMap = new Map(existingMeds.map(m => [m.nameEn.toLowerCase(), m.id]));
+          
+          for (const item of data.orderSetMedications) {
+            const medId = medMap.get(item.nameEn.toLowerCase().trim());
             if (medId) {
               resolvedMedicationItems.push({
                 medicationId: medId,
@@ -412,51 +395,45 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
                 durationDays: item.durationDays,
                 instructions: item.instructions,
               });
+            } else {
+              // If an item in the Order Set is missing from the hospital's active list, throw error to prevent broken prescriptions
+              throw new AppError(
+                ErrorCode.NOT_FOUND, 
+                `Medication "${item.nameEn}" is not registered in this hospital's active pharmacy catalog. Please add it to inventory before applying this protocol.`
+              );
             }
-          });
+          }
         }
       }
 
-      // 2. Resolve/Seed Labs Catalog inside the transaction context
+      // 2. Resolve Labs from Catalog inside the transaction context
       const resolvedLabItems: string[] = [];
       if (data.orderSetLabs && data.orderSetLabs.length > 0) {
-        // Filter valid items and prepare bulk insert payload
-        const validLabs = data.orderSetLabs.filter(item =>
-          item.nameEn?.trim() && item.nameAr?.trim()
-        );
+        const labNames = data.orderSetLabs.map(item => item.nameEn.trim()).filter(Boolean);
 
-        if (validLabs.length > 0) {
-          const labsToInsert = validLabs.map(item => ({
-            hospitalId,
-            nameAr: item.nameAr.trim(),
-            nameEn: item.nameEn.trim(),
-            loincCode: item.loincCode,
-            cptCode: item.cptCode,
-            normalRange: item.normalRange,
-            unit: item.unit,
-            price: "150.00",
-            isActive: true,
-          }));
+        if (labNames.length > 0) {
+          const existingLabs = await tx
+            .select()
+            .from(labTests)
+            .where(and(
+              eq(labTests.hospitalId, hospitalId),
+              eq(labTests.isActive, true),
+              inArray(sql`lower(${labTests.nameEn})`, labNames.map(name => name.toLowerCase()))
+            ));
 
-          // Execute Bulk Insert with conflict resolution using transactional client tx
-          const insertedLabs = await tx
-            .insert(labTests)
-            .values(labsToInsert)
-            .onConflictDoUpdate({
-              target: [labTests.hospitalId, labTests.nameEn],
-              targetWhere: sql`name_en IS NOT NULL AND name_en != ''`,
-              set: { updatedAt: new Date() } // Safe dummy update to return the existing row
-            })
-            .returning();
+          const labMap = new Map(existingLabs.map(l => [l.nameEn.toLowerCase(), l.id]));
 
-          // Collect the resolved IDs
-          const labMap = new Map(insertedLabs.map(l => [l.nameEn, l.id]));
-          validLabs.forEach(item => {
-            const labId = labMap.get(item.nameEn.trim());
+          for (const item of data.orderSetLabs) {
+            const labId = labMap.get(item.nameEn.toLowerCase().trim());
             if (labId) {
               resolvedLabItems.push(labId);
+            } else {
+              throw new AppError(
+                ErrorCode.NOT_FOUND,
+                `Laboratory test "${item.nameEn}" is not defined in this hospital's test menu. Please configure it in Laboratory Settings.`
+              );
             }
-          });
+          }
         }
       }
 
