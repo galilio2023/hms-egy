@@ -34,6 +34,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { safeParseInt } from "@/lib/utils/formatting";
 
 interface PatientMinimal {
   id: string;
@@ -151,14 +152,14 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
           soapNotes: soapNotes.trim() || undefined,
           icdCodes: icdCodes.length > 0 ? icdCodes : undefined,
           vitals: {
-            bloodPressureSystolic: bpSystolic ? parseInt(bpSystolic) : undefined,
-            bloodPressureDiastolic: bpDiastolic ? parseInt(bpDiastolic) : undefined,
-            heartRate: heartRate ? parseInt(heartRate) : undefined,
-            respiratoryRate: respiratoryRate ? parseInt(respiratoryRate) : undefined,
-            temperature: temperature.trim() || undefined,
-            oxygenSaturation: oxygenSaturation ? parseInt(oxygenSaturation) : undefined,
-            weightKg: weightKg.trim() || undefined,
-            heightCm: heightCm ? parseInt(heightCm) : undefined,
+            bloodPressureSystolic: bpSystolic ? safeParseInt(bpSystolic) : undefined,
+            bloodPressureDiastolic: bpDiastolic ? safeParseInt(bpDiastolic) : undefined,
+            heartRate: heartRate ? safeParseInt(heartRate) : undefined,
+            respiratoryRate: respiratoryRate ? safeParseInt(respiratoryRate) : undefined,
+            temperature: temperature || undefined,
+            oxygenSaturation: oxygenSaturation ? safeParseInt(oxygenSaturation) : undefined,
+            weightKg: weightKg || undefined,
+            heightCm: heightCm ? safeParseInt(heightCm) : undefined,
           },
           locale,
           appliedOrderSetId: selectedOrderSetId !== "none" ? selectedOrderSetId : undefined,

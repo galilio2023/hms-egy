@@ -5,7 +5,6 @@ import Fuse from "fuse.js";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, X, Check } from "lucide-react";
-import icd10Data from "@db/clinical-data/icd10-ar.json";
 import { cn } from "@/lib/utils";
 
 // Structured ICD-10 object interface
@@ -40,18 +39,32 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<Icd10Code[]>([]);
   const [isFocused, setIsFocused] = useState(false);
+  const [icdData, setIcdData] = useState<Icd10Code[]>([]);
+  const [fuse, setFuse] = useState<Fuse<Icd10Code> | null>(null);
 
-  // Initialize Fuse.js once for extremely fast, local indexing
-  const fuse = useMemo(() => {
-    return new Fuse(icd10Data as Icd10Code[], {
-      keys: [
-        { name: "code", weight: 0.6 },
-        { name: "nameEn", weight: 0.2 },
-        { name: "nameAr", weight: 0.2 }
-      ],
-      threshold: 0.35,
-      ignoreLocation: true
-    });
+  // Initialize Fuse.js once by dynamically importing the dataset
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = (await import("@db/clinical-data/icd10-ar.json")).default as Icd10Code[];
+        setIcdData(data);
+        
+        const fuseInstance = new Fuse(data, {
+          keys: [
+            { name: "code", weight: 0.6 },
+            { name: "nameEn", weight: 0.2 },
+            { name: "nameAr", weight: 0.2 }
+          ],
+          threshold: 0.35,
+          ignoreLocation: true
+        });
+        setFuse(fuseInstance);
+      } catch (error) {
+        console.error("Failed to load ICD-10 data:", error);
+      }
+    };
+    
+    loadData();
   }, []);
 
   // Debounce the input query changes by 200ms
@@ -67,7 +80,7 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
 
   // Execute the fuzzy search locally when debounced query updates
   useEffect(() => {
-    if (!debouncedQuery.trim()) {
+    if (!fuse || !debouncedQuery.trim()) {
       setResults([]);
       return;
     }
@@ -88,10 +101,10 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
   // Find rich data of selected codes for rendering badges
   const selectedCodeDetails = useMemo(() => {
     return selectedCodes.map((code) => {
-      const match = (icd10Data as Icd10Code[]).find((item) => item.code === code);
+      const match = icdData.find((item) => item.code === code);
       return match || { code, nameEn: code, nameAr: code, category: "Unspecified" };
     });
-  }, [selectedCodes]);
+  }, [selectedCodes, icdData]);
 
   return (
     <div className="space-y-3 text-start">

@@ -36,7 +36,7 @@ interface VitalsInput {
 /**
  * Performs clinical boundary/range validation on vitals signs inputs to prevent typographical errors.
  */
-export function validateVitals(vitals?: VitalsInput) {
+function validateVitals(vitals?: VitalsInput) {
   if (!vitals) return { success: true };
 
   const SystolicRange = { min: 40, max: 260 };
@@ -379,36 +379,28 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
     const resolvedMedicationItems: Array<{ medicationId: string; dosage: string; frequency: string; durationDays: number; instructions: string }> = [];
     if (data.orderSetMedications && data.orderSetMedications.length > 0) {
       for (const item of data.orderSetMedications) {
-        let [med] = await db
-          .select()
-          .from(medications)
-          .where(
-            and(
-              eq(medications.hospitalId, hospitalId),
-              eq(medications.nameEn, item.nameEn)
-            )
-          )
-          .limit(1);
-
-        if (!med) {
-          // Self-seed missing medication in hospital catalog with high-entropy cryptographic barcode
-          [med] = await db
-            .insert(medications)
-            .values({
-              hospitalId,
-              nameAr: item.nameAr,
-              nameEn: item.nameEn,
-              genericName: item.genericName,
-              form: item.form,
-              strength: item.strength,
-              barcode: `AUTO-${randomBytes(4).toString("hex").toUpperCase()}`,
-              stockCount: 100,
-              minStockLevel: 10,
-              price: "50.00",
-              isActive: true,
-            })
-            .returning();
-        }
+        // Self-seed missing medication in hospital catalog with high-entropy cryptographic barcode
+        // Using onConflictDoUpdate to handle potential race conditions atomically
+        const [med] = await db
+          .insert(medications)
+          .values({
+            hospitalId,
+            nameAr: item.nameAr,
+            nameEn: item.nameEn,
+            genericName: item.genericName,
+            form: item.form,
+            strength: item.strength,
+            barcode: `AUTO-${randomBytes(4).toString("hex").toUpperCase()}`,
+            stockCount: 100,
+            minStockLevel: 10,
+            price: "50.00",
+            isActive: true,
+          })
+          .onConflictDoUpdate({
+            target: [medications.hospitalId, medications.nameEn],
+            set: { updatedAt: new Date() } // Safe dummy update to return the existing row
+          })
+          .returning();
 
         if (med) {
           resolvedMedicationItems.push({
@@ -426,34 +418,26 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
     const resolvedLabItems: string[] = [];
     if (data.orderSetLabs && data.orderSetLabs.length > 0) {
       for (const item of data.orderSetLabs) {
-        let [test] = await db
-          .select()
-          .from(labTests)
-          .where(
-            and(
-              eq(labTests.hospitalId, hospitalId),
-              eq(labTests.nameEn, item.nameEn)
-            )
-          )
-          .limit(1);
-
-        if (!test) {
-          // Self-seed missing lab test in hospital catalog
-          [test] = await db
-            .insert(labTests)
-            .values({
-              hospitalId,
-              nameAr: item.nameAr,
-              nameEn: item.nameEn,
-              loincCode: item.loincCode,
-              cptCode: item.cptCode,
-              normalRange: item.normalRange,
-              unit: item.unit,
-              price: "150.00",
-              isActive: true,
-            })
-            .returning();
-        }
+        // Self-seed missing lab test in hospital catalog
+        // Using onConflictDoUpdate to handle potential race conditions atomically
+        const [test] = await db
+          .insert(labTests)
+          .values({
+            hospitalId,
+            nameAr: item.nameAr,
+            nameEn: item.nameEn,
+            loincCode: item.loincCode,
+            cptCode: item.cptCode,
+            normalRange: item.normalRange,
+            unit: item.unit,
+            price: "150.00",
+            isActive: true,
+          })
+          .onConflictDoUpdate({
+            target: [labTests.hospitalId, labTests.nameEn],
+            set: { updatedAt: new Date() } // Safe dummy update to return the existing row
+          })
+          .returning();
 
         if (test) {
           resolvedLabItems.push(test.id);

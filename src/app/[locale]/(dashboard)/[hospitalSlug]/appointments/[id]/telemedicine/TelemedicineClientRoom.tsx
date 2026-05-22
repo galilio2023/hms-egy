@@ -31,6 +31,7 @@ import {
   Pill
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { safeParseInt } from "@/lib/utils/formatting";
 import { completeTelemedicineConsultation } from "@/lib/actions/clinical";
 
 // Memoize the Jitsi player to prevent DOM tear-downs on local state updates
@@ -246,14 +247,14 @@ ${plan}
     `.trim();
 
     const formattedVitals = {
-      bloodPressureSystolic: systolic ? parseInt(systolic) : undefined,
-      bloodPressureDiastolic: diastolic ? parseInt(diastolic) : undefined,
-      heartRate: heartRate ? parseInt(heartRate) : undefined,
-      respiratoryRate: respiratoryRate ? parseInt(respiratoryRate) : undefined,
-      temperature: temperature ? temperature : undefined,
-      oxygenSaturation: oxygenSaturation ? parseInt(oxygenSaturation) : undefined,
-      weightKg: weight ? weight : undefined,
-      heightCm: height ? parseInt(height) : undefined,
+      bloodPressureSystolic: systolic ? safeParseInt(systolic) : undefined,
+      bloodPressureDiastolic: diastolic ? safeParseInt(diastolic) : undefined,
+      heartRate: heartRate ? safeParseInt(heartRate) : undefined,
+      respiratoryRate: respiratoryRate ? safeParseInt(respiratoryRate) : undefined,
+      temperature: temperature || undefined,
+      oxygenSaturation: oxygenSaturation ? safeParseInt(oxygenSaturation) : undefined,
+      weightKg: weight || undefined,
+      heightCm: height ? safeParseInt(height) : undefined,
     };
 
     const formattedPrescriptions = prescriptionItems.map((item) => ({

@@ -29,6 +29,17 @@ export function toEasternArabicNumerals(n: number | string): string {
 }
 
 /**
+ * Safely parses a string into an integer.
+ * Always uses radix 10 and returns undefined instead of NaN for invalid inputs.
+ */
+export function safeParseInt(val: string | number | undefined | null): number | undefined {
+  if (val === undefined || val === null || val === "") return undefined;
+  if (typeof val === "number") return isNaN(val) ? undefined : Math.floor(val);
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? undefined : parsed;
+}
+
+/**
  * Formats date in Arabic.
  */
 export function formatArabicDate(

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { safeParseInt } from "@/lib/utils/formatting";
 import {
   Bed as BedIcon,
   Plus,
@@ -151,15 +152,17 @@ export default function AdmissionsDashboardClient({
   // Selection states
   const [selectedBed, setSelectedBed] = useState<BedDataRow | null>(null);
   
-  // Local state for vitals history to prevent mutating props directly and satisfy React's state management
-  const [localVitalsHistory, setLocalVitalsHistory] = useState<Record<string, VitalRecord[]>>(vitalsHistory);
+  // Track client-side added vitals to merge with server data without mirror-state anti-patterns
+  const [clientAddedVitals, setClientAddedVitals] = useState<Record<string, VitalRecord[]>>({});
 
-  const [prevVitalsHistory, setPrevVitalsHistory] = useState<Record<string, VitalRecord[]>>(vitalsHistory);
-
-  if (vitalsHistory !== prevVitalsHistory) {
-    setPrevVitalsHistory(vitalsHistory);
-    setLocalVitalsHistory(vitalsHistory);
-  }
+  // Compute the combined flowsheet dynamically in-render
+  const combinedVitalsHistory = useMemo(() => {
+    const result = { ...vitalsHistory };
+    Object.keys(clientAddedVitals).forEach((patientId) => {
+      result[patientId] = [...(clientAddedVitals[patientId] || []), ...(result[patientId] || [])];
+    });
+    return result;
+  }, [vitalsHistory, clientAddedVitals]);
   
   // New Admission Dialog fields
   const [patientQuery, setPatientQuery] = useState("");
@@ -305,14 +308,14 @@ export default function AdmissionsDashboardClient({
     try {
       const res = await recordInpatientVitals({
         patientId: selectedBed.patientId,
-        bloodPressureSystolic: vitalsInput.bpSystolic ? parseInt(vitalsInput.bpSystolic) : undefined,
-        bloodPressureDiastolic: vitalsInput.bpDiastolic ? parseInt(vitalsInput.bpDiastolic) : undefined,
-        heartRate: vitalsInput.heartRate ? parseInt(vitalsInput.heartRate) : undefined,
-        respiratoryRate: vitalsInput.respiratoryRate ? parseInt(vitalsInput.respiratoryRate) : undefined,
+        bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
+        bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,
+        heartRate: vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined,
+        respiratoryRate: vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined,
         temperature: vitalsInput.temperature || undefined,
-        oxygenSaturation: vitalsInput.oxygenSaturation ? parseInt(vitalsInput.oxygenSaturation) : undefined,
+        oxygenSaturation: vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined,
         weightKg: vitalsInput.weightKg || undefined,
-        heightCm: vitalsInput.heightCm ? parseInt(vitalsInput.heightCm) : undefined,
+        heightCm: vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined,
       });
 
       if (res.success) {
@@ -333,25 +336,24 @@ export default function AdmissionsDashboardClient({
         router.refresh();
         // Update selectedBed reference to update the flowsheet panel on the fly
         if (selectedBed.patientId) {
-          const currentVitals = localVitalsHistory[selectedBed.patientId] || [];
           const recordToAppend: VitalRecord = {
             id: (res as { vitalId?: string }).vitalId || Math.random().toString(),
             patientId: selectedBed.patientId,
             recordedAt: new Date(),
-            bloodPressureSystolic: vitalsInput.bpSystolic ? parseInt(vitalsInput.bpSystolic) : null,
-            bloodPressureDiastolic: vitalsInput.bpDiastolic ? parseInt(vitalsInput.bpDiastolic) : null,
-            heartRate: vitalsInput.heartRate ? parseInt(vitalsInput.heartRate) : null,
-            respiratoryRate: vitalsInput.respiratoryRate ? parseInt(vitalsInput.respiratoryRate) : null,
+            bloodPressureSystolic: safeParseInt(vitalsInput.bpSystolic) ?? null,
+            bloodPressureDiastolic: safeParseInt(vitalsInput.bpDiastolic) ?? null,
+            heartRate: safeParseInt(vitalsInput.heartRate) ?? null,
+            respiratoryRate: safeParseInt(vitalsInput.respiratoryRate) ?? null,
             temperature: vitalsInput.temperature || null,
-            oxygenSaturation: vitalsInput.oxygenSaturation ? parseInt(vitalsInput.oxygenSaturation) : null,
+            oxygenSaturation: safeParseInt(vitalsInput.oxygenSaturation) ?? null,
             weightKg: vitalsInput.weightKg || null,
-            heightCm: vitalsInput.heightCm ? parseInt(vitalsInput.heightCm) : null,
+            heightCm: safeParseInt(vitalsInput.heightCm) ?? null,
             recorderNameAr: isRtl ? "الطاقم الطبي الحالي" : "Current Medical Staff",
             recorderNameEn: "Current Medical Staff",
           };
-          setLocalVitalsHistory(prev => ({
+          setClientAddedVitals(prev => ({
             ...prev,
-            [selectedBed.patientId!]: [recordToAppend, ...currentVitals]
+            [selectedBed.patientId!]: [recordToAppend, ...(prev[selectedBed.patientId!] || [])]
           }));
         }
       } else {
@@ -1072,7 +1074,7 @@ export default function AdmissionsDashboardClient({
               )}
 
               {/* Vitals History Flowshet Timeline Log */}
-              {selectedBed && selectedBed.patientId && localVitalsHistory[selectedBed.patientId]?.length > 0 ? (
+              {selectedBed && selectedBed.patientId && combinedVitalsHistory[selectedBed.patientId]?.length > 0 ? (
                 <div className="border border-slate-100/80 rounded-2xl overflow-hidden bg-white shadow-sm overflow-x-auto text-start">
                   <table className="w-full text-xs">
                     <thead className="bg-slate-50 border-b border-slate-100 font-bold text-slate-600">
@@ -1088,7 +1090,7 @@ export default function AdmissionsDashboardClient({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {localVitalsHistory[selectedBed.patientId].map((v) => (
+                      {combinedVitalsHistory[selectedBed.patientId].map((v) => (
                         <tr key={v.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-3 font-semibold text-slate-500 whitespace-nowrap">
                             {formatDate(v.recordedAt)}

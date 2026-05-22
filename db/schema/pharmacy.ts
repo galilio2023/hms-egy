@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, decimal , pgPolicy} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, uniqueIndex, integer, decimal , pgPolicy} from "drizzle-orm/pg-core";
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 import { admissions } from "./clinical";
@@ -22,7 +22,7 @@ export const medications = pgTable("medications", {
 }, (table) => {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
-    hospitalMedIdx: index("med_hospital_name_idx").on(table.hospitalId, table.nameEn),
+    hospitalMedIdx: uniqueIndex("med_hospital_name_idx").on(table.hospitalId, table.nameEn),
     barcodeIdx: index("med_barcode_idx").on(table.barcode),
   };
 }).enableRLS();
