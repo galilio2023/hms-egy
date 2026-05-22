@@ -1264,7 +1264,7 @@ export function PatientProfileClient({
                       {isRtl ? dept.nameAr : dept.nameEn}
                     </option>
                   ))}
-                </Select>
+                </select>
               </div>
 
               <div className="space-y-1.5">
@@ -1280,7 +1280,7 @@ export function PatientProfileClient({
                       {isRtl ? doc.nameAr : doc.nameEn} ({doc.role})
                     </option>
                   ))}
-                </Select>
+                </select>
               </div>
 
               <div className="space-y-1.5">
@@ -1294,7 +1294,7 @@ export function PatientProfileClient({
                   <option value="routine">{isRtl ? "روتينية (عادية)" : "Routine"}</option>
                   <option value="urgent">{isRtl ? "عاجلة" : "Urgent"}</option>
                   <option value="emergency">{isRtl ? "طارئة" : "Emergency"}</option>
-                </Select>
+                </select>
               </div>
 
               <div className="space-y-1.5">
@@ -1373,7 +1373,7 @@ export function PatientProfileClient({
                   <option value="sick_leave">{isRtl ? "إجازة مرضية" : "Sick Leave"}</option>
                   <option value="fitness">{isRtl ? "شهادة لياقة بدنية" : "Fitness Certificate"}</option>
                   <option value="companion">{isRtl ? "شهادة مرافق مريض" : "Companion Certificate"}</option>
-                </Select>
+                </select>
               </div>
 
               <div className="space-y-1.5">

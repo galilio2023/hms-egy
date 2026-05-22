@@ -186,7 +186,7 @@ export function HospitalOnboardingForm() {
                       {gov.en} ({gov.ar})
                     </option>
                   ))}
-                </Select>
+                </select>
                 {errors.governorate && <p className="text-destructive text-[10px] font-bold">{errors.governorate.message}</p>}
               </div>
 
@@ -204,7 +204,7 @@ export function HospitalOnboardingForm() {
                       {t(`types.${type}`)}
                     </option>
                   ))}
-                </Select>
+                </select>
                 {errors.type && <p className="text-destructive text-[10px] font-bold">{errors.type.message}</p>}
               </div>
             </div>

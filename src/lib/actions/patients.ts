@@ -129,7 +129,7 @@ export async function registerPatient(data: PatientSchema) {
         .values({
           hospitalId,
           patientNumber,
-          nameAr: normalizedNameAr,
+          nameAr: validatedData.nameAr.trim(), // Save un-mutated exact name for MOH/UHIS compliance
           nameEn: validatedData.nameEn.trim(),
           nationalId: validatedData.nationalId?.trim() || null,
           passportNumber: validatedData.passportNumber?.trim() || null,
@@ -225,7 +225,7 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
       await tx
         .update(patients)
         .set({
-          nameAr: normalizedNameAr,
+          nameAr: data.nameAr?.trim(), // Save un-mutated exact name for MOH/UHIS compliance
           nameEn: data.nameEn?.trim(),
           nationalId: data.nationalId?.trim() || null,
           passportNumber: data.passportNumber?.trim() || null,

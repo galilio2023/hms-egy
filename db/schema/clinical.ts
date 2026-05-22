@@ -194,7 +194,7 @@ export const medicalCertificates = pgTable("medical_certificates", {
   endDate: timestamp("end_date").notNull(),
   restDays: integer("rest_days").notNull(),
   notes: text("notes"),
-  serialNumber: varchar("serial_number", { length: 100 }).notNull().unique(),
+  serialNumber: varchar("serial_number", { length: 100 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
@@ -205,5 +205,6 @@ export const medicalCertificates = pgTable("medical_certificates", {
       using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` 
     }),
     hospitalCertIdx: index("cert_hospital_patient_idx").on(table.hospitalId, table.patientId),
+    hospitalCertSerialIdx: uniqueIndex("cert_hospital_serial_idx").on(table.hospitalId, table.serialNumber),
   };
 }).enableRLS();

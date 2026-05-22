@@ -423,7 +423,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                     >
                       <option value="male">{t("male")}</option>
                       <option value="female">{t("female")}</option>
-                    </Select>
+                    </select>
                     {errors.gender && <p className="text-destructive text-[11px] font-semibold">{errors.gender.message}</p>}
                   </div>
 
@@ -445,7 +445,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                           {isRtl ? gov.ar : gov.en}
                         </option>
                       ))}
-                    </Select>
+                    </select>
                     {errors.governorate && <p className="text-destructive text-[11px] font-semibold">{errors.governorate.message}</p>}
                   </div>
                 </div>
@@ -563,7 +563,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                       {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bt) => (
                         <option key={bt} value={bt}>{bt}</option>
                       ))}
-                    </Select>
+                    </select>
                   </div>
 
                   {/* Drug Allergies Tag Input */}
@@ -670,7 +670,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                           {isRtl ? provider.nameAr : provider.nameEn}
                         </option>
                       ))}
-                    </Select>
+                    </select>
                     {errors.insuranceProviderId && <p className="text-destructive text-[11px] font-semibold">{errors.insuranceProviderId.message}</p>}
                   </div>
 

@@ -808,8 +808,7 @@ export default function AdmissionsDashboardClient({
                   {isRtl ? doc.nameAr : doc.nameEn} {doc.licenseNumber ? `(${doc.licenseNumber})` : ""}
                 </option>
               ))}
-            </Select>
-          </div>
+            </select>          </div>
 
           {/* Admission Reason */}
           <div className="space-y-2">
@@ -1144,7 +1143,7 @@ export default function AdmissionsDashboardClient({
                       <option value="improved" className="text-xs bg-background text-foreground">{t("conditionImproved")}</option>
                       <option value="referred" className="text-xs bg-background text-foreground">{t("conditionReferred")}</option>
                       <option value="deceased" className="text-xs bg-background text-foreground">{t("conditionDeceased")}</option>
-                    </Select>
+                    </select>
                   </div>
 
                   {/* Follow-up Instructions */}
