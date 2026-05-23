@@ -7,6 +7,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { patientSchema, type PatientSchema } from "@/lib/validations/patient.schema";
 import { registerPatient } from "@/lib/actions/patients";
 import { useRouter } from "@/i18n/routing";
+import { cn } from "@/lib/utils";
 import { GOVERNORATES, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId, validateNationalId } from "@/lib/utils/egypt";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -415,11 +416,14 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                       {t("gender")}
                       {nidInfo && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
                     </label>
-                    <Select
+                    <select
                       {...register("gender")}
                       disabled={!!nidInfo}
-                      className={nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : ""}
-                      error={!!errors.gender}
+                      className={cn(
+                        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                        nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : "",
+                        errors.gender ? "border-destructive focus-visible:ring-destructive" : ""
+                      )}
                     >
                       <option value="male">{t("male")}</option>
                       <option value="female">{t("female")}</option>
@@ -433,11 +437,14 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                       {t("governorate")}
                       {nidInfo && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
                     </label>
-                    <Select
+                    <select
                       {...register("governorate")}
                       disabled={!!nidInfo}
-                      className={nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : ""}
-                      error={!!errors.governorate}
+                      className={cn(
+                        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                        nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : "",
+                        errors.governorate ? "border-destructive focus-visible:ring-destructive" : ""
+                      )}
                     >
                       <option value="">{isRtl ? "-- اختر المحافظة --" : "-- Select Governorate --"}</option>
                       {Object.values(GOVERNORATES).map((gov) => (
@@ -559,7 +566,13 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                   {/* Blood Type */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground">{t("bloodType")}</label>
-                    <Select {...register("bloodType")} error={!!errors.bloodType}>
+                    <select
+                      {...register("bloodType")}
+                      className={cn(
+                        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                        errors.bloodType ? "border-destructive focus-visible:ring-destructive" : ""
+                      )}
+                    >
                       {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bt) => (
                         <option key={bt} value={bt}>{bt}</option>
                       ))}
@@ -663,7 +676,13 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                   {/* Insurance Provider */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground">{t("insuranceProvider")}</label>
-                    <Select {...register("insuranceProviderId")} error={!!errors.insuranceProviderId}>
+                    <select 
+                      {...register("insuranceProviderId")} 
+                      className={cn(
+                        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                        errors.insuranceProviderId ? "border-destructive focus-visible:ring-destructive" : ""
+                      )}
+                    >
                       <option value="">{isRtl ? "مريض نقدي / دفع شخصي" : "Self-Pay / Cash Patient"}</option>
                       {EGYPTIAN_INSURANCE_PROVIDERS.map((provider) => (
                         <option key={provider.id} value={provider.id}>

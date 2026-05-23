@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, integer, decimal, time , pgPolicy} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, uniqueIndex, integer, decimal, time , pgPolicy} from "drizzle-orm/pg-core";
 import { hospitals, departments, staff } from "./core";
 import { patients } from "./patients";
 import { bedStatusEnum } from "./enums";

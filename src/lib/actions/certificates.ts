@@ -5,7 +5,7 @@ import { randomBytes } from "crypto";
 import { withTenantContext } from "@/lib/db/tenant";
 import { medicalCertificates } from "@db/schema/clinical";
 import { staff } from "@db/schema/core";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";

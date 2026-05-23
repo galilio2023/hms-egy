@@ -139,13 +139,26 @@ export async function auth(): Promise<Session | null> {
 
     const isMockAdmin = process.env.NODE_ENV === "development" && cookieStore.get("mock_tenant_admin")?.value === "true";
     if (isMockAdmin) {
+      // Find the actual UUID for 'al-shifa' to prevent 404 UUID mismatch errors
+      let mockHospitalId = "al-shifa";
+      try {
+        const alShifa = await db.query.hospitals.findFirst({
+          where: (hospitals, { eq }) => eq(hospitals.slug, "al-shifa"),
+        });
+        if (alShifa) {
+          mockHospitalId = alShifa.id;
+        }
+      } catch (err) {
+        console.error("Failed to resolve al-shifa UUID for mock admin:", err);
+      }
+
       return {
         user: {
           id: "admin-id-1",
           email: "admin@alshifa.com.eg",
           name: "د. أحمد الشافعي",
           role: "ADMIN",
-          hospitalId: "al-shifa",
+          hospitalId: mockHospitalId,
         },
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       };
