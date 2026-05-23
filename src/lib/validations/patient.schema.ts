@@ -23,6 +23,8 @@ export const patientSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   address: z.string().min(5, "Address must be at least 5 characters"),
   bloodType: z.string().optional(),
+  allergies: z.array(z.string()).default([]),
+  chronicConditions: z.array(z.string()).default([]),
   insuranceProviderId: z.string().optional(),
   insuranceNumber: z.string().optional(),
   guardianName: z.string().optional(),

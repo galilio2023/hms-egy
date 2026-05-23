@@ -614,12 +614,20 @@ export function PatientProfileClient({
                     : "Review doctor SOAP encounter notes, diagnostics assessments, and recorded outpatient vitals flowsheet."}
                 </p>
               </div>
-              <Button asChild size="sm" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 bg-primary hover:bg-primary/95 text-primary-foreground">
-                <Link href={`/${hospitalSlug}/patients/${patient.id}/records/new`}>
-                  <Plus className="w-4 h-4" />
-                  {t("recordNewVisit")}
-                </Link>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="outline" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 border-indigo-500/30 text-indigo-600 hover:bg-indigo-50">
+                  <Link href={`/${hospitalSlug}/patients/${patient.id}/prescribe`}>
+                    <Pill className="w-4 h-4" />
+                    {isRtl ? "صرف دواء" : "Prescribe Meds"}
+                  </Link>
+                </Button>
+                <Button asChild size="sm" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 bg-primary hover:bg-primary/95 text-primary-foreground">
+                  <Link href={`/${hospitalSlug}/patients/${patient.id}/records/new`}>
+                    <Plus className="w-4 h-4" />
+                    {t("recordNewVisit")}
+                  </Link>
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

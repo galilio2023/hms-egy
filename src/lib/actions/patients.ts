@@ -145,6 +145,9 @@ export async function registerPatient(data: PatientSchema) {
           uhisNumber: validatedData.insuranceNumber?.trim() || null,
           uhisGovernorate: validatedData.insuranceProviderId === "uhis" ? validatedData.governorate : null,
           isUhisActive: validatedData.insuranceProviderId === "uhis",
+          bloodType: validatedData.bloodType || null,
+          allergies: validatedData.allergies || [],
+          chronicConditions: validatedData.chronicConditions || [],
         })
         .returning();
 
@@ -242,6 +245,9 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
           uhisNumber: data.insuranceNumber?.trim() || null,
           uhisGovernorate: data.insuranceProviderId === "uhis" ? data.governorate : null,
           isUhisActive: data.insuranceProviderId === "uhis",
+          bloodType: data.bloodType || undefined,
+          allergies: data.allergies || undefined,
+          chronicConditions: data.chronicConditions || undefined,
           updatedAt: new Date(),
         })
         .where(eq(patients.id, patientId));

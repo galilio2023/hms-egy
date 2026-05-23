@@ -23,6 +23,9 @@ export const patients = pgTable("patients", {
   uhisNumber: varchar("uhis_number", { length: 50 }),
   uhisGovernorate: text("uhis_governorate"),
   isUhisActive: boolean("is_uhis_active").default(false).notNull(),
+  allergies: text("allergies").array().default(sql`'{}'::text[]`).notNull(),
+  chronicConditions: text("chronic_conditions").array().default(sql`'{}'::text[]`).notNull(),
+  bloodType: varchar("blood_type", { length: 5 }), // A+, B-, etc.
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
