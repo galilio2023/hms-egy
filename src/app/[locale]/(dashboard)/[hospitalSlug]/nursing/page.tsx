@@ -113,7 +113,7 @@ export default async function NursingPage({
         )
         .then((res) => res[0]),
 
-      // C. Fetch recent vitals for active inpatients (last 24 hours), strictly getting the latest record per patient
+      // C. Fetch the absolute latest vitals record for each active inpatient (unrestricted by time to provide baseline)
       tx
         .selectDistinctOn([vitalsFlowsheet.patientId], {
           patientId: vitalsFlowsheet.patientId,
@@ -133,12 +133,7 @@ export default async function NursingPage({
             eq(admissions.hospitalId, hospital.id)
           )
         )
-        .where(
-          and(
-            eq(vitalsFlowsheet.hospitalId, hospital.id),
-            sql`${vitalsFlowsheet.recordedAt} > now() - interval '24 hours'`
-          )
-        )
+        .where(eq(vitalsFlowsheet.hospitalId, hospital.id))
         .orderBy(vitalsFlowsheet.patientId, desc(vitalsFlowsheet.recordedAt))
     ]);
 

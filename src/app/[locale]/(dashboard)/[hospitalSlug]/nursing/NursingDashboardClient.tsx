@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { normalizeArabic } from "@/lib/utils/egypt";
+import { normalizeArabic, normalizeDecimal } from "@/lib/utils/egypt";
 
 interface ActivePatient {
   admissionId: string;
@@ -62,16 +62,6 @@ interface NursingDashboardClientProps {
   pendingCleaningCount: number;
   vitalsByPatient: Record<string, VitalRecord[]>;
 }
-
-// Utility for localized decimal parsing (handles Arabic commas and Eastern numerals)
-const normalizeDecimal = (str: string | number | null | undefined): number | null => {
-  if (str === null || str === undefined || String(str).trim() === "") return null;
-  const normalized = String(str)
-    .replace(/،|,/g, ".") // Convert Arabic/localized commas to dots
-    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString()); // Eastern Arabic to Western digits
-  const num = Number(normalized);
-  return isNaN(num) ? null : num;
-};
 
 export default function NursingDashboardClient({
   locale,

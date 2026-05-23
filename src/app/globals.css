@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --background: 210 40% 98%;
   --foreground: 222 47% 11%;
   
@@ -33,6 +34,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: 222 47% 6%;
   --foreground: 210 40% 98%;
   
@@ -134,10 +136,15 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
-  overflow-x: hidden;
+  overflow-x: clip; /* Safer than hidden for sticky positioning */
 }
 
 /* Custom scrollbar for premium aesthetic */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -176,10 +183,15 @@ body {
     @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
     @apply disabled:cursor-not-allowed disabled:opacity-50;
     @apply appearance-none;
+    
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 0.5rem center;
     background-repeat: no-repeat;
     background-size: 1.5em 1.5em;
+  }
+
+  .dark .hms-select-native {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   }
 
   [dir="rtl"] .hms-select-native {

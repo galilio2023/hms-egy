@@ -338,3 +338,16 @@ export function normalizeArabic(text: string): string {
     // Normalize Yeh
     .replace(/ي/g, "ى");
 }
+
+/**
+ * Normalizes localized decimal inputs (handles Arabic commas and Eastern numerals)
+ * and returns a standard numeric value or null.
+ */
+export const normalizeDecimal = (str: string | number | null | undefined): number | null => {
+  if (str === null || str === undefined || String(str).trim() === "") return null;
+  const normalized = String(str)
+    .replace(/،|,/g, ".") // Convert Arabic/localized commas to dots
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString()); // Eastern Arabic to Western digits
+  const num = Number(normalized);
+  return isNaN(num) ? null : num;
+};
