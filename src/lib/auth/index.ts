@@ -153,11 +153,12 @@ export async function auth(): Promise<Session | null> {
           if (alShifa) {
             cachedMockHospitalId = alShifa.id;
           } else {
-            console.warn("⚠️ Warning: Hospital 'al-shifa' not found in database. Mock development tenant context may load empty or fail.");
+            throw new Error("⚠️ Setup Error: Hospital 'al-shifa' not found in database. You must run the DB seed script before accessing the mock tenant in development.");
           }
         } catch (err) {
+          if (err instanceof Error && err.message.includes("Setup Error")) throw err;
           console.error("Failed to resolve al-shifa UUID for mock admin:", err);
-          console.warn("⚠️ Warning: Hospital 'al-shifa' query failed. Mock development tenant context may load empty or fail.");
+          throw new Error("⚠️ Database Error: Failed to resolve mock hospital context. Ensure Postgres is running and seeded.");
         }
       }
 
@@ -167,7 +168,7 @@ export async function auth(): Promise<Session | null> {
           email: "admin@alshifa.com.eg",
           name: "د. أحمد الشافعي",
           role: "ADMIN",
-          hospitalId: cachedMockHospitalId || "00000000-0000-0000-0000-000000000000",
+          hospitalId: cachedMockHospitalId as string,
         },
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       };

@@ -10,7 +10,6 @@ import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { GOVERNORATES, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId, validateNationalId } from "@/lib/utils/egypt";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -35,8 +34,6 @@ interface PatientRegistrationWizardProps {
   hospitalSlug: string;
   currentUserName?: string;
 }
-
-const nativeSelectClasses = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: PatientRegistrationWizardProps) {
   const t = useTranslations("patients");
@@ -422,7 +419,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                       {...register("gender")}
                       disabled={!!nidInfo}
                       className={cn(
-                        nativeSelectClasses,
+                        "hms-select-native",
                         nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : "",
                         errors.gender ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
@@ -443,7 +440,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                       {...register("governorate")}
                       disabled={!!nidInfo}
                       className={cn(
-                        nativeSelectClasses,
+                        "hms-select-native",
                         nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : "",
                         errors.governorate ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
@@ -571,7 +568,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                     <select
                       {...register("bloodType")}
                       className={cn(
-                        nativeSelectClasses,
+                        "hms-select-native",
                         errors.bloodType ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
                     >
@@ -681,7 +678,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                     <select 
                       {...register("insuranceProviderId")} 
                       className={cn(
-                        nativeSelectClasses,
+                        "hms-select-native",
                         errors.insuranceProviderId ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
                     >

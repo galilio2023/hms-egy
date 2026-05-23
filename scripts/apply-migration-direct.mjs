@@ -19,9 +19,9 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const migrationFilePath = path.join(__dirname, '..', 'db', 'migrations', '0008_clear_violations.sql');
+const migrationFilePath = path.join(__dirname, '..', 'db', 'migrations', '0009_nursing_updates.sql');
 if (!fs.existsSync(migrationFilePath)) {
-  console.error("Migration file 0008_clear_violations.sql not found at:", migrationFilePath);
+  console.error("Migration file 0009_nursing_updates.sql not found at:", migrationFilePath);
   process.exit(1);
 }
 

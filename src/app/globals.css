@@ -169,3 +169,20 @@ body {
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid hsl(var(--border) / 0.4);
 }
+
+@layer components {
+  .hms-select-native {
+    @apply flex h-9 w-full rounded-md border border-input bg-transparent ps-3 pe-8 py-1 text-sm shadow-sm transition-colors;
+    @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply appearance-none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+  }
+
+  [dir="rtl"] .hms-select-native {
+    background-position: left 0.5rem center;
+  }
+}
