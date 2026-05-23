@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const results = await withTenantContext(hospitalId, async (tx) => {
+      // NOTE: For production scale, use GIN indexes with pg_trgm extension to optimize these ILIKE queries:
+      // CREATE EXTENSION IF NOT EXISTS pg_trgm;
+      // CREATE INDEX idx_meds_trgm_en ON medications USING gin (name_en gin_trgm_ops);
       return await tx
         .select()
         .from(medications)

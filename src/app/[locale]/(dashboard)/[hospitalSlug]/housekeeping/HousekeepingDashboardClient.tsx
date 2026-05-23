@@ -322,10 +322,10 @@ export default function HousekeepingDashboardClient({
     setActionLoading(activeTaskId);
     setCompleteDialogOpen(false);
     try {
-      // NOTE: Storing raw base64 images in DB is not recommended for production.
+      // NOTE: Storing raw base64 images in DB is blocked by the server action.
       // TODO: Implement direct-to-S3 upload via pre-signed URLs.
-      const finalPhotoUrl = photoPreview || "https://objectstorage.hms-egypt.com/housekeeping/mock-completion.jpg";
-      const res = await completeHousekeepingTask(activeTaskId, finalPhotoUrl);
+      // For now, we only pass the URL if we have one (which we don't yet, so this will fail if required)
+      const res = await completeHousekeepingTask(activeTaskId, photoPreview || undefined);
       if (res.success) {
         toast.success(isRtl ? "تم إكمال عملية التنظيف والتعقيم بنجاح." : "Cleaning and disinfection completed successfully.");
       } else {

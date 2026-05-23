@@ -90,7 +90,51 @@ export async function createPrescription(payload: {
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
-      // 1. Create the master prescription record
+      // 1. Mandatory Server-Side DDI Validation
+      const medIds = payload.items.map(i => i.medicationId);
+      if (medIds.length === 0) throw new Error("At least one medication is required");
+
+      const [medDetails, patient] = await Promise.all([
+        tx
+          .select({
+            id: medications.id,
+            name: medications.nameEn,
+            genericName: medications.genericName,
+          })
+          .from(medications)
+          .where(and(
+            eq(medications.hospitalId, hospitalId),
+            inArray(medications.id, medIds)
+          )),
+        tx
+          .select({
+            allergies: patients.allergies,
+            chronicConditions: patients.chronicConditions,
+          })
+          .from(patients)
+          .where(eq(patients.id, payload.patientId))
+          .limit(1)
+          .then(res => res[0])
+      ]);
+
+      if (!patient) throw new Error("Patient not found");
+
+      const ddiCheck = await checkDrugInteractions(
+        medDetails.map(m => ({ name: m.name, genericName: m.genericName })),
+        patient.allergies || [],
+        patient.chronicConditions || []
+      );
+
+      // Enforce hard-stops and justification requirements
+      if (!ddiCheck.isApproved && !payload.hasDdiOverride) {
+        throw new Error("Contraindicated drug interaction detected. Override justification required.");
+      }
+
+      if (ddiCheck.overallRiskLevel === "high" && (!payload.ddiOverrideReason || payload.ddiOverrideReason.trim().length < 10)) {
+        throw new Error("High risk prescription requires a valid medical justification (min 10 characters).");
+      }
+
+      // 2. Create the master prescription record
       const [newRx] = await tx
         .insert(prescriptions)
         .values({
@@ -106,7 +150,7 @@ export async function createPrescription(payload: {
 
       if (!newRx) throw new Error("Failed to create prescription");
 
-      // 2. Create prescription items
+      // 3. Create prescription items
       const itemsToInsert = payload.items.map(item => ({
         hospitalId,
         prescriptionId: newRx.id,

@@ -306,6 +306,11 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
     return { success: false, error: "Forbidden: You do not have permission to complete housekeeping tasks." };
   }
 
+  // Security: Block raw base64 data to prevent database bloat
+  if (photoUrl && photoUrl.startsWith("data:image")) {
+    return { success: false, error: "Security Error: Raw image data is not allowed. Please use the designated upload service." };
+  }
+
   try {
     const result = await withTenantContext(hospitalId, async (tx) => {
       // 1. Resolve task to get bedId
