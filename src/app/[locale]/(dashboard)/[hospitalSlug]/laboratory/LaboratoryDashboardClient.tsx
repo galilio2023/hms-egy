@@ -128,7 +128,7 @@ export default function LaboratoryDashboardClient({
     const completedWithTat = recentCompleted.filter(o => o.updatedAt && o.status === "completed");
     if (completedWithTat.length === 0) return null;
     const totalMinutes = completedWithTat.reduce((acc, curr) => {
-      const diff = curr.updatedAt!.getTime() - curr.createdAt.getTime();
+      const diff = new Date(curr.updatedAt!).getTime() - new Date(curr.createdAt).getTime();
       return acc + (diff / (1000 * 60));
     }, 0);
     return Math.round(totalMinutes / completedWithTat.length);
