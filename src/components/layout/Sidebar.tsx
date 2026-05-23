@@ -89,6 +89,12 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
       roles: ["SUPER_ADMIN", "ADMIN", "DOCTOR", "SURGEON", "NURSE"],
     },
     {
+      key: "nursing",
+      href: `/${hospitalSlug}/nursing`,
+      icon: Activity,
+      roles: ["SUPER_ADMIN", "ADMIN", "NURSE", "OR_NURSE", "HOUSEKEEPING"],
+    },
+    {
       key: "surgical",
       href: `/${hospitalSlug}/surgical`,
       icon: Syringe,

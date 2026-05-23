@@ -116,3 +116,27 @@ export const drugAllergyCrossReferences = pgTable("drug_allergy_cross_references
     allergenIdx: index("allergy_name_idx").on(table.allergenName),
   };
 });
+
+export const medicationAdministration = pgTable("medication_administration", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  patientId: uuid("patient_id").references(() => patients.id, { onDelete: "cascade" }).notNull(),
+  prescriptionItemId: uuid("prescription_item_id").references(() => prescriptionItems.id, { onDelete: "cascade" }).notNull(),
+  administeredBy: uuid("administered_by").references(() => staff.id, { onDelete: "set null" }),
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  administeredAt: timestamp("administered_at"),
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, given, missed, refused, held
+  doseGiven: text("dose_given"), // can be different from prescribed dose if adjusted
+  site: text("site"), // injection site, etc.
+  route: text("route"), // oral, iv, im, etc.
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
+    hospitalPatientIdx: index("mar_hospital_patient_idx").on(table.hospitalId, table.patientId),
+    scheduledIdx: index("mar_scheduled_at_idx").on(table.scheduledAt),
+    prescriptionItemIdx: index("mar_prescription_item_idx").on(table.prescriptionItemId),
+  };
+}).enableRLS();

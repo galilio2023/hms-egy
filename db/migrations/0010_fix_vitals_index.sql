@@ -1,0 +1,2 @@
+DROP INDEX "vitals_patient_recorded_idx";--> statement-breakpoint
+CREATE INDEX "vitals_hospital_patient_recorded_idx" ON "vitals_flowsheet" USING btree ("hospital_id","patient_id","recorded_at" DESC NULLS LAST);

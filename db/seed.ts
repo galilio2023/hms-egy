@@ -207,6 +207,7 @@ async function seed() {
     // 7. Rooms & Beds
     const [room301] = await db.insert(schema.rooms).values({
       hospitalId: hospital.id,
+      departmentId: deptCardiology.id,
       roomNumber: "301",
       type: "standard",
       floor: "3",
@@ -216,6 +217,7 @@ async function seed() {
 
     const [room302] = await db.insert(schema.rooms).values({
       hospitalId: hospital.id,
+      departmentId: deptCardiology.id,
       roomNumber: "302",
       type: "icu",
       floor: "3",

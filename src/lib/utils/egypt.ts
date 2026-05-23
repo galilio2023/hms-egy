@@ -338,3 +338,39 @@ export function normalizeArabic(text: string): string {
     // Normalize Yeh
     .replace(/ي/g, "ى");
 }
+
+/**
+ * Normalizes localized decimal inputs (handles Arabic commas and Eastern numerals)
+ * and returns a standard numeric value or null.
+ */
+/**
+ * NOTE: Strictly for clinical inputs (vitals, weights). Do not use for financial 
+ * calculations or invoices as it will corrupt thousands-separator commas (e.g. 1,250.50).
+ * 
+ * Normalizes Eastern Arabic (٠-٩) and Persian (۰-۹) numerals to standard Western digits (0-9)
+ * and converts Arabic/localized decimal separators (٫, ،) to standard dots (.).
+ */
+export const normalizeDecimal = (str: string | number | null | undefined): number | null => {
+  if (str === null || str === undefined || String(str).trim() === "") return null;
+  const normalized = String(str)
+    .replace(/[،,٫]/g, ".") // Convert Arabic, standard, and Eastern decimal separators to dots
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString()) // Eastern Arabic numerals
+    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString()); // Persian numerals
+  const num = Number(normalized);
+  return isNaN(num) ? null : num;
+};
+
+/**
+ * Normalizes a search term by converting it to lowercase, normalizing Arabic characters, 
+ * and translating all numeral systems (Eastern, Persian) to Western digits for robust matching.
+ */
+export const normalizeSearchTerm = (str: string): string => {
+  if (!str) return "";
+  const lower = str.toLowerCase();
+  // 1. Normalize Arabic characters (Alef, Yeh, Te Marbuta)
+  const normArabic = normalizeArabic(lower);
+  // 2. Normalize all Eastern and Persian numerals to Western digits
+  return normArabic
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
+    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
+};

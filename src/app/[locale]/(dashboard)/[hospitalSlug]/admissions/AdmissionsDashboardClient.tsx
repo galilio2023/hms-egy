@@ -707,7 +707,7 @@ export default function AdmissionsDashboardClient({
               <select 
                 value={targetBedId} 
                 onChange={(e) => setTargetBedId(e.target.value)}
-                className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
+                className="hms-select-native font-bold"
               >
                 <option value="" disabled className="text-xs text-muted-foreground bg-background">
                   {isRtl ? "اختر سريراً متاحاً..." : "Select an available bed..."}
@@ -798,7 +798,7 @@ export default function AdmissionsDashboardClient({
             <select 
               value={admittingDoctorId} 
               onChange={(e) => setAdmittingDoctorId(e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
+              className="hms-select-native font-bold"
             >
               <option value="" disabled className="text-xs text-muted-foreground bg-background">
                 {isRtl ? "اختر الطبيب المسؤول..." : "Select admitting physician..."}
@@ -1137,7 +1137,7 @@ export default function AdmissionsDashboardClient({
                     <select 
                       value={dischargeCondition} 
                       onChange={(e) => setDischargeCondition(e.target.value as "stable" | "improved" | "referred" | "deceased")}
-                      className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
+                      className="hms-select-native font-bold"
                     >
                       <option value="stable" className="text-xs bg-background text-foreground">{t("conditionStable")}</option>
                       <option value="improved" className="text-xs bg-background text-foreground">{t("conditionImproved")}</option>

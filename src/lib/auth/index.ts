@@ -74,6 +74,11 @@ export const authInstance = betterAuth({
   ],
 });
 
+// Dev-only optimization: caches the mock hospital UUID in memory to prevent blocking DB queries 
+// on every auth check during local development. Do not use this pattern for production logic 
+// as serverless environments will reset this cache unpredictably.
+let cachedMockHospitalId: string | null = null;
+
 /**
  * High-compatibility auth helper that acts as the primary server session retriever.
  * Checks for a real Better Auth session, with seamless fallback to development mock headers/cookies.
@@ -139,13 +144,31 @@ export async function auth(): Promise<Session | null> {
 
     const isMockAdmin = process.env.NODE_ENV === "development" && cookieStore.get("mock_tenant_admin")?.value === "true";
     if (isMockAdmin) {
+      // Use memory cache to avoid blocking DB query overhead in development
+      if (!cachedMockHospitalId) {
+        try {
+          const alShifa = await db.query.hospitals.findFirst({
+            where: (hospitals, { eq }) => eq(hospitals.slug, "al-shifa"),
+          });
+          if (alShifa) {
+            cachedMockHospitalId = alShifa.id;
+          } else {
+            throw new Error("⚠️ Setup Error: Hospital 'al-shifa' not found in database. You must run the DB seed script before accessing the mock tenant in development.");
+          }
+        } catch (err) {
+          if (err instanceof Error && err.message.includes("Setup Error")) throw err;
+          console.error("Failed to resolve al-shifa UUID for mock admin:", err);
+          throw new Error("⚠️ Database Error: Failed to resolve mock hospital context. Ensure Postgres is running and seeded.");
+        }
+      }
+
       return {
         user: {
           id: "admin-id-1",
           email: "admin@alshifa.com.eg",
           name: "د. أحمد الشافعي",
           role: "ADMIN",
-          hospitalId: "al-shifa",
+          hospitalId: cachedMockHospitalId as string,
         },
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       };

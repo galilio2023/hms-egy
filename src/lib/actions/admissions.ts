@@ -12,6 +12,7 @@ import { type User } from "@/types/auth-api.types";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { validateVitals } from "./clinical";
+import { normalizeDecimal } from "@/lib/utils/egypt";
 
 interface AdmitPatientPayload {
   patientId: string;
@@ -284,12 +285,12 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
   }
 
   try {
-    const cleanTemperature = payload.temperature && !isNaN(parseFloat(payload.temperature))
-      ? parseFloat(payload.temperature).toFixed(1)
+    const cleanTemperature = payload.temperature && String(payload.temperature).trim() !== ""
+      ? normalizeDecimal(payload.temperature)?.toFixed(1) || null
       : null;
 
-    const cleanWeight = payload.weightKg && !isNaN(parseFloat(payload.weightKg))
-      ? parseFloat(payload.weightKg).toFixed(1)
+    const cleanWeight = payload.weightKg && String(payload.weightKg).trim() !== ""
+      ? normalizeDecimal(payload.weightKg)?.toFixed(1) || null
       : null;
 
     return await withTenantContext(hospitalId, async (tx) => {

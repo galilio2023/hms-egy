@@ -13,6 +13,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
+import { normalizeDecimal } from "@/lib/utils/egypt";
 
 interface PrescriptionItemInput {
   medicationId: string;
@@ -52,9 +53,12 @@ export async function validateVitals(vitals?: VitalsInput) {
   if (vitals.bloodPressureDiastolic && (vitals.bloodPressureDiastolic < DiastolicRange.min || vitals.bloodPressureDiastolic > DiastolicRange.max)) {
     return { success: false, error: `Invalid diastolic blood pressure reading: ${vitals.bloodPressureDiastolic} (must be between 30 and 150 mmHg).` };
   }
-  if (vitals.temperature) {
-    const tVal = parseFloat(vitals.temperature);
-    if (!isNaN(tVal) && (tVal < TempRange.min || tVal > TempRange.max)) {
+  if (vitals.temperature && String(vitals.temperature).trim() !== "") {
+    const tVal = normalizeDecimal(vitals.temperature);
+    if (tVal === null) {
+      return { success: false, error: "Invalid temperature format. Please enter a valid number." };
+    }
+    if (tVal < TempRange.min || tVal > TempRange.max) {
       return { success: false, error: `Invalid temperature reading: ${vitals.temperature}°C (must be between 30.0°C and 45.0°C).` };
     }
   }
@@ -149,12 +153,12 @@ export async function completeTelemedicineConsultation(
   }
 
   try {
-    const cleanTemperature = vitals?.temperature && !isNaN(parseFloat(vitals.temperature))
-      ? parseFloat(vitals.temperature).toFixed(1)
+    const cleanTemperature = vitals?.temperature 
+      ? normalizeDecimal(vitals.temperature)?.toFixed(1) || null
       : null;
 
-    const cleanWeight = vitals?.weightKg && !isNaN(parseFloat(vitals.weightKg))
-      ? parseFloat(vitals.weightKg).toFixed(1)
+    const cleanWeight = vitals?.weightKg 
+      ? normalizeDecimal(vitals.weightKg)?.toFixed(1) || null
       : null;
 
     const result = await withTenantContext(hospitalId, async (tx) => {
@@ -522,12 +526,12 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
   }
 
   try {
-    const cleanTemperature = data.vitals?.temperature && !isNaN(parseFloat(data.vitals.temperature))
-      ? parseFloat(data.vitals.temperature).toFixed(1)
+    const cleanTemperature = data.vitals?.temperature 
+      ? normalizeDecimal(data.vitals.temperature)?.toFixed(1) || null
       : null;
 
-    const cleanWeight = data.vitals?.weightKg && !isNaN(parseFloat(data.vitals.weightKg))
-      ? parseFloat(data.vitals.weightKg).toFixed(1)
+    const cleanWeight = data.vitals?.weightKg 
+      ? normalizeDecimal(data.vitals.weightKg)?.toFixed(1) || null
       : null;
 
     const result = await withTenantContext(hospitalId, async (tx) => {

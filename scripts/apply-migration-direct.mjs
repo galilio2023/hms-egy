@@ -19,9 +19,9 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const migrationFilePath = path.join(__dirname, '..', 'db', 'migrations', '0008_clear_violations.sql');
+const migrationFilePath = path.join(__dirname, '..', 'db', 'migrations', '0010_fix_vitals_index.sql');
 if (!fs.existsSync(migrationFilePath)) {
-  console.error("Migration file 0008_clear_violations.sql not found at:", migrationFilePath);
+  console.error("Migration file 0010_fix_vitals_index.sql not found at:", migrationFilePath);
   process.exit(1);
 }
 

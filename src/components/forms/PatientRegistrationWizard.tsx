@@ -7,9 +7,9 @@ import { useTranslations, useLocale } from "next-intl";
 import { patientSchema, type PatientSchema } from "@/lib/validations/patient.schema";
 import { registerPatient } from "@/lib/actions/patients";
 import { useRouter } from "@/i18n/routing";
+import { cn } from "@/lib/utils";
 import { GOVERNORATES, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId, validateNationalId } from "@/lib/utils/egypt";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -415,11 +415,14 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                       {t("gender")}
                       {nidInfo && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
                     </label>
-                    <Select
+                    <select
                       {...register("gender")}
                       disabled={!!nidInfo}
-                      className={nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : ""}
-                      error={!!errors.gender}
+                      className={cn(
+                        "hms-select-native",
+                        nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : "",
+                        errors.gender ? "border-destructive focus-visible:ring-destructive" : ""
+                      )}
                     >
                       <option value="male">{t("male")}</option>
                       <option value="female">{t("female")}</option>
@@ -431,15 +434,16 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       {t("governorate")}
-                      {nidInfo && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+                      {nidInfo && <Sparkles className="w-3.5 h-3.5 text-emerald-500" />}
                     </label>
-                    <Select
+                    <select
                       {...register("governorate")}
-                      disabled={!!nidInfo}
-                      className={nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : ""}
-                      error={!!errors.governorate}
+                      className={cn(
+                        "hms-select-native",
+                        errors.governorate ? "border-destructive focus-visible:ring-destructive" : ""
+                      )}
                     >
-                      <option value="">{isRtl ? "-- اختر المحافظة --" : "-- Select Governorate --"}</option>
+                      <option value="">{t("selectGovernorate")}</option>
                       {Object.values(GOVERNORATES).map((gov) => (
                         <option key={gov.code} value={gov.code}>
                           {isRtl ? gov.ar : gov.en}
@@ -559,7 +563,13 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                   {/* Blood Type */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground">{t("bloodType")}</label>
-                    <Select {...register("bloodType")} error={!!errors.bloodType}>
+                    <select
+                      {...register("bloodType")}
+                      className={cn(
+                        "hms-select-native",
+                        errors.bloodType ? "border-destructive focus-visible:ring-destructive" : ""
+                      )}
+                    >
                       {["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"].map((bt) => (
                         <option key={bt} value={bt}>{bt}</option>
                       ))}
@@ -663,7 +673,13 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                   {/* Insurance Provider */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground">{t("insuranceProvider")}</label>
-                    <Select {...register("insuranceProviderId")} error={!!errors.insuranceProviderId}>
+                    <select 
+                      {...register("insuranceProviderId")} 
+                      className={cn(
+                        "hms-select-native",
+                        errors.insuranceProviderId ? "border-destructive focus-visible:ring-destructive" : ""
+                      )}
+                    >
                       <option value="">{isRtl ? "مريض نقدي / دفع شخصي" : "Self-Pay / Cash Patient"}</option>
                       {EGYPTIAN_INSURANCE_PROVIDERS.map((provider) => (
                         <option key={provider.id} value={provider.id}>
