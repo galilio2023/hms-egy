@@ -84,6 +84,7 @@ export default async function NursingPage({
           
           patientId: patients.id,
           patientNameAr: patients.nameAr,
+          patientNormalizedNameAr: patients.normalizedNameAr,
           patientNameEn: patients.nameEn,
           patientNumber: patients.patientNumber,
           gender: patients.gender,

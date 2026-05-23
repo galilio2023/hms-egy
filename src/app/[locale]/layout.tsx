@@ -39,7 +39,7 @@ export default async function LocaleLayout({
       className={`${cairo.variable} h-full`}
       suppressHydrationWarning
     >
-      <body className={`${cairo.className} min-h-full antialiased`} suppressHydrationWarning>
+      <body className={`${cairo.className} min-h-full antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

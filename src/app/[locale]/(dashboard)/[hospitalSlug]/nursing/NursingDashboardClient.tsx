@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { normalizeSearchTerm, normalizeDecimal } from "@/lib/utils/egypt";
+import { PHYSIO_THRESHOLDS } from "@/lib/utils/clinical-thresholds";
 
 interface ActivePatient {
   admissionId: string;
@@ -29,6 +30,7 @@ interface ActivePatient {
   reason: string | null;
   patientId: string;
   patientNameAr: string;
+  patientNormalizedNameAr: string;
   patientNameEn: string;
   patientNumber: string;
   gender: "male" | "female" | null;
@@ -87,7 +89,7 @@ export default function NursingDashboardClient({
 
     return activePatients.filter(
       (p) =>
-        normalizeSearchTerm(p.patientNameAr || "").includes(normalizedQuery) ||
+        (p.patientNormalizedNameAr && p.patientNormalizedNameAr.includes(normalizedQuery)) ||
         normalizeSearchTerm(p.patientNameEn || "").includes(normalizedQuery) ||
         normalizeSearchTerm(p.patientNumber || "").includes(normalizedQuery) ||
         (p.roomNumber && normalizeSearchTerm(p.roomNumber).includes(normalizedQuery))
@@ -105,12 +107,12 @@ export default function NursingDashboardClient({
       const sys = recentVitals.bloodPressureSystolic;
       const temp = normalizeDecimal(recentVitals.temperature);
 
-      // Basic physiological thresholds
+      // Standard physiological thresholds from clinical config
       if (
-        (hr !== null && (hr > 120 || hr < 50)) ||
-        (spo2 !== null && spo2 < 90) ||
-        (temp !== null && (temp > 38.5 || temp < 35)) ||
-        (sys !== null && (sys > 180 || sys < 90))
+        (hr !== null && (hr > PHYSIO_THRESHOLDS.heartRate.max || hr < PHYSIO_THRESHOLDS.heartRate.min)) ||
+        (spo2 !== null && spo2 < PHYSIO_THRESHOLDS.oxygenSaturation.min) ||
+        (temp !== null && (temp > PHYSIO_THRESHOLDS.temperature.max || temp < PHYSIO_THRESHOLDS.temperature.min)) ||
+        (sys !== null && (sys > PHYSIO_THRESHOLDS.bloodPressure.systolic.max || sys < PHYSIO_THRESHOLDS.bloodPressure.systolic.min))
       ) {
         count++;
       }
