@@ -1,14 +1,14 @@
-import { db } from "@/lib/db";
 import { getHospitalBySlug } from "@/lib/db/cache";
 import { withTenantContext } from "@/lib/db/tenant";
 import { notFound, redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { rooms, beds, admissions, vitalsFlowsheet } from "@db/schema/clinical";
-import { staff } from "@db/schema/core";
+import { staff, departments } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
+import { shifts, handoverNotes } from "@db/schema/nursing";
 import { eq, and, desc, sql } from "drizzle-orm";
 import NursingDashboardClient from "./NursingDashboardClient";
+import { getTranslations } from "next-intl/server";
 
 export async function generateMetadata({
   params,
@@ -38,7 +38,6 @@ export default async function NursingPage({
 }) {
   const { locale, hospitalSlug } = await params;
   const { view } = await searchParams;
-  const t = await getTranslations({ locale, namespace: "nursing" });
 
   const session = await auth();
   if (!session) {
@@ -73,7 +72,10 @@ export default async function NursingPage({
     const [
       activePatientsRes,
       pendingCleaningRes,
-      recentVitalsRes
+      recentVitalsRes,
+      departmentsRes,
+      activeShiftRes,
+      handoverNotesRes
     ] = await Promise.all([
       // A. Fetch active admissions with patient and bed info
       tx
@@ -152,7 +154,47 @@ export default async function NursingPage({
           )
         )
         .where(eq(vitalsFlowsheet.hospitalId, hospital.id))
-        .orderBy(vitalsFlowsheet.patientId, desc(vitalsFlowsheet.recordedAt))
+        .orderBy(vitalsFlowsheet.patientId, desc(vitalsFlowsheet.recordedAt)),
+
+      // D. Fetch all departments
+      tx
+        .select({ id: departments.id, nameAr: departments.nameAr, nameEn: departments.nameEn })
+        .from(departments)
+        .where(eq(departments.hospitalId, hospital.id)),
+
+      // E. Fetch active shift for current staff
+      tx.query.shifts.findFirst({
+        where: and(
+          eq(shifts.staffId, session.user.id),
+          eq(shifts.status, "active")
+        ),
+        with: {
+          department: true
+        }
+      }) as unknown as Promise<Record<string, unknown>>,
+
+      // F. Fetch handover notes for active patients
+      tx
+        .select({
+          id: handoverNotes.id,
+          patientId: handoverNotes.patientId,
+          content: handoverNotes.content,
+          priority: handoverNotes.priority,
+          isAcknowledged: handoverNotes.isAcknowledged,
+          createdAt: handoverNotes.createdAt,
+          fromStaffNameAr: staff.nameAr,
+          fromStaffNameEn: staff.nameEn,
+        })
+        .from(handoverNotes)
+        .innerJoin(staff, eq(handoverNotes.fromStaffId, staff.id))
+        .innerJoin(admissions, eq(handoverNotes.admissionId, admissions.id))
+        .where(
+          and(
+            eq(handoverNotes.hospitalId, hospital.id),
+            eq(admissions.status, "active")
+          )
+        )
+        .orderBy(desc(handoverNotes.createdAt))
     ]);
 
     const pendingCleaningCount = pendingCleaningRes?.count || 0;
@@ -166,11 +208,31 @@ export default async function NursingPage({
       vitalsByPatient[record.patientId].push(record);
     }
 
+    // Group handover notes by patient ID
+    const handoverByPatient: Record<string, Record<string, unknown>[]> = {};
+    for (const note of handoverNotesRes) {
+      if (!handoverByPatient[note.patientId]) {
+        handoverByPatient[note.patientId] = [];
+      }
+      handoverByPatient[note.patientId].push(note as unknown as Record<string, unknown>);
+    }
+
+    const activeShift = activeShiftRes as unknown as { 
+      id: string; 
+      startTime: Date; 
+      departmentId: string; 
+      department: { nameAr: string; nameEn: string } 
+    } | null;
+
     return {
       activePatients: activePatientsRes,
       pendingCleaningCount,
       vitalsByPatient,
+      handoverByPatient,
+      departments: departmentsRes,
+      activeShift,
       hasDepartment: !!userDeptId,
+      hospitalId: hospital.id,
     };
   });
 
@@ -179,9 +241,19 @@ export default async function NursingPage({
       <NursingDashboardClient
         locale={locale}
         hospitalSlug={hospitalSlug}
+        hospitalId={dashboardData.hospitalId}
         activePatients={dashboardData.activePatients}
         pendingCleaningCount={dashboardData.pendingCleaningCount}
         vitalsByPatient={dashboardData.vitalsByPatient}
+        handoverByPatient={dashboardData.handoverByPatient}
+        departments={dashboardData.departments}
+        activeShift={dashboardData.activeShift ? {
+          id: dashboardData.activeShift.id,
+          startTime: dashboardData.activeShift.startTime,
+          departmentId: dashboardData.activeShift.departmentId,
+          departmentNameAr: dashboardData.activeShift.department.nameAr,
+          departmentNameEn: dashboardData.activeShift.department.nameEn,
+        } : null}
         showAll={showAll}
         hasDepartment={dashboardData.hasDepartment}
       />

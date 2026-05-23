@@ -2,8 +2,9 @@ import { relations } from "drizzle-orm";
 import { hospitals, hospitalSettings, departments, staff, operatingRooms, orBlocks, orBlockOverrides } from "./core";
 import { patients, patientConsents } from "./patients";
 import { rooms, beds, appointments, waitingList, admissions, dischargeSummaries, medicalRecords, vitalsFlowsheet } from "./clinical";
+import { nursingAssessments, shifts, handoverNotes } from "./nursing";
 import { housekeepingTasks } from "./housekeeping";
-import { medications, prescriptions, prescriptionItems, stockTransactions } from "./pharmacy";
+import { medications, prescriptions, prescriptionItems, stockTransactions, medicationAdministration } from "./pharmacy";
 import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "./laboratory";
 import { radiologyOrders, radiologyReports } from "./radiology";
 import { invoices, invoiceItems, payments, insuranceClaims, onlinePayments, paymentReminders } from "./billing";
@@ -219,7 +220,11 @@ export const prescriptionsRelations = relations(prescriptions, ({ one, many }) =
 }));
 
 // prescriptionItems Relations
-export const prescriptionItemsRelations = relations(prescriptionItems, ({ one }) => ({
+export const prescriptionItemsRelations = relations(prescriptionItems, ({ one, many }) => ({
+  hospital: one(hospitals, {
+    fields: [prescriptionItems.hospitalId],
+    references: [hospitals.id],
+  }),
   prescription: one(prescriptions, {
     fields: [prescriptionItems.prescriptionId],
     references: [prescriptions.id],
@@ -227,6 +232,27 @@ export const prescriptionItemsRelations = relations(prescriptionItems, ({ one })
   medication: one(medications, {
     fields: [prescriptionItems.medicationId],
     references: [medications.id],
+  }),
+  administrations: many(medicationAdministration),
+}));
+
+// medicationAdministration Relations
+export const medicationAdministrationRelations = relations(medicationAdministration, ({ one }) => ({
+  hospital: one(hospitals, {
+    fields: [medicationAdministration.hospitalId],
+    references: [hospitals.id],
+  }),
+  patient: one(patients, {
+    fields: [medicationAdministration.patientId],
+    references: [patients.id],
+  }),
+  prescriptionItem: one(prescriptionItems, {
+    fields: [medicationAdministration.prescriptionItemId],
+    references: [prescriptionItems.id],
+  }),
+  administrator: one(staff, {
+    fields: [medicationAdministration.administeredBy],
+    references: [staff.id],
   }),
 }));
 
@@ -311,5 +337,65 @@ export const onlinePaymentsRelations = relations(onlinePayments, ({ one }) => ({
   patient: one(patients, {
     fields: [onlinePayments.patientId],
     references: [patients.id],
+  }),
+}));
+
+// nursingAssessments Relations
+export const nursingAssessmentsRelations = relations(nursingAssessments, ({ one }) => ({
+  hospital: one(hospitals, {
+    fields: [nursingAssessments.hospitalId],
+    references: [hospitals.id],
+  }),
+  patient: one(patients, {
+    fields: [nursingAssessments.patientId],
+    references: [patients.id],
+  }),
+  admission: one(admissions, {
+    fields: [nursingAssessments.admissionId],
+    references: [admissions.id],
+  }),
+  recorder: one(staff, {
+    fields: [nursingAssessments.recordedBy],
+    references: [staff.id],
+  }),
+}));
+
+// shifts Relations
+export const shiftsRelations = relations(shifts, ({ one }) => ({
+  hospital: one(hospitals, {
+    fields: [shifts.hospitalId],
+    references: [hospitals.id],
+  }),
+  staff: one(staff, {
+    fields: [shifts.staffId],
+    references: [staff.id],
+  }),
+  department: one(departments, {
+    fields: [shifts.departmentId],
+    references: [departments.id],
+  }),
+}));
+
+// handoverNotes Relations
+export const handoverNotesRelations = relations(handoverNotes, ({ one }) => ({
+  hospital: one(hospitals, {
+    fields: [handoverNotes.hospitalId],
+    references: [hospitals.id],
+  }),
+  patient: one(patients, {
+    fields: [handoverNotes.patientId],
+    references: [patients.id],
+  }),
+  admission: one(admissions, {
+    fields: [handoverNotes.admissionId],
+    references: [admissions.id],
+  }),
+  fromStaff: one(staff, {
+    fields: [handoverNotes.fromStaffId],
+    references: [staff.id],
+  }),
+  toStaff: one(staff, {
+    fields: [handoverNotes.toStaffId],
+    references: [staff.id],
   }),
 }));

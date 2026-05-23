@@ -309,6 +309,21 @@
     "recordVitals": "تسجيل قراءات",
     "floatedNurseMode": "وضع التمريض المتنقل",
     "showAllPatients": "عرض جميع مرضى المستشفى",
-    "departmentOnly": "عرض مرضى قسمي فقط"
+    "departmentOnly": "عرض مرضى قسمي فقط",
+    "startShift": "بدء المناوبة",
+    "endShift": "إنهاء المناوبة",
+    "activeShift": "المناوبة النشطة",
+    "noActiveShift": "لا توجد مناوبة نشطة حالياً",
+    "handoverNotes": "ملاحظات التسليم (Handover)",
+    "createHandover": "إضافة ملاحظة تسليم",
+    "acknowledged": "تم الاستلام",
+    "acknowledge": "تأكيد الاستلام",
+    "selectDepartment": "اختر القسم للمناوبة",
+    "shiftDetails": "تفاصيل المناوبة",
+    "shiftStarted": "بدأت المناوبة في",
+    "priority": "الأولوية",
+    "routine": "عادية",
+    "urgent": "عاجلة",
+    "emergency": "طارئة"
   }
 }

@@ -309,6 +309,21 @@
     "recordVitals": "Record Vitals",
     "floatedNurseMode": "Floated Nurse Mode",
     "showAllPatients": "Show all hospital patients",
-    "departmentOnly": "Show only my department's patients"
+    "departmentOnly": "Show only my department's patients",
+    "startShift": "Start Shift",
+    "endShift": "End Shift",
+    "activeShift": "Active Shift",
+    "noActiveShift": "No active shift currently",
+    "handoverNotes": "Handover Notes",
+    "createHandover": "Add Handover Note",
+    "acknowledged": "Acknowledged",
+    "acknowledge": "Acknowledge",
+    "selectDepartment": "Select Department for Shift",
+    "shiftDetails": "Shift Details",
+    "shiftStarted": "Shift started at",
+    "priority": "Priority",
+    "routine": "Routine",
+    "urgent": "Urgent",
+    "emergency": "Emergency"
   }
 }

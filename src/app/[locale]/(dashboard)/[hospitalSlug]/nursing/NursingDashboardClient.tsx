@@ -13,7 +13,8 @@ import {
   Sparkles,
   Search,
   Droplet,
-  HeartPulse
+  HeartPulse,
+  Pill
 } from "lucide-react";
 import {
   Card,
@@ -23,6 +24,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { normalizeSearchTerm, normalizeDecimal } from "@/lib/utils/egypt";
 import { PHYSIO_THRESHOLDS } from "@/lib/utils/clinical-thresholds";
+import { ShiftManagement } from "@/components/layout/ShiftManagement";
+import { HandoverNoteForm } from "@/components/forms/HandoverNoteForm";
+import { acknowledgeHandoverNote } from "@/lib/actions/nursing";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { ar, enUS } from "date-fns/locale";
 
 interface ActivePatient {
   admissionId: string;
@@ -57,12 +64,27 @@ interface VitalRecord {
   oxygenSaturation: number | null;
 }
 
+interface HandoverNote {
+  id: string;
+  patientId: string;
+  content: string;
+  priority: "routine" | "urgent" | "emergency";
+  isAcknowledged: boolean;
+  createdAt: Date;
+  fromStaffNameAr: string;
+  fromStaffNameEn: string;
+}
+
 interface NursingDashboardClientProps {
   locale: string;
   hospitalSlug: string;
+  hospitalId: string;
   activePatients: ActivePatient[];
   pendingCleaningCount: number;
   vitalsByPatient: Record<string, VitalRecord[]>;
+  handoverByPatient: Record<string, HandoverNote[]>;
+  departments: { id: string; nameAr: string; nameEn: string }[];
+  activeShift: { id: string; startTime: Date; departmentId: string; departmentNameAr: string; departmentNameEn: string } | null;
   showAll: boolean;
   hasDepartment: boolean;
 }
@@ -70,17 +92,23 @@ interface NursingDashboardClientProps {
 export default function NursingDashboardClient({
   locale,
   hospitalSlug,
+  hospitalId,
   activePatients,
   pendingCleaningCount,
   vitalsByPatient,
+  handoverByPatient,
+  departments,
+  activeShift,
   showAll,
   hasDepartment,
 }: NursingDashboardClientProps) {
   const t = useTranslations("nursing");
   const isRtl = locale === "ar";
   const router = useRouter();
+  const dateLocale = locale === "ar" ? ar : enUS;
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [loadingNoteId, setLoadingNoteId] = useState<string | null>(null);
 
   const normalizedPatients = useMemo(() => {
     return activePatients.map(p => ({
@@ -104,6 +132,29 @@ export default function NursingDashboardClient({
         p.normalizedRoom.includes(normalizedQuery)
     );
   }, [normalizedPatients, searchQuery]);
+
+  async function handleAcknowledgeNote(noteId: string) {
+    setLoadingNoteId(noteId);
+    try {
+      const result = await acknowledgeHandoverNote({
+        hospitalId,
+        noteId,
+        hospitalSlug,
+      });
+
+      if (result.success) {
+        toast.success(isRtl ? "تم استلام الملاحظة" : "Note acknowledged");
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error acknowledging note");
+    } finally {
+      setLoadingNoteId(null);
+    }
+  }
 
   const criticalAlertsCount = useMemo(() => {
     let count = 0;
@@ -176,6 +227,15 @@ export default function NursingDashboardClient({
         </div>
       </div>
 
+      {/* ── SHIFT MANAGEMENT ─────────────────── */}
+      <ShiftManagement
+        hospitalId={hospitalId}
+        hospitalSlug={hospitalSlug}
+        departments={departments}
+        activeShift={activeShift}
+        locale={locale}
+      />
+
       {/* ── METRICS STRIP ──────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-0 shadow-lg shadow-teal-500/5 overflow-hidden relative rounded-2xl bg-white dark:bg-slate-950">
@@ -244,86 +304,155 @@ export default function NursingDashboardClient({
           ) : (
             filteredPatients.map((patient) => {
               const recentVitals = vitalsByPatient[patient.patientId]?.[0];
+              const handovers = handoverByPatient[patient.patientId] || [];
 
               return (
-                <div key={patient.admissionId} className="p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
-                  
-                  {/* Patient Info */}
-                  <div className="flex gap-4 items-start w-full lg:w-1/3">
-                    <div className="h-10 w-10 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 flex items-center justify-center font-black shrink-0 border border-teal-200 dark:border-teal-800">
-                      {patient.roomNumber || "-"}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 dark:text-white text-sm">
-                        {isRtl ? patient.patientNameAr : patient.patientNameEn}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 font-medium">
-                        <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">
-                          {patient.patientNumber}
-                        </span>
-                        <span>•</span>
-                        <span>{isRtl ? patient.doctorNameAr : patient.doctorNameEn}</span>
+                <div key={patient.admissionId} className="p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+                    {/* Patient Info */}
+                    <div className="flex gap-4 items-start w-full lg:w-1/3">
+                      <div className="h-10 w-10 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 flex items-center justify-center font-black shrink-0 border border-teal-200 dark:border-teal-800">
+                        {patient.roomNumber || "-"}
                       </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+                          {isRtl ? patient.patientNameAr : patient.patientNameEn}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 font-medium">
+                          <span className="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">
+                            {patient.patientNumber}
+                          </span>
+                          <span>•</span>
+                          <span>{isRtl ? patient.doctorNameAr : patient.doctorNameEn}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Vitals Summary */}
+                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 w-full lg:w-auto">
+                      <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-blue-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase">{t("bp")}</p>
+                          <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
+                            {recentVitals?.bloodPressureSystolic && recentVitals?.bloodPressureDiastolic 
+                              ? `${recentVitals.bloodPressureSystolic}/${recentVitals.bloodPressureDiastolic}`
+                              : "--/--"}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                        <HeartPulse className="w-4 h-4 text-rose-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase">{t("hr")}</p>
+                          <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
+                            {recentVitals?.heartRate ? `${recentVitals.heartRate} bpm` : "--"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                        <Thermometer className="w-4 h-4 text-amber-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase">{t("temp")}</p>
+                          <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
+                            {recentVitals?.temperature ? `${recentVitals.temperature}°C` : "--"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                        <Droplet className="w-4 h-4 text-cyan-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-slate-500 font-bold uppercase">{t("spo2")}</p>
+                          <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
+                            {recentVitals?.oxygenSaturation ? `${recentVitals.oxygenSaturation}%` : "--"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="w-full lg:w-auto flex justify-end gap-2">
+                      <HandoverNoteForm
+                        hospitalId={hospitalId}
+                        patientId={patient.patientId}
+                        admissionId={patient.admissionId}
+                        departmentId={activeShift?.departmentId || ""}
+                        hospitalSlug={hospitalSlug}
+                        locale={locale}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="font-bold text-xs rounded-xl shadow-sm border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 gap-1.5"
+                        onClick={() => router.push(`/${hospitalSlug}/nursing/mar/${patient.admissionId}`)}
+                      >
+                        <Pill className="w-3.5 h-3.5" />
+                        {t("marTitle") || "MAR"}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="font-bold text-xs rounded-xl shadow-sm border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/30 gap-1.5"
+                        onClick={() => router.push(`/${hospitalSlug}/admissions`)}
+                      >
+                        <Activity className="w-3.5 h-3.5" />
+                        {t("recordVitals")}
+                      </Button>
                     </div>
                   </div>
 
-                  {/* Vitals Summary */}
-                  <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 w-full lg:w-auto">
-                    <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-blue-500 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{t("bp")}</p>
-                        <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
-                          {recentVitals?.bloodPressureSystolic && recentVitals?.bloodPressureDiastolic 
-                            ? `${recentVitals.bloodPressureSystolic}/${recentVitals.bloodPressureDiastolic}`
-                            : "--/--"}
-                        </p>
-                      </div>
+                  {/* Handover Notes Display */}
+                  {handovers.length > 0 && (
+                    <div className="mt-4 space-y-2 border-t border-slate-50 dark:border-slate-800/50 pt-3">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">
+                        {t("handoverNotes")}
+                      </p>
+                      {handovers.map((note) => (
+                        <div key={note.id} className={cn(
+                          "p-3 rounded-xl border flex flex-col md:flex-row justify-between items-start md:items-center gap-3",
+                          note.priority === "emergency" ? "bg-rose-50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/30" :
+                          note.priority === "urgent" ? "bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-900/30" :
+                          "bg-slate-50 border-slate-100 dark:bg-slate-950 dark:border-slate-800"
+                        )}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={cn(
+                                "text-[9px] font-black uppercase px-1.5 py-0.5 rounded",
+                                note.priority === "emergency" ? "bg-rose-500 text-white" :
+                                note.priority === "urgent" ? "bg-amber-500 text-white" :
+                                "bg-slate-500 text-white"
+                              )}>
+                                {t(note.priority)}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-500">
+                                {isRtl ? note.fromStaffNameAr : note.fromStaffNameEn} • {formatDistanceToNow(note.createdAt, { addSuffix: true, locale: dateLocale })}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                              {note.content}
+                            </p>
+                          </div>
+                          {!note.isAcknowledged ? (
+                            <Button
+                              size="sm"
+                              disabled={loadingNoteId === note.id}
+                              onClick={() => handleAcknowledgeNote(note.id)}
+                              className="rounded-lg h-7 text-[10px] font-black bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 shadow-sm px-3"
+                            >
+                              {t("acknowledge")}
+                            </Button>
+                          ) : (
+                            <span className="text-[10px] font-black text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 px-2 py-1 rounded-lg">
+                              {t("acknowledged")}
+                            </span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    
-                    <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                      <HeartPulse className="w-4 h-4 text-rose-500 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{t("hr")}</p>
-                        <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
-                          {recentVitals?.heartRate ? `${recentVitals.heartRate} bpm` : "--"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                      <Thermometer className="w-4 h-4 text-amber-500 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{t("temp")}</p>
-                        <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
-                          {recentVitals?.temperature ? `${recentVitals.temperature}°C` : "--"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                      <Droplet className="w-4 h-4 text-cyan-500 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{t("spo2")}</p>
-                        <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
-                          {recentVitals?.oxygenSaturation ? `${recentVitals.oxygenSaturation}%` : "--"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="w-full lg:w-auto flex justify-end">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="font-bold text-xs rounded-xl shadow-sm border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30"
-                      onClick={() => router.push(`/${hospitalSlug}/admissions`)}
-                    >
-                      {t("recordVitals")}
-                    </Button>
-                  </div>
-                  
+                  )}
                 </div>
               );
             })

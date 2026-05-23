@@ -5,6 +5,7 @@ export * from "./auth";
 export * from "./core";
 export * from "./patients";
 export * from "./clinical";
+export * from "./nursing";
 export * from "./housekeeping";
 export * from "./pharmacy";
 export * from "./laboratory";
