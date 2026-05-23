@@ -88,7 +88,18 @@ export default async function PharmacyPage({
             eq(prescriptions.status, "active")
           )
         )
-        .groupBy(prescriptions.id, patients.id, staff.id)
+        .groupBy(
+          prescriptions.id, 
+          prescriptions.createdAt, 
+          prescriptions.status, 
+          patients.id, 
+          patients.nameAr, 
+          patients.nameEn, 
+          patients.patientNumber, 
+          staff.id, 
+          staff.nameAr, 
+          staff.nameEn
+        )
         .orderBy(desc(prescriptions.createdAt))
         .limit(20),
 

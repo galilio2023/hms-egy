@@ -94,19 +94,21 @@ export async function createHousekeepingTask(payload: {
           eq(staff.isActive, true)
         ));
 
-      for (const member of hkStaff) {
-        if (member.userId) {
-          await tx.insert(notifications).values({
-            hospitalId,
-            userId: member.userId,
-            titleAr: "🧹 طلب تنظيف جديد",
-            titleEn: "🧹 New Cleaning Request",
-            messageAr: `مطلوب تنظيف وتعقيم السرير رقم ${bedInfo.bedNumber} في الغرفة رقم ${bedInfo.roomNumber}. الأولوية: ${payload.priority === "urgent" ? "عاجل" : "عادي"}.`,
-            messageEn: `Cleaning requested for bed ${bedInfo.bedNumber} in room ${bedInfo.roomNumber}. Priority: ${payload.priority}.`,
-            type: payload.priority === "urgent" ? "warning" : "info",
-            isRead: false,
-          });
-        }
+      const notificationPayloads = hkStaff
+        .filter(member => member.userId)
+        .map(member => ({
+          hospitalId,
+          userId: member.userId!,
+          titleAr: "🧹 طلب تنظيف جديد",
+          titleEn: "🧹 New Cleaning Request",
+          messageAr: `مطلوب تنظيف وتعقيم السرير رقم ${bedInfo.bedNumber} في الغرفة رقم ${bedInfo.roomNumber}. الأولوية: ${payload.priority === "urgent" ? "عاجل" : "عادي"}.`,
+          messageEn: `Cleaning requested for bed ${bedInfo.bedNumber} in room ${bedInfo.roomNumber}. Priority: ${payload.priority}.`,
+          type: (payload.priority === "urgent" ? "warning" : "info") as any,
+          isRead: false,
+        }));
+
+      if (notificationPayloads.length > 0) {
+        await tx.insert(notifications).values(notificationPayloads);
       }
 
       return { success: true, taskId: task.id };
@@ -374,19 +376,21 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
           eq(staff.isActive, true)
         ));
 
-      for (const nurse of nurses) {
-        if (nurse.userId) {
-          await tx.insert(notifications).values({
-            hospitalId,
-            userId: nurse.userId,
-            titleAr: "✅ السرير جاهز للاستقبال",
-            titleEn: "✅ Bed Ready for Admission",
-            messageAr: `تم إكمال عملية تنظيف وتعقيم ${bedDetailsAr} وهو جاهز الآن لاستقبال المرضى.`,
-            messageEn: `Housekeeping has finished cleaning ${bedDetailsEn}. It is now available for admission.`,
-            type: "success",
-            isRead: false,
-          });
-        }
+      const nursingNotifications = nurses
+        .filter(nurse => nurse.userId)
+        .map(nurse => ({
+          hospitalId,
+          userId: nurse.userId!,
+          titleAr: "✅ السرير جاهز للاستقبال",
+          titleEn: "✅ Bed Ready for Admission",
+          messageAr: `تم إكمال عملية تنظيف وتعقيم ${bedDetailsAr} وهو جاهز الآن لاستقبال المرضى.`,
+          messageEn: `Housekeeping has finished cleaning ${bedDetailsEn}. It is now available for admission.`,
+          type: "success" as any,
+          isRead: false,
+        }));
+
+      if (nursingNotifications.length > 0) {
+        await tx.insert(notifications).values(nursingNotifications);
       }
 
       // 5. Create audit log entry

@@ -180,7 +180,10 @@ export default function PharmacyDashboardClient({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-primary">{initialData.pendingPrescriptions.length}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-3xl font-black text-primary">{initialData.pendingPrescriptions.length}</div>
+              <ArrowUpRight className="h-4 w-4 text-primary/40 rtl:-scale-x-100" />
+            </div>
             <p className="text-xs text-muted-foreground mt-1 font-medium">
               {isRtl ? "وصفات بانتظار الصرف" : "Prescriptions awaiting fulfillment"}
             </p>
@@ -195,7 +198,10 @@ export default function PharmacyDashboardClient({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-amber-600">{initialData.lowStock.length}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-3xl font-black text-amber-600">{initialData.lowStock.length}</div>
+              <ArrowUpRight className="h-4 w-4 text-amber-600/40 rtl:-scale-x-100" />
+            </div>
             <p className="text-xs text-muted-foreground mt-1 font-medium">
               {isRtl ? "أدوية تحت حد الطلب" : "Items below minimum level"}
             </p>
@@ -210,7 +216,10 @@ export default function PharmacyDashboardClient({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-black text-teal-600">{initialData.recentTransactions.length}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-3xl font-black text-teal-600">{initialData.recentTransactions.length}</div>
+              <ArrowUpRight className="h-4 w-4 text-teal-600/40 rtl:-scale-x-100" />
+            </div>
             <p className="text-xs text-muted-foreground mt-1 font-medium">
               {isRtl ? "عمليات اليوم" : "Total operations today"}
             </p>

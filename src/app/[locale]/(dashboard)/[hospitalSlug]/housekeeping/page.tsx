@@ -75,14 +75,15 @@ export default async function HousekeepingPage({
     
     // Create UTC boundaries by assuming Cairo is between UTC+2 and UTC+3
     // A safer way is to let the DB calculate the UTC timestamp for 00:00:00 Cairo time
-    const [timeBoundaries] = await tx.execute(sql`
+    const result = await tx.execute(sql`
       SELECT 
         (CURRENT_DATE AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as start_utc,
         ((CURRENT_DATE + 1) AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as end_utc
     `);
     
-    const startOfCairoDayUtc = new Date((timeBoundaries as any).start_utc);
-    const endOfCairoDayUtc = new Date((timeBoundaries as any).end_utc);
+    const timeBoundaries = result.rows[0];
+    const startOfCairoDayUtc = new Date(timeBoundaries.start_utc as string);
+    const endOfCairoDayUtc = new Date(timeBoundaries.end_utc as string);
 
     const [
       roomsList,
