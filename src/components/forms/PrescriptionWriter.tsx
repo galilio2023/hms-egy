@@ -85,9 +85,14 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
         return;
       }
       setIsSearching(true);
-      const res = await searchMedications(searchQuery);
-      if (active && res.success) {
-        setSearchResults(res.data || []);
+      try {
+        const res = await fetch(`/api/clinical/medications?q=${encodeURIComponent(searchQuery)}`);
+        const json = await res.json();
+        if (active && json.data) {
+          setSearchResults(json.data);
+        }
+      } catch (err) {
+        console.error("Search error:", err);
       }
       setIsSearching(false);
     }, 300);

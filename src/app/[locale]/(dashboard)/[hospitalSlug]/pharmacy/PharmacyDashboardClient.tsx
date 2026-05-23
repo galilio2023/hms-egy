@@ -102,7 +102,7 @@ export default function PharmacyDashboardClient({
       accessorKey: "createdAt",
       header: t("date"),
       cell: ({ row }) => (
-        <span className="text-xs font-medium">
+        <span className="text-xs font-medium" suppressHydrationWarning>
           {format(new Date(row.original.createdAt), "HH:mm")}
         </span>
       ),
@@ -299,7 +299,7 @@ export default function PharmacyDashboardClient({
                         </span>
                       </div>
                     </div>
-                    <span className="text-[11px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                    <span className="text-[11px] font-bold text-muted-foreground bg-muted px-2 py-1 rounded-md" suppressHydrationWarning>
                       {format(new Date(tx.createdAt), "HH:mm")}
                     </span>
                   </div>

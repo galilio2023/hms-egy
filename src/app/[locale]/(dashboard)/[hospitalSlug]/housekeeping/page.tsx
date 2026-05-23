@@ -77,8 +77,8 @@ export default async function HousekeepingPage({
     // A safer way is to let the DB calculate the UTC timestamp for 00:00:00 Cairo time
     const result = await tx.execute(sql`
       SELECT 
-        (CURRENT_DATE AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as start_utc,
-        ((CURRENT_DATE + 1) AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as end_utc
+        ((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Cairo')::date AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as start_utc,
+        (((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Cairo')::date + 1) AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as end_utc
     `);
     
     const timeBoundaries = result.rows[0];

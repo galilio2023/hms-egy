@@ -45,10 +45,13 @@ export async function createHousekeepingTask(payload: {
         })
         .from(beds)
         .innerJoin(rooms, eq(beds.roomId, rooms.id))
-        .where(eq(beds.id, payload.bedId))
+        .where(and(
+          eq(beds.id, payload.bedId),
+          eq(beds.hospitalId, hospitalId)
+        ))
         .limit(1);
 
-      if (!bedInfo) throw new Error("Bed not found");
+      if (!bedInfo) throw new Error("Bed not found or unauthorized access");
       const targetRoomId = payload.roomId || bedInfo.roomId;
 
       // 2. Resolve staff record for requester
@@ -82,7 +85,10 @@ export async function createHousekeepingTask(payload: {
           cleaningRequestedAt: new Date(), 
           updatedAt: new Date() 
         })
-        .where(eq(beds.id, payload.bedId));
+        .where(and(
+          eq(beds.id, payload.bedId),
+          eq(beds.hospitalId, hospitalId)
+        ));
 
       // 5. Notify all active housekeeping staff in this hospital
       const hkStaff = await tx
