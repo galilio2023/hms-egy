@@ -346,7 +346,7 @@ export function normalizeArabic(text: string): string {
 export const normalizeDecimal = (str: string | number | null | undefined): number | null => {
   if (str === null || str === undefined || String(str).trim() === "") return null;
   const normalized = String(str)
-    .replace(/،|,/g, ".") // Convert Arabic/localized commas to dots
+    .replace(/[،,٫]/g, ".") // Convert Arabic, standard, and Eastern decimal separators to dots
     .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString()); // Eastern Arabic to Western digits
   const num = Number(normalized);
   return isNaN(num) ? null : num;

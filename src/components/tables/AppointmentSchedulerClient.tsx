@@ -394,7 +394,7 @@ export function AppointmentSchedulerClient({
             />
           </div>
 
-          <select dir={isRtl ? "rtl" : "ltr"} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
+          <select dir={isRtl ? "rtl" : "ltr"} className="hms-select-native" value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
             <option value="">{isRtl ? "جميع العيادات" : "All Clinics"}</option>
             {departments.map((dept) => (
               <option key={dept.id} value={dept.id}>
@@ -403,7 +403,7 @@ export function AppointmentSchedulerClient({
             ))}
           </select>
 
-          <select dir={isRtl ? "rtl" : "ltr"} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)}>
+          <select dir={isRtl ? "rtl" : "ltr"} className="hms-select-native" value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)}>
             <option value="">{isRtl ? "جميع الأطباء" : "All Doctors"}</option>
             {doctors.map((doc) => (
               <option key={doc.id} value={doc.id}>
@@ -412,7 +412,7 @@ export function AppointmentSchedulerClient({
             ))}
           </select>
 
-          <select dir={isRtl ? "rtl" : "ltr"} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
+          <select dir={isRtl ? "rtl" : "ltr"} className="hms-select-native" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
             <option value="">{isRtl ? "كل الحالات" : "All Statuses"}</option>
             <option value="scheduled">{isRtl ? "مؤكد" : "Scheduled"}</option>
             <option value="completed">{isRtl ? "مكتمل" : "Completed"}</option>
@@ -723,7 +723,7 @@ export function AppointmentSchedulerClient({
                         </label>
                         <select
                           dir={isRtl ? "rtl" : "ltr"}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          className="hms-select-native"
                           value={selectedAppointment.status}
                           onChange={(e) => handleStatusChange(e.target.value)}
                         >
@@ -774,7 +774,7 @@ export function AppointmentSchedulerClient({
                 <label className="font-bold text-foreground block">{t("doctor")}</label>
                 <select
                   dir={isRtl ? "rtl" : "ltr"}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  className="hms-select-native"
                   value={scheduleDoctorId}
                   onChange={(e) => setScheduleDoctorId(e.target.value)}
                 >

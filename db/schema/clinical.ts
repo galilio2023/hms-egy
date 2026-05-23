@@ -85,6 +85,7 @@ export const admissions = pgTable("admissions", {
   id: uuid("id").primaryKey().defaultRandom(),
   hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull(),
   patientId: uuid("patient_id").references(() => patients.id, { onDelete: "restrict" }).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "restrict" }).notNull(),
   bedId: uuid("bed_id").references(() => beds.id, { onDelete: "set null" }),
   admittingDoctorId: uuid("admitting_doctor_id").references(() => staff.id, { onDelete: "restrict" }).notNull(),
   admissionDate: timestamp("admission_date").notNull(),
@@ -98,6 +99,7 @@ export const admissions = pgTable("admissions", {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalAdmissionIdx: index("adm_hospital_patient_idx").on(table.hospitalId, table.patientId),
     hospitalBedIdx: index("adm_hospital_bed_idx").on(table.hospitalId, table.bedId),
+    hospitalDeptIdx: index("adm_hospital_dept_idx").on(table.hospitalId, table.departmentId),
   };
 }).enableRLS();
 

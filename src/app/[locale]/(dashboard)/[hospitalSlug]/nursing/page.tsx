@@ -99,7 +99,7 @@ export default async function NursingPage({
           and(
             eq(admissions.hospitalId, hospital.id),
             eq(admissions.status, "active"),
-            userDeptId ? eq(rooms.departmentId, userDeptId) : sql`TRUE`
+            userDeptId ? eq(admissions.departmentId, userDeptId) : sql`TRUE`
           )
         )
         .orderBy(desc(admissions.admissionDate)),

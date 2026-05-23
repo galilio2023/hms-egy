@@ -88,6 +88,10 @@ export const admissionsRelations = relations(admissions, ({ one }) => ({
     fields: [admissions.patientId],
     references: [patients.id],
   }),
+  department: one(departments, {
+    fields: [admissions.departmentId],
+    references: [departments.id],
+  }),
   bed: one(beds, {
     fields: [admissions.bedId],
     references: [beds.id],
