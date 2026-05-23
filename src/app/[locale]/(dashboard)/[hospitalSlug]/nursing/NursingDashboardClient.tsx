@@ -81,9 +81,9 @@ export default function NursingDashboardClient({
     const lowerQ = normalizeArabic(searchQuery.toLowerCase());
     return activePatients.filter(
       (p) =>
-        normalizeArabic(p.patientNameAr.toLowerCase()).includes(lowerQ) ||
-        p.patientNameEn.toLowerCase().includes(lowerQ) ||
-        p.patientNumber.toLowerCase().includes(lowerQ) ||
+        normalizeArabic(p.patientNameAr?.toLowerCase() || "").includes(lowerQ) ||
+        (p.patientNameEn?.toLowerCase() || "").includes(lowerQ) ||
+        (p.patientNumber?.toLowerCase() || "").includes(lowerQ) ||
         (p.roomNumber && p.roomNumber.toLowerCase().includes(lowerQ))
     );
   }, [activePatients, searchQuery]);
@@ -98,7 +98,7 @@ export default function NursingDashboardClient({
       const spo2 = recentVitals.oxygenSaturation;
       const sys = recentVitals.bloodPressureSystolic;
       const tempStr = recentVitals.temperature;
-      const temp = tempStr !== null && tempStr !== undefined ? Number(tempStr) : null;
+      const temp = tempStr !== null && tempStr !== undefined && String(tempStr).trim() !== "" ? Number(tempStr) : null;
 
       // Basic physiological thresholds
       if (

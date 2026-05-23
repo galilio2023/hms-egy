@@ -152,9 +152,12 @@ export async function auth(): Promise<Session | null> {
           });
           if (alShifa) {
             cachedMockHospitalId = alShifa.id;
+          } else {
+            console.warn("⚠️ Warning: Hospital 'al-shifa' not found in database. Mock development tenant context may load empty or fail.");
           }
         } catch (err) {
           console.error("Failed to resolve al-shifa UUID for mock admin:", err);
+          console.warn("⚠️ Warning: Hospital 'al-shifa' query failed. Mock development tenant context may load empty or fail.");
         }
       }
 
