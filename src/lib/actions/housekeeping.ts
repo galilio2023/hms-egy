@@ -255,6 +255,7 @@ export async function startHousekeepingTask(taskId: string) {
         })
         .where(and(
           eq(housekeepingTasks.id, taskId),
+          eq(housekeepingTasks.status, "pending"),
           eq(housekeepingTasks.hospitalId, hospitalId)
         ));
 
@@ -296,6 +297,7 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
         .from(housekeepingTasks)
         .where(and(
           eq(housekeepingTasks.id, taskId),
+          inArray(housekeepingTasks.status, ["pending", "in_progress"]),
           eq(housekeepingTasks.hospitalId, hospitalId)
         ))
         .limit(1);
@@ -326,6 +328,7 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
         })
         .where(and(
           eq(housekeepingTasks.id, taskId),
+          inArray(housekeepingTasks.status, ["pending", "in_progress"]),
           eq(housekeepingTasks.hospitalId, hospitalId)
         ));
 

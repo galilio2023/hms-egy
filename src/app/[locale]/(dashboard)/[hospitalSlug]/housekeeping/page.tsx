@@ -166,7 +166,7 @@ export default async function HousekeepingPage({
           and(
             eq(housekeepingTasks.hospitalId, hospital.id),
             eq(housekeepingTasks.status, "completed"),
-            sql`(${housekeepingTasks.completedAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')::date = CURRENT_DATE`
+            sql`(${housekeepingTasks.completedAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Cairo')::date`
           )
         ),
 

@@ -850,7 +850,7 @@ export default function HousekeepingDashboardClient({
                   <img src={photoPreview} alt="Captured Bed" className="w-full h-full object-cover" />
                   <button
                     onClick={() => setPhotoPreview(null)}
-                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-black/80 transition-colors"
+                    className="absolute top-2 end-2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 transition-colors"
                   >
                     <X className="h-4 w-4" />
                   </button>
