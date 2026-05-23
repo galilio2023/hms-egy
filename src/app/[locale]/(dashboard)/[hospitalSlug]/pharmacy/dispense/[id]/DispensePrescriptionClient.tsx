@@ -240,11 +240,14 @@ export default function DispensePrescriptionClient({
 
   // Initialize and close camera scanner
   useEffect(() => {
+    let isMounted = true;
+
     if (isCameraOpen && Html5Qrcode) {
       const startScanner = async () => {
         try {
           // Add a short delay to ensure the DOM element #reader is mounted
           await new Promise((resolve) => setTimeout(resolve, 300));
+          if (!isMounted) return;
           
           const html5QrCode = new Html5Qrcode("reader");
           qrScannerRef.current = html5QrCode;
@@ -259,17 +262,21 @@ export default function DispensePrescriptionClient({
               },
             },
             (decodedText: string) => {
-              verifyBarcode(decodedText);
-              setIsCameraOpen(false); // Close after successful scan
+              if (isMounted) {
+                verifyBarcode(decodedText);
+                setIsCameraOpen(false); // Close after successful scan
+              }
             },
             (errorMessage: string) => {
               // Verbose scanning error, silent ignore
             }
           );
         } catch (err) {
-          console.error("Camera scan start error:", err);
-          toast.error(isRtl ? "فشل تشغيل الكاميرا." : "Failed to open camera.");
-          setIsCameraOpen(false);
+          if (isMounted) {
+            console.error("Camera scan start error:", err);
+            toast.error(isRtl ? "فشل تشغيل الكاميرا." : "Failed to open camera.");
+            setIsCameraOpen(false);
+          }
         }
       };
 
@@ -277,6 +284,7 @@ export default function DispensePrescriptionClient({
     }
 
     return () => {
+      isMounted = false;
       if (qrScannerRef.current && qrScannerRef.current.isScanning) {
         qrScannerRef.current
           .stop()

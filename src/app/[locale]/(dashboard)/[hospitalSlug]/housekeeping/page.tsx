@@ -9,6 +9,8 @@ import { staff } from "@db/schema/core";
 import { housekeepingTasks } from "@db/schema/housekeeping";
 import { eq, and, or, inArray, desc, sql, gte, lt } from "drizzle-orm";
 import HousekeepingDashboardClient from "./HousekeepingDashboardClient";
+import { toZonedTime } from "date-fns-tz";
+import { startOfDay, endOfDay } from "date-fns";
 
 export async function generateMetadata({
   params,
@@ -60,30 +62,10 @@ export default async function HousekeepingPage({
 
   // Query database in tenant context
   const dashboardData = await withTenantContext(hospital.id, async (tx) => {
-    // Calculate Cairo day boundaries in UTC for a sargable query
-    const now = new Date();
-    const cairoFormatter = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Africa/Cairo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-    const parts = cairoFormatter.formatToParts(now);
-    const year = parts.find(p => p.type === "year")?.value;
-    const month = parts.find(p => p.type === "month")?.value;
-    const day = parts.find(p => p.type === "day")?.value;
-    
-    // Create UTC boundaries by assuming Cairo is between UTC+2 and UTC+3
-    // A safer way is to let the DB calculate the UTC timestamp for 00:00:00 Cairo time
-    const result = await tx.execute(sql`
-      SELECT 
-        ((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Cairo')::date AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as start_utc,
-        (((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Cairo')::date + 1) AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as end_utc
-    `);
-    
-    const timeBoundaries = result.rows[0];
-    const startOfCairoDayUtc = new Date(timeBoundaries.start_utc as string);
-    const endOfCairoDayUtc = new Date(timeBoundaries.end_utc as string);
+    // Calculate Cairo day boundaries in UTC for a sargable query using application logic
+    const cairoTime = toZonedTime(new Date(), "Africa/Cairo");
+    const startOfCairoDayUtc = startOfDay(cairoTime);
+    const endOfCairoDayUtc = endOfDay(cairoTime);
 
     const [
       roomsList,

@@ -538,17 +538,16 @@ export async function dispensePrescription(
           performedBy: performer.id,
         });
 
-        // Deduct from stock
+        // Deduct from stock ATOMICALLY using SQL expressions to prevent race conditions
         await tx
           .update(medications)
           .set({
-            stockCount: med.stockCount - item.quantity,
+            stockCount: sql`${medications.stockCount} - ${item.quantity}`,
             updatedAt: new Date(),
           })
           .where(eq(medications.id, item.medicationId));
 
-        // Update prescription item
-        const newDispensedCount = rxItem.dispensedCount + item.quantity;
+        // Update prescription item (reusing newDispensedCount calculated earlier)
         await tx
           .update(prescriptionItems)
           .set({

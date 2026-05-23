@@ -188,7 +188,7 @@ export default function LabResultEntryClient({
 
                       <div className="flex flex-col justify-end pb-1">
                         <div className={cn(
-                          "flex items-center space-x-2 space-x-reverse h-12 px-4 rounded-xl border transition-all select-none",
+                          "flex items-center gap-2 h-12 px-4 rounded-xl border transition-all select-none",
                           formItem.isCritical 
                             ? "border-rose-600 bg-rose-600 text-white shadow-lg shadow-rose-500/20" 
                             : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-400 hover:border-rose-300 dark:hover:border-rose-900/50"
