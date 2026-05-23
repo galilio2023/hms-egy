@@ -490,28 +490,27 @@ export async function dispensePrescription(
         .limit(1)
         .then(res => res[0]);
 
-      // 3. Process each item
-      for (const item of items) {
-        if (item.quantity <= 0) continue;
+      if (!performer) throw new Error("Performer staff profile not found");
 
-        const [rxItem] = await tx
-          .select()
-          .from(prescriptionItems)
-          .where(eq(prescriptionItems.id, item.prescriptionItemId))
-          .limit(1);
+      const itemIds = items.map(i => i.prescriptionItemId);
+      const medIds = items.map(i => i.medicationId);
 
-        if (!rxItem) throw new Error(`Prescription item not found`);
+      // 3. Pre-fetch all needed data to avoid N+1 reads
+      const [existingRxItems, existingMeds] = await Promise.all([
+        tx.select().from(prescriptionItems).where(inArray(prescriptionItems.id, itemIds)),
+        tx.select().from(medications).where(and(eq(medications.hospitalId, hospitalId), inArray(medications.id, medIds)))
+      ]);
 
-        const [med] = await tx
-          .select()
-          .from(medications)
-          .where(and(
-            eq(medications.id, item.medicationId),
-            eq(medications.hospitalId, hospitalId)
-          ))
-          .limit(1);
+      // 4. Process each item in parallel (within tx)
+      await Promise.all(items.map(async (item) => {
+        if (item.quantity <= 0) return;
 
-        if (!med) throw new Error(`Medication not found`);
+        const rxItem = existingRxItems.find(i => i.id === item.prescriptionItemId);
+        if (!rxItem) throw new Error(`Prescription item not found: ${item.prescriptionItemId}`);
+
+        const med = existingMeds.find(m => m.id === item.medicationId);
+        if (!med) throw new Error(`Medication not found: ${item.medicationId}`);
+        
         if (med.stockCount < item.quantity) {
           throw new Error(`Insufficient stock for ${med.nameEn} / ${med.nameAr}. Available: ${med.stockCount}, Requested: ${item.quantity}`);
         }
@@ -523,7 +522,7 @@ export async function dispensePrescription(
           type: "dispense",
           quantity: -item.quantity,
           notes: `Dispensed for prescription ${prescriptionId}`,
-          performedBy: performer?.id || null,
+          performedBy: performer.id,
         });
 
         // Deduct from stock
@@ -544,9 +543,9 @@ export async function dispensePrescription(
             status: "dispensed",
           })
           .where(eq(prescriptionItems.id, item.prescriptionItemId));
-      }
+      }));
 
-      // 4. Check if all items in prescription are completed/dispensed
+      // 5. Check if all items in prescription are completed/dispensed
       const allItems = await tx
         .select()
         .from(prescriptionItems)
@@ -570,7 +569,8 @@ export async function dispensePrescription(
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/pharmacy/dispense`, "layout");
     return result;
   } catch (error: any) {
-    return { success: false, error: error.message };
+    console.error("[DISPENSE_PHARMACY_ERROR]", error);
+    return { success: false, error: error.message || "Failed to dispense" };
   }
 }
 

@@ -47,6 +47,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
+import { normalizeSearchTerm } from "@/lib/utils/egypt";
 import {
   createHousekeepingTask,
   assignHousekeepingTask,

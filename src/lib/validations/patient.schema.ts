@@ -10,7 +10,15 @@ const egyptianPhoneSchema = z
   });
 
 export const patientSchema = z.object({
-  nationalId: z.string().optional().or(z.literal("")),
+  nationalId: z.string()
+    .optional()
+    .or(z.literal(""))
+    .refine((val) => {
+      if (!val || val === "") return true;
+      return /^[23]\d{13}$/.test(val);
+    }, {
+      message: "Invalid Egyptian National ID: Must be 14 digits starting with 2 or 3.",
+    }),
   passportNumber: z.string().optional().or(z.literal("")),
   nameAr: z.string().min(3, "Name in Arabic must be at least 3 characters"),
   nameEn: z.string().min(3, "Name in English must be at least 3 characters"),

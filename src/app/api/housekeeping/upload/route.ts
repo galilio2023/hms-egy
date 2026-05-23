@@ -19,10 +19,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid image data" }, { status: 400 });
     }
 
-    // Basic size validation (e.g. 1MB limit for dev environment)
-    const sizeInBytes = (base64.length * 3) / 4;
-    if (sizeInBytes > 1024 * 1024) {
-      return NextResponse.json({ error: "Image too large (Max 1MB allowed)" }, { status: 400 });
+    // Basic validation of the base64 content
+    // In production, use 'file-type' or 'sharp' to verify the actual image data and strip metadata.
+    const imageContent = base64.split(",")[1];
+    if (!imageContent || imageContent.length < 100) {
+      return NextResponse.json({ error: "Image content too short or invalid" }, { status: 400 });
+    }
+
+    // Check for common image header patterns in base64 (Optional but safer)
+    // JPEG starts with '/9j/', PNG starts with 'iVBORw0KGgo'
+    const isCommonImage = /^(\/9j\/|iVBORw0KGgo|R0lGOD|UklGR)/.test(imageContent);
+    if (!isCommonImage) {
+      return NextResponse.json({ error: "Unsupported image format or corrupted data" }, { status: 400 });
     }
 
     // In a real implementation, we would write to disk or S3 here.

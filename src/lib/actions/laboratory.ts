@@ -268,8 +268,8 @@ export async function saveLabResults(data: SaveLabResultInput) {
 
       if (!orderMeta) throw new Error("Lab order not found");
 
-      // 3. Update each item
-      for (const item of data.items) {
+      // 3. Update all items and trigger alerts in parallel (still within tx)
+      await Promise.all(data.items.map(async (item) => {
         await tx
           .update(labOrderItems)
           .set({
@@ -296,7 +296,7 @@ export async function saveLabResults(data: SaveLabResultInput) {
           // TODO: Trigger emergency out-of-band alert (SMS/WhatsApp)
           console.log(`[OUT-OF-BAND] Emergency critical value alert for doctor ${orderMeta.doctorId}`);
         }
-      }
+      }));
 
       // 5. Check if all items are completed to mark order as completed
       const remainingItems = await tx
