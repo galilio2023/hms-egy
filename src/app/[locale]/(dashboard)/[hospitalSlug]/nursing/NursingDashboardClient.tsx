@@ -10,19 +10,25 @@ import {
   UserCheck,
   AlertCircle,
   Thermometer,
-  Clock,
   Sparkles,
   Search,
-  Droplet
+  Droplet,
+  HeartPulse
 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardHeader,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+export function normalizeArabic(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/[أإآا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه");
+}
 
 interface ActivePatient {
   admissionId: string;
@@ -79,13 +85,13 @@ export default function NursingDashboardClient({
 
   const filteredPatients = useMemo(() => {
     if (!searchQuery.trim()) return activePatients;
-    const lowerQ = searchQuery.toLowerCase();
+    const lowerQ = normalizeArabic(searchQuery.toLowerCase());
     return activePatients.filter(
       (p) =>
-        p.patientNameAr.toLowerCase().includes(lowerQ) ||
+        normalizeArabic(p.patientNameAr.toLowerCase()).includes(lowerQ) ||
         p.patientNameEn.toLowerCase().includes(lowerQ) ||
         p.patientNumber.toLowerCase().includes(lowerQ) ||
-        p.roomNumber?.toLowerCase().includes(lowerQ)
+        (p.roomNumber && p.roomNumber.toLowerCase().includes(lowerQ))
     );
   }, [activePatients, searchQuery]);
 
@@ -96,10 +102,10 @@ export default function NursingDashboardClient({
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Activity className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-            {t("title") || "لوحة تمريض المناوبة"}
+            {t("title")}
           </h1>
           <p className="text-sm text-slate-500 font-medium mt-1">
-            {isRtl ? "متابعة الحالات الداخلية، المؤشرات الحيوية، وحالة الأسرة" : "Inpatient monitoring, vitals, and bed status."}
+            {t("subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -107,7 +113,7 @@ export default function NursingDashboardClient({
             <Search className="w-4 h-4 absolute top-1/2 -translate-y-1/2 start-3 text-slate-400" />
             <Input
               type="text"
-              placeholder={isRtl ? "ابحث باسم المريض أو الغرفة..." : "Search patient or room..."}
+              placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full md:w-64 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl ps-9"
@@ -124,7 +130,7 @@ export default function NursingDashboardClient({
           </div>
           <CardContent className="p-6">
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">{isRtl ? "مرضى القسم الداخلي" : "Active Inpatients"}</span>
+              <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">{t("activeInpatients")}</span>
               <span className="text-4xl font-black text-slate-900 dark:text-white mt-2">{activePatients.length}</span>
             </div>
           </CardContent>
@@ -137,13 +143,13 @@ export default function NursingDashboardClient({
           <CardContent className="p-6">
             <div className="flex flex-col">
               <span className="text-sm font-bold text-amber-700 dark:text-amber-500 uppercase tracking-wider">
-                {isRtl ? "أسرة بانتظار التنظيف" : "Beds Pending Cleaning"}
+                {t("bedsPendingCleaning")}
               </span>
               <div className="flex items-baseline gap-2 mt-2">
                 <span className="text-4xl font-black text-amber-700 dark:text-amber-400">{pendingCleaningCount}</span>
               </div>
               <p className="text-xs font-semibold text-amber-600/80 mt-1">
-                {isRtl ? "يتطلب إرسال فريق النظافة" : "Housekeeping team dispatch required"}
+                {t("cleaningRequired")}
               </p>
             </div>
           </CardContent>
@@ -156,11 +162,11 @@ export default function NursingDashboardClient({
           <CardContent className="p-6">
             <div className="flex flex-col">
               <span className="text-sm font-bold text-rose-700 dark:text-rose-500 uppercase tracking-wider">
-                {isRtl ? "تنبيهات حيوية" : "Critical Alerts"}
+                {t("criticalAlerts")}
               </span>
               <span className="text-4xl font-black text-rose-700 dark:text-rose-400 mt-2">0</span>
               <p className="text-xs font-semibold text-rose-600/80 mt-1">
-                {isRtl ? "لا توجد مؤشرات حرجة حديثة" : "No recent critical vitals"}
+                {t("noCriticalVitals")}
               </p>
             </div>
           </CardContent>
@@ -172,14 +178,14 @@ export default function NursingDashboardClient({
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
           <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
             <BedIcon className="w-4 h-4 text-teal-600" />
-            {isRtl ? "حالات المناوبة الحالية" : "Current Shift Patients"}
+            {t("currentShiftPatients")}
           </h2>
         </div>
         
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {filteredPatients.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-sm font-bold">
-              {isRtl ? "لا توجد حالات حالية" : "No active patients found."}
+              {t("noActivePatients")}
             </div>
           ) : (
             filteredPatients.map((patient) => {
@@ -212,7 +218,7 @@ export default function NursingDashboardClient({
                     <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
                       <Activity className="w-4 h-4 text-blue-500 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{isRtl ? "ضغط الدم" : "BP"}</p>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{t("bp")}</p>
                         <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
                           {recentVitals?.bloodPressureSystolic && recentVitals?.bloodPressureDiastolic 
                             ? `${recentVitals.bloodPressureSystolic}/${recentVitals.bloodPressureDiastolic}`
@@ -222,9 +228,9 @@ export default function NursingDashboardClient({
                     </div>
                     
                     <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                      <HeartPulseIcon className="w-4 h-4 text-rose-500 shrink-0" />
+                      <HeartPulse className="w-4 h-4 text-rose-500 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{isRtl ? "نبض القلب" : "HR"}</p>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{t("hr")}</p>
                         <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
                           {recentVitals?.heartRate ? `${recentVitals.heartRate} bpm` : "--"}
                         </p>
@@ -234,7 +240,7 @@ export default function NursingDashboardClient({
                     <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
                       <Thermometer className="w-4 h-4 text-amber-500 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{isRtl ? "الحرارة" : "Temp"}</p>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{t("temp")}</p>
                         <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
                           {recentVitals?.temperature ? `${recentVitals.temperature}°C` : "--"}
                         </p>
@@ -244,7 +250,7 @@ export default function NursingDashboardClient({
                     <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-2">
                       <Droplet className="w-4 h-4 text-cyan-500 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">{isRtl ? "الأكسجين" : "SpO2"}</p>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase">{t("spo2")}</p>
                         <p className="text-xs font-black font-mono text-slate-700 dark:text-slate-300 truncate">
                           {recentVitals?.oxygenSaturation ? `${recentVitals.oxygenSaturation}%` : "--"}
                         </p>
@@ -260,7 +266,7 @@ export default function NursingDashboardClient({
                       className="font-bold text-xs rounded-xl shadow-sm border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30"
                       onClick={() => router.push(`/${hospitalSlug}/admissions`)}
                     >
-                      {isRtl ? "تسجيل قراءات" : "Record Vitals"}
+                      {t("recordVitals")}
                     </Button>
                   </div>
                   
@@ -271,26 +277,5 @@ export default function NursingDashboardClient({
         </div>
       </div>
     </div>
-  );
-}
-
-// Temporary inline icon for HeartPulse
-function HeartPulseIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-      <path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" />
-    </svg>
   );
 }

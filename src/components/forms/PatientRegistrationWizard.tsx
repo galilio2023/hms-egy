@@ -36,6 +36,8 @@ interface PatientRegistrationWizardProps {
   currentUserName?: string;
 }
 
+const nativeSelectClasses = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+
 export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: PatientRegistrationWizardProps) {
   const t = useTranslations("patients");
   const locale = useLocale();
@@ -420,7 +422,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                       {...register("gender")}
                       disabled={!!nidInfo}
                       className={cn(
-                        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                        nativeSelectClasses,
                         nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : "",
                         errors.gender ? "border-destructive focus-visible:ring-destructive" : ""
                       )}

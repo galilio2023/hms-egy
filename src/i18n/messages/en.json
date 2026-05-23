@@ -290,6 +290,20 @@
     "bedUnavailable": "This bed is currently unavailable due to maintenance or quarantine constraints."
   },
   "nursing": {
-    "title": "Nursing Shift Dashboard"
+    "title": "Nursing Shift Dashboard",
+    "subtitle": "Inpatient monitoring, vitals, and bed status.",
+    "searchPlaceholder": "Search patient or room...",
+    "activeInpatients": "Active Inpatients",
+    "bedsPendingCleaning": "Beds Pending Cleaning",
+    "cleaningRequired": "Housekeeping team dispatch required",
+    "criticalAlerts": "Critical Alerts",
+    "noCriticalVitals": "No recent critical vitals",
+    "currentShiftPatients": "Current Shift Patients",
+    "noActivePatients": "No active patients found.",
+    "bp": "BP",
+    "hr": "HR",
+    "temp": "Temp",
+    "spo2": "SpO2",
+    "recordVitals": "Record Vitals"
   }
 }

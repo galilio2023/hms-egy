@@ -74,6 +74,8 @@ export const authInstance = betterAuth({
   ],
 });
 
+let cachedMockHospitalId: string | null = null;
+
 /**
  * High-compatibility auth helper that acts as the primary server session retriever.
  * Checks for a real Better Auth session, with seamless fallback to development mock headers/cookies.
@@ -139,17 +141,18 @@ export async function auth(): Promise<Session | null> {
 
     const isMockAdmin = process.env.NODE_ENV === "development" && cookieStore.get("mock_tenant_admin")?.value === "true";
     if (isMockAdmin) {
-      // Find the actual UUID for 'al-shifa' to prevent 404 UUID mismatch errors
-      let mockHospitalId = "al-shifa";
-      try {
-        const alShifa = await db.query.hospitals.findFirst({
-          where: (hospitals, { eq }) => eq(hospitals.slug, "al-shifa"),
-        });
-        if (alShifa) {
-          mockHospitalId = alShifa.id;
+      // Use memory cache to avoid blocking DB query overhead in development
+      if (!cachedMockHospitalId) {
+        try {
+          const alShifa = await db.query.hospitals.findFirst({
+            where: (hospitals, { eq }) => eq(hospitals.slug, "al-shifa"),
+          });
+          if (alShifa) {
+            cachedMockHospitalId = alShifa.id;
+          }
+        } catch (err) {
+          console.error("Failed to resolve al-shifa UUID for mock admin:", err);
         }
-      } catch (err) {
-        console.error("Failed to resolve al-shifa UUID for mock admin:", err);
       }
 
       return {
@@ -158,7 +161,7 @@ export async function auth(): Promise<Session | null> {
           email: "admin@alshifa.com.eg",
           name: "د. أحمد الشافعي",
           role: "ADMIN",
-          hospitalId: mockHospitalId,
+          hospitalId: cachedMockHospitalId || "al-shifa",
         },
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       };
