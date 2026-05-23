@@ -297,13 +297,9 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
     return { success: false, error: "Forbidden: You do not have permission to complete housekeeping tasks." };
   }
 
-  // Security: Restrict raw base64 data to prevent massive database bloat
-  // TEMPORARY: Allowing small base64 (max 500KB) until direct-to-S3 upload is implemented
+  // Security: Block raw base64 data to prevent database bloat
   if (photoUrl && photoUrl.startsWith("data:image")) {
-    const sizeInBytes = (photoUrl.length * 3) / 4;
-    if (sizeInBytes > 500 * 1024) {
-      return { success: false, error: "Photo too large. Please reduce resolution or use the upload service (Max 500KB)." };
-    }
+    return { success: false, error: "Security Error: Raw image data is not allowed. Please use the designated upload service to obtain an HTTPS URL." };
   }
 
   try {

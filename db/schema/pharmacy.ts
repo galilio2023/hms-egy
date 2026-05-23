@@ -25,6 +25,11 @@ export const medications = pgTable("medications", {
     hospitalMedEnIdx: uniqueIndex("med_hospital_name_en_idx").on(table.hospitalId, sql`lower(${table.nameEn})`).where(sql`name_en IS NOT NULL AND name_en != ''`),
     hospitalMedArIdx: uniqueIndex("med_hospital_name_ar_idx").on(table.hospitalId, table.nameAr).where(sql`name_ar IS NOT NULL AND name_ar != ''`),
     barcodeIdx: index("med_barcode_idx").on(table.barcode),
+    // NOTE: For production scale, use GIN indexes with pg_trgm for autocomplete:
+    // CREATE EXTENSION IF NOT EXISTS pg_trgm;
+    // CREATE INDEX idx_meds_trgm_en ON medications USING gin (name_en gin_trgm_ops);
+    // CREATE INDEX idx_meds_trgm_ar ON medications USING gin (name_ar gin_trgm_ops);
+    // CREATE INDEX idx_meds_trgm_generic ON medications USING gin (generic_name gin_trgm_ops);
   };
 }).enableRLS();
 
@@ -101,6 +106,11 @@ export const medicationInteractions = pgTable("medication_interactions", {
   return {
     exactDrugMatchIdx: index("ddi_exact_drugs_idx").on(table.drug1Name, table.drug2Name),
     genericDrugMatchIdx: index("ddi_generic_drugs_idx").on(table.drug1Generic, table.drug2Generic),
+    // NOTE: For production scale, use functional indexes to optimize lowercase DDI lookups:
+    // CREATE INDEX idx_ddi_lower_drug1_name ON medication_interactions (LOWER(drug1_name));
+    // CREATE INDEX idx_ddi_lower_drug2_name ON medication_interactions (LOWER(drug2_name));
+    // CREATE INDEX idx_ddi_lower_drug1_generic ON medication_interactions (LOWER(drug1_generic));
+    // CREATE INDEX idx_ddi_lower_drug2_generic ON medication_interactions (LOWER(drug2_generic));
   };
 });
 

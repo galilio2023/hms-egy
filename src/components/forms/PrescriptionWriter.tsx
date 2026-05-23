@@ -42,7 +42,7 @@ interface PrescriptionItem {
   medicationGeneric: string;
   dosage: string;
   frequency: string;
-  durationDays: number;
+  durationDays: number | "";
   instructions: string;
 }
 
@@ -115,7 +115,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
         medicationId: i.medicationId,
         dosage: i.dosage,
         frequency: i.frequency,
-        durationDays: i.durationDays
+        durationDays: i.durationDays === "" ? 1 : i.durationDays
       })));
       if (active && res.success) {
         setDdiResult(res.data);
@@ -160,7 +160,8 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
     const newItems = [...items];
     let sanitizedValue = value;
     if (field === "durationDays") {
-      sanitizedValue = isNaN(parseInt(value)) ? 0 : parseInt(value);
+      // Allow empty string for natural typing experience
+      sanitizedValue = value === "" ? "" : (isNaN(parseInt(value)) ? 1 : parseInt(value));
     }
     newItems[index] = { ...newItems[index], [field]: sanitizedValue };
     setItems(newItems);
@@ -173,13 +174,13 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
     }
 
     // Check for required fields in items
-    const incomplete = items.some(i => !i.dosage || !i.frequency);
+    const incomplete = items.some(i => !i.dosage || !i.frequency || i.durationDays === "");
     if (incomplete) {
       toast.error(t("completeDetailsError"));
       return;
     }
 
-    const invalidDuration = items.some(i => i.durationDays <= 0);
+    const invalidDuration = items.some(i => typeof i.durationDays === "number" && i.durationDays <= 0);
     if (invalidDuration) {
       toast.error(isRtl ? "يجب أن تكون مدة العلاج يوماً واحداً على الأقل." : "Duration must be at least 1 day.");
       return;
@@ -198,7 +199,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
           medicationId: i.medicationId,
           dosage: i.dosage,
           frequency: i.frequency,
-          durationDays: i.durationDays,
+          durationDays: i.durationDays === "" ? 1 : i.durationDays as number,
           instructions: i.instructions
         })),
         notes,
@@ -510,10 +511,10 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
             className="w-full h-14 rounded-2xl font-black text-lg shadow-lg hover:shadow-xl transition-all duration-300"
             variant={ddiResult?.overallRiskLevel === "high" && !hasDdiOverride ? "secondary" : "accent"}
             onClick={handleSubmit}
-            disabled={isPending || (ddiResult?.overallRiskLevel === "high" && !hasDdiOverride)}
+            disabled={isPending || isCheckingDdi || (ddiResult?.overallRiskLevel === "high" && !hasDdiOverride)}
           >
-            {isPending ? <Loader2 className="me-2 h-5 w-5 animate-spin" /> : <Save className="me-2 h-5 w-5" />}
-            {t("issuePrescription")}
+            {isPending || isCheckingDdi ? <Loader2 className="me-2 h-5 w-5 animate-spin" /> : <Save className="me-2 h-5 w-5" />}
+            {isCheckingDdi ? t("analyzingInteractions") : t("issuePrescription")}
           </Button>
         </CardContent>
       </Card>
