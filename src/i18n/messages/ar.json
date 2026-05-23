@@ -305,6 +305,9 @@
     "hr": "نبض القلب",
     "temp": "الحرارة",
     "spo2": "الأكسجين",
-    "recordVitals": "تسجيل قراءات"
+    "recordVitals": "تسجيل قراءات",
+    "floatedNurseMode": "وضع التمريض المتنقل",
+    "showAllPatients": "عرض جميع مرضى المستشفى",
+    "departmentOnly": "عرض مرضى قسمي فقط"
   }
 }

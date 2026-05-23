@@ -31,10 +31,13 @@ export async function generateMetadata({
 
 export default async function NursingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; hospitalSlug: string }>;
+  searchParams: Promise<{ view?: string }>;
 }) {
   const { locale, hospitalSlug } = await params;
+  const { view } = await searchParams;
   const t = await getTranslations({ locale, namespace: "nursing" });
 
   const session = await auth();
@@ -54,16 +57,19 @@ export default async function NursingPage({
     notFound();
   }
 
+  const showAll = view === "all";
+
   // Fetch dashboard data within tenant context
   const dashboardData = await withTenantContext(hospital.id, async (tx) => {
     const userDeptId = session.user.departmentId;
+    const filterDept = !showAll && userDeptId;
 
     const [
       activePatientsRes,
       pendingCleaningRes,
       recentVitalsRes
     ] = await Promise.all([
-      // A. Fetch active admissions with patient and bed info (filtered by nurse department if available)
+      // A. Fetch active admissions with patient and bed info
       tx
         .select({
           admissionId: admissions.id,
@@ -99,12 +105,12 @@ export default async function NursingPage({
           and(
             eq(admissions.hospitalId, hospital.id),
             eq(admissions.status, "active"),
-            userDeptId ? eq(admissions.departmentId, userDeptId) : sql`TRUE`
+            filterDept ? eq(admissions.departmentId, userDeptId) : sql`TRUE`
           )
         )
         .orderBy(desc(admissions.admissionDate)),
 
-      // B. Count beds in pending_cleaning status (filtered by nurse department if available)
+      // B. Count beds in pending_cleaning status
       tx
         .select({ count: sql<number>`count(*)::int` })
         .from(beds)
@@ -113,12 +119,12 @@ export default async function NursingPage({
           and(
             eq(beds.hospitalId, hospital.id),
             eq(beds.status, "pending_cleaning"),
-            userDeptId ? eq(rooms.departmentId, userDeptId) : sql`TRUE`
+            filterDept ? eq(rooms.departmentId, userDeptId) : sql`TRUE`
           )
         )
         .then((res) => res[0]),
 
-      // C. Fetch the absolute latest vitals record for each active inpatient (unrestricted by time to provide baseline)
+      // C. Fetch the absolute latest vitals record for each active inpatient
       tx
         .selectDistinctOn([vitalsFlowsheet.patientId], {
           patientId: vitalsFlowsheet.patientId,
@@ -157,6 +163,7 @@ export default async function NursingPage({
       activePatients: activePatientsRes,
       pendingCleaningCount,
       vitalsByPatient,
+      hasDepartment: !!userDeptId,
     };
   });
 
@@ -168,6 +175,8 @@ export default async function NursingPage({
         activePatients={dashboardData.activePatients}
         pendingCleaningCount={dashboardData.pendingCleaningCount}
         vitalsByPatient={dashboardData.vitalsByPatient}
+        showAll={showAll}
+        hasDepartment={dashboardData.hasDepartment}
       />
     </div>
   );

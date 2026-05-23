@@ -61,6 +61,8 @@ interface NursingDashboardClientProps {
   activePatients: ActivePatient[];
   pendingCleaningCount: number;
   vitalsByPatient: Record<string, VitalRecord[]>;
+  showAll: boolean;
+  hasDepartment: boolean;
 }
 
 export default function NursingDashboardClient({
@@ -69,6 +71,8 @@ export default function NursingDashboardClient({
   activePatients,
   pendingCleaningCount,
   vitalsByPatient,
+  showAll,
+  hasDepartment,
 }: NursingDashboardClientProps) {
   const t = useTranslations("nursing");
   const isRtl = locale === "ar";
@@ -126,6 +130,26 @@ export default function NursingDashboardClient({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {hasDepartment && (
+            <Button
+              variant={showAll ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (!showAll) params.set("view", "all");
+                router.push(`/${hospitalSlug}/nursing?${params.toString()}`);
+              }}
+              className={cn(
+                "font-bold text-xs rounded-xl shadow-sm gap-2",
+                showAll 
+                  ? "bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20" 
+                  : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
+              )}
+            >
+              <Sparkles className={cn("w-4 h-4", showAll ? "text-amber-500" : "text-slate-400")} />
+              {showAll ? t("departmentOnly") : t("showAllPatients")}
+            </Button>
+          )}
           <div className="relative">
             <Search className="w-4 h-4 absolute top-1/2 -translate-y-1/2 start-3 text-slate-400" />
             <Input

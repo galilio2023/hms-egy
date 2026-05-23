@@ -305,6 +305,9 @@
     "hr": "HR",
     "temp": "Temp",
     "spo2": "SpO2",
-    "recordVitals": "Record Vitals"
+    "recordVitals": "Record Vitals",
+    "floatedNurseMode": "Floated Nurse Mode",
+    "showAllPatients": "Show all hospital patients",
+    "departmentOnly": "Show only my department's patients"
   }
 }

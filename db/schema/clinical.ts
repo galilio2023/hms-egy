@@ -159,7 +159,6 @@ export const vitalsFlowsheet = pgTable("vitals_flowsheet", {
 }, (table) => {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
-    hospitalVitalsIdx: index("vit_hospital_patient_idx").on(table.hospitalId, table.patientId),
     vitalsPatientRecordedIdx: index("vitals_hospital_patient_recorded_idx").on(table.hospitalId, table.patientId, table.recordedAt.desc()),
   };
 }).enableRLS();
