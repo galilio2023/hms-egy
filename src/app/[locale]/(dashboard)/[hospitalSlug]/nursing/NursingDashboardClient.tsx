@@ -82,13 +82,19 @@ export default function NursingDashboardClient({
 
   const filteredPatients = useMemo(() => {
     if (!searchQuery.trim()) return activePatients;
-    const lowerQ = normalizeArabic(searchQuery.toLowerCase());
+    
+    const normalizedQuery = normalizeArabic(searchQuery.toLowerCase());
+    // Translate Eastern digits to Western standard digits for numeric comparisons
+    const westernQuery = normalizedQuery.replace(/[٠-٩]/g, (d) => 
+      "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString()
+    );
+
     return activePatients.filter(
       (p) =>
-        normalizeArabic(p.patientNameAr?.toLowerCase() || "").includes(lowerQ) ||
-        (p.patientNameEn?.toLowerCase() || "").includes(lowerQ) ||
-        (p.patientNumber?.toLowerCase() || "").includes(lowerQ) ||
-        (p.roomNumber && p.roomNumber.toLowerCase().includes(lowerQ))
+        normalizeArabic(p.patientNameAr?.toLowerCase() || "").includes(normalizedQuery) ||
+        (p.patientNameEn?.toLowerCase() || "").includes(westernQuery) ||
+        (p.patientNumber?.toLowerCase() || "").includes(westernQuery) ||
+        (p.roomNumber && p.roomNumber.toLowerCase().includes(westernQuery))
     );
   }, [activePatients, searchQuery]);
 

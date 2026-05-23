@@ -53,9 +53,12 @@ export async function validateVitals(vitals?: VitalsInput) {
   if (vitals.bloodPressureDiastolic && (vitals.bloodPressureDiastolic < DiastolicRange.min || vitals.bloodPressureDiastolic > DiastolicRange.max)) {
     return { success: false, error: `Invalid diastolic blood pressure reading: ${vitals.bloodPressureDiastolic} (must be between 30 and 150 mmHg).` };
   }
-  if (vitals.temperature) {
+  if (vitals.temperature && String(vitals.temperature).trim() !== "") {
     const tVal = normalizeDecimal(vitals.temperature);
-    if (tVal !== null && (tVal < TempRange.min || tVal > TempRange.max)) {
+    if (tVal === null) {
+      return { success: false, error: "Invalid temperature format. Please enter a valid number." };
+    }
+    if (tVal < TempRange.min || tVal > TempRange.max) {
       return { success: false, error: `Invalid temperature reading: ${vitals.temperature}°C (must be between 30.0°C and 45.0°C).` };
     }
   }

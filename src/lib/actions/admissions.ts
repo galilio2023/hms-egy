@@ -285,11 +285,11 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
   }
 
   try {
-    const cleanTemperature = payload.temperature 
+    const cleanTemperature = payload.temperature && String(payload.temperature).trim() !== ""
       ? normalizeDecimal(payload.temperature)?.toFixed(1) || null
       : null;
 
-    const cleanWeight = payload.weightKg 
+    const cleanWeight = payload.weightKg && String(payload.weightKg).trim() !== ""
       ? normalizeDecimal(payload.weightKg)?.toFixed(1) || null
       : null;
 
