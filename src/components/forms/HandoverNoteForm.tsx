@@ -10,7 +10,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { createHandoverNote } from "@/lib/actions/nursing";
@@ -71,7 +70,7 @@ export function HandoverNoteForm({
         reset();
         setOpen(false);
       } else {
-        toast.error(result.error);
+        toast.error("error" in result ? String(result.error) : "Failed to create note");
       }
     } catch (err) {
       console.error(err);
@@ -82,14 +81,19 @@ export function HandoverNoteForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="rounded-xl font-bold gap-2 text-xs border-amber-200 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20">
-          <PlusCircle className="w-4 h-4" />
-          {t("createHandover")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] rounded-3xl">
+    <>
+      <Button 
+        size="sm" 
+        variant="outline" 
+        className="rounded-xl font-bold gap-2 text-xs border-amber-200 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+        onClick={() => setOpen(true)}
+      >
+        <PlusCircle className="w-4 h-4" />
+        {t("createHandover")}
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
@@ -140,7 +144,8 @@ export function HandoverNoteForm({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

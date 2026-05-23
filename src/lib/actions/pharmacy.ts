@@ -4,10 +4,12 @@ import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
 import { medications, prescriptions, prescriptionItems } from "@db/schema/pharmacy";
 import { patients } from "@db/schema/patients";
-import { eq, and, or, ilike, sql, inArray } from "drizzle-orm";
+import { eq, and, or, ilike, sql, inArray, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { checkDrugInteractions } from "@/lib/pharmacy/ddi";
 import { revalidatePath } from "next/cache";
+import { stockTransactions, auditLogs } from "@db/schema/index";
+import { staff } from "@db/schema/core";
 
 interface PrescriptionItemInput {
   medicationId: string;
@@ -208,3 +210,367 @@ export async function searchMedications(query: string) {
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Adjusts stock level for a medication and records the transaction.
+ */
+export async function adjustStock(payload: {
+  medicationId: string;
+  type: "stock_in" | "adjustment" | "waste" | "return";
+  quantity: number;
+  notes?: string;
+}) {
+  const session = await auth();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!hospitalId) return { success: false, error: "Hospital context missing" };
+
+  try {
+    const result = await withTenantContext(hospitalId, async (tx) => {
+      // 1. Resolve medication and current stock
+      const [med] = await tx
+        .select()
+        .from(medications)
+        .where(and(eq(medications.id, payload.medicationId), eq(medications.hospitalId, hospitalId)))
+        .limit(1);
+
+      if (!med) throw new Error("Medication not found");
+
+      // 2. Resolve staff record for the person performing the action
+      const performer = await tx
+        .select({ id: staff.id })
+        .from(staff)
+        .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+        .limit(1)
+        .then(res => res[0]);
+
+      // 3. Record transaction
+      await tx.insert(stockTransactions).values({
+        hospitalId,
+        medicationId: payload.medicationId,
+        type: payload.type,
+        quantity: payload.quantity,
+        notes: payload.notes,
+        performedBy: performer?.id || null,
+      });
+
+      // 4. Update medication stock count
+      await tx
+        .update(medications)
+        .set({ 
+          stockCount: med.stockCount + payload.quantity,
+          updatedAt: new Date()
+        })
+        .where(eq(medications.id, payload.medicationId));
+
+      return { success: true };
+    });
+
+    revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/pharmacy/inventory`, "layout");
+    return result;
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Fetches transaction history for a specific medication.
+ */
+export async function getMedicationHistory(medicationId: string) {
+  const session = await auth();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!hospitalId) return { success: false, error: "Hospital context missing" };
+
+  try {
+    return await withTenantContext(hospitalId, async (tx) => {
+      const history = await tx
+        .select({
+          id: stockTransactions.id,
+          type: stockTransactions.type,
+          quantity: stockTransactions.quantity,
+          notes: stockTransactions.notes,
+          createdAt: stockTransactions.createdAt,
+          performerNameAr: staff.nameAr,
+          performerNameEn: staff.nameEn,
+        })
+        .from(stockTransactions)
+        .leftJoin(staff, eq(stockTransactions.performedBy, staff.id))
+        .where(and(
+          eq(stockTransactions.medicationId, medicationId),
+          eq(stockTransactions.hospitalId, hospitalId)
+        ))
+        .orderBy(desc(stockTransactions.createdAt))
+        .limit(50);
+
+      return { success: true, data: history };
+    });
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Searches active prescriptions for the hospital queue.
+ */
+export async function searchActivePrescriptions(query: string) {
+  const session = await auth();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!hospitalId) return { success: false, error: "Hospital context missing" };
+
+  try {
+    return await withTenantContext(hospitalId, async (tx) => {
+      const results = await tx
+        .select({
+          id: prescriptions.id,
+          createdAt: prescriptions.createdAt,
+          status: prescriptions.status,
+          patientNameAr: patients.nameAr,
+          patientNameEn: patients.nameEn,
+          patientNumber: patients.patientNumber,
+          doctorNameAr: staff.nameAr,
+          doctorNameEn: staff.nameEn,
+          itemCount: sql<number>`count(${prescriptionItems.id})`.mapWith(Number),
+        })
+        .from(prescriptions)
+        .innerJoin(patients, eq(prescriptions.patientId, patients.id))
+        .innerJoin(staff, eq(prescriptions.doctorId, staff.id))
+        .leftJoin(prescriptionItems, eq(prescriptions.id, prescriptionItems.prescriptionId))
+        .where(
+          and(
+            eq(prescriptions.hospitalId, hospitalId),
+            eq(prescriptions.status, "active"),
+            or(
+              ilike(patients.nameEn, `%${query}%`),
+              ilike(patients.nameAr, `%${query}%`),
+              ilike(patients.patientNumber, `%${query}%`),
+              ilike(prescriptions.id, `%${query}%`)
+            )
+          )
+        )
+        .groupBy(
+          prescriptions.id,
+          prescriptions.createdAt,
+          prescriptions.status,
+          patients.id,
+          patients.nameAr,
+          patients.nameEn,
+          patients.patientNumber,
+          staff.id,
+          staff.nameAr,
+          staff.nameEn
+        )
+        .orderBy(desc(prescriptions.createdAt))
+        .limit(30);
+
+      return { success: true, data: results };
+    });
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Fetches prescription details and its items for dispensing.
+ */
+export async function getPrescriptionForDispensing(id: string) {
+  const session = await auth();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!hospitalId) return { success: false, error: "Hospital context missing" };
+
+  try {
+    return await withTenantContext(hospitalId, async (tx) => {
+      const [rx] = await tx
+        .select({
+          id: prescriptions.id,
+          createdAt: prescriptions.createdAt,
+          status: prescriptions.status,
+          notes: prescriptions.notes,
+          hasDdiOverride: prescriptions.hasDdiOverride,
+          ddiOverrideReason: prescriptions.ddiOverrideReason,
+          patientId: patients.id,
+          patientNameAr: patients.nameAr,
+          patientNameEn: patients.nameEn,
+          patientNumber: patients.patientNumber,
+          nationalId: patients.nationalId,
+          gender: patients.gender,
+          birthDate: patients.dob,
+          allergies: patients.allergies,
+          chronicConditions: patients.chronicConditions,
+          doctorNameAr: staff.nameAr,
+          doctorNameEn: staff.nameEn,
+          doctorRole: staff.role,
+        })
+        .from(prescriptions)
+        .innerJoin(patients, eq(prescriptions.patientId, patients.id))
+        .innerJoin(staff, eq(prescriptions.doctorId, staff.id))
+        .where(and(
+          eq(prescriptions.id, id),
+          eq(prescriptions.hospitalId, hospitalId)
+        ))
+        .limit(1);
+
+      if (!rx) return { success: false, error: "Prescription not found" };
+
+      const items = await tx
+        .select({
+          id: prescriptionItems.id,
+          medicationId: prescriptionItems.medicationId,
+          dosage: prescriptionItems.dosage,
+          frequency: prescriptionItems.frequency,
+          durationDays: prescriptionItems.durationDays,
+          instructions: prescriptionItems.instructions,
+          dispensedCount: prescriptionItems.dispensedCount,
+          status: prescriptionItems.status,
+          medicationNameAr: medications.nameAr,
+          medicationNameEn: medications.nameEn,
+          genericName: medications.genericName,
+          form: medications.form,
+          strength: medications.strength,
+          barcode: medications.barcode,
+          stockCount: medications.stockCount,
+          price: medications.price,
+        })
+        .from(prescriptionItems)
+        .innerJoin(medications, eq(prescriptionItems.medicationId, medications.id))
+        .where(eq(prescriptionItems.prescriptionId, id));
+
+      return { success: true, data: { ...rx, items } };
+    });
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Dispenses medications for a prescription and updates stock levels.
+ */
+export async function dispensePrescription(
+  prescriptionId: string,
+  items: { prescriptionItemId: string; medicationId: string; quantity: number }[]
+) {
+  const session = await auth();
+  if (!session) return { success: false, error: "Unauthorized" };
+
+  const ALLOWED_ROLES = ["SUPER_ADMIN", "ADMIN", "PHARMACIST"];
+  if (!ALLOWED_ROLES.includes(session.user.role)) {
+    return { success: false, error: "Unauthorized: Insufficient permissions" };
+  }
+
+  const hospitalId = session.activeHospitalId || session.user.hospitalId;
+  if (!hospitalId) return { success: false, error: "Hospital context missing" };
+
+  try {
+    const result = await withTenantContext(hospitalId, async (tx) => {
+      // 1. Fetch prescription and verify it belongs to this hospital and is active
+      const [rx] = await tx
+        .select()
+        .from(prescriptions)
+        .where(and(
+          eq(prescriptions.id, prescriptionId),
+          eq(prescriptions.hospitalId, hospitalId)
+        ))
+        .limit(1);
+
+      if (!rx) throw new Error("Prescription not found");
+      if (rx.status === "completed") throw new Error("Prescription already fully completed");
+      if (rx.status === "cancelled") throw new Error("Prescription is cancelled");
+
+      // 2. Fetch the staff ID of the person dispensing
+      const performer = await tx
+        .select({ id: staff.id })
+        .from(staff)
+        .where(and(eq(staff.userId, session.user.id), eq(staff.hospitalId, hospitalId)))
+        .limit(1)
+        .then(res => res[0]);
+
+      // 3. Process each item
+      for (const item of items) {
+        if (item.quantity <= 0) continue;
+
+        const [rxItem] = await tx
+          .select()
+          .from(prescriptionItems)
+          .where(eq(prescriptionItems.id, item.prescriptionItemId))
+          .limit(1);
+
+        if (!rxItem) throw new Error(`Prescription item not found`);
+
+        const [med] = await tx
+          .select()
+          .from(medications)
+          .where(and(
+            eq(medications.id, item.medicationId),
+            eq(medications.hospitalId, hospitalId)
+          ))
+          .limit(1);
+
+        if (!med) throw new Error(`Medication not found`);
+        if (med.stockCount < item.quantity) {
+          throw new Error(`Insufficient stock for ${med.nameEn} / ${med.nameAr}. Available: ${med.stockCount}, Requested: ${item.quantity}`);
+        }
+
+        // Update stock transactions
+        await tx.insert(stockTransactions).values({
+          hospitalId,
+          medicationId: item.medicationId,
+          type: "dispense",
+          quantity: -item.quantity,
+          notes: `Dispensed for prescription ${prescriptionId}`,
+          performedBy: performer?.id || null,
+        });
+
+        // Deduct from stock
+        await tx
+          .update(medications)
+          .set({
+            stockCount: med.stockCount - item.quantity,
+            updatedAt: new Date(),
+          })
+          .where(eq(medications.id, item.medicationId));
+
+        // Update prescription item
+        const newDispensedCount = rxItem.dispensedCount + item.quantity;
+        await tx
+          .update(prescriptionItems)
+          .set({
+            dispensedCount: newDispensedCount,
+            status: "dispensed",
+          })
+          .where(eq(prescriptionItems.id, item.prescriptionItemId));
+      }
+
+      // 4. Check if all items in prescription are completed/dispensed
+      const allItems = await tx
+        .select()
+        .from(prescriptionItems)
+        .where(eq(prescriptionItems.prescriptionId, prescriptionId));
+
+      const allCompleted = allItems.every(i => i.status === "dispensed" || i.status === "cancelled");
+      if (allCompleted) {
+        await tx
+          .update(prescriptions)
+          .set({
+            status: "completed",
+            updatedAt: new Date(),
+          })
+          .where(eq(prescriptions.id, prescriptionId));
+      }
+
+      return { success: true };
+    });
+
+    revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/pharmacy`, "layout");
+    revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/pharmacy/dispense`, "layout");
+    return result;
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+

@@ -217,7 +217,11 @@ export default async function HousekeepingPage({
     return {
       roomsList,
       bedsWithRooms,
-      tasksQueue,
+      tasksQueue: tasksQueue.map((t) => ({
+        ...t,
+        roomNumber: t.roomNumber || "",
+        floor: t.floor || "",
+      })),
       housekeepingStaff,
       completedToday,
       currentUserStaff,

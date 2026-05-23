@@ -143,7 +143,7 @@ export default function PharmacyDashboardClient({
       id: "actions",
       header: t("actions"),
       cell: ({ row }) => (
-        <Button size="icon" variant="ghost" className="h-8 w-8 text-primary">
+        <Button size="xs" variant="ghost" className="h-8 w-8 text-primary">
           <Plus className="h-4 w-4" />
         </Button>
       ),

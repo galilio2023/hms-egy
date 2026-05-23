@@ -36,11 +36,11 @@ export default async function PrescribePage({
   }
 
   const patientRes = await getPatientById(id);
-  if (!patientRes.success || !patientRes.data) {
+  if (!patientRes.success || !("data" in patientRes) || !patientRes.data) {
     notFound();
   }
 
-  const patient = patientRes.data;
+  const patient = (patientRes as any).data;
 
   // Security: Verify patient ownership
   if (patient.hospitalId !== hospital.id) {
@@ -51,7 +51,19 @@ export default async function PrescribePage({
     <PageShell
       title={locale === "ar" ? "إصدار وصفة طبية" : "Issue Prescription"}
       subtitle={locale === "ar" ? `للمريض: ${patient.nameAr}` : `For Patient: ${patient.nameEn}`}
-      backLink={`/${hospitalSlug}/patients/${id}`}
+      breadcrumbs={[
+        {
+          label: locale === "ar" ? "المرضى" : "Patients",
+          href: `/${hospitalSlug}/patients`,
+        },
+        {
+          label: locale === "ar" ? patient.nameAr : patient.nameEn,
+          href: `/${hospitalSlug}/patients/${id}`,
+        },
+        {
+          label: locale === "ar" ? "وصفة طبية جديدة" : "New Prescription",
+        },
+      ]}
     >
       <PrescriptionWriter 
         patientId={id} 

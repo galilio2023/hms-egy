@@ -30,7 +30,7 @@ export async function startShift(payload: {
       });
 
       if (existingShift) {
-        throw new AppError(ErrorCode.BAD_REQUEST, "You already have an active shift.");
+        throw new AppError(ErrorCode.VALIDATION_ERROR, "You already have an active shift.");
       }
 
       const [record] = await tx

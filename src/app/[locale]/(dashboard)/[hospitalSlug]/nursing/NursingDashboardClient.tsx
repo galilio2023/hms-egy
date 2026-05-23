@@ -146,7 +146,7 @@ export default function NursingDashboardClient({
         toast.success(isRtl ? "تم استلام الملاحظة" : "Note acknowledged");
         router.refresh();
       } else {
-        toast.error(result.error);
+        toast.error("error" in result ? String(result.error) : "Error acknowledging note");
       }
     } catch (err) {
       console.error(err);

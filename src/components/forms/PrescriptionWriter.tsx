@@ -117,7 +117,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
         frequency: i.frequency,
         durationDays: i.durationDays === "" ? 1 : i.durationDays
       })));
-      if (active && res.success) {
+      if (active && res.success && "data" in res) {
         setDdiResult(res.data);
       }
       setIsCheckingDdi(false);
@@ -209,11 +209,11 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
 
       if (res.success) {
         toast.success(t("prescriptionSuccess"));
-        if (onSuccess) onSuccess(res.rxId);
+        if (onSuccess && "rxId" in res) onSuccess(res.rxId as string);
         // Standard redirection to patient profile
         router.push(`/${locale}/${hospitalSlug}/patients/${patientId}`);
       } else {
-        toast.error(res.error || "Failed to create prescription");
+        toast.error("error" in res ? String(res.error) : "Failed to create prescription");
       }
     });
   };
@@ -329,7 +329,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                     <div className="md:col-span-1 flex justify-end">
                       <Button 
                         variant="ghost" 
-                        size="icon" 
+                        size="xs" 
                         className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-lg"
                         onClick={() => removeItem(idx)}
                       >

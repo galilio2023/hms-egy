@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { medicationInteractions, drugAllergyCrossReferences } from "@/db/schema/pharmacy";
+import { medicationInteractions, drugAllergyCrossReferences } from "@db/schema/pharmacy";
 import { eq, and, or, ilike, sql, inArray } from "drizzle-orm";
 
 export interface Interaction {
@@ -76,7 +76,7 @@ export async function checkDrugInteractions(
         )
       );
 
-    ddiMatches.forEach(match => {
+    ddiMatches.forEach((match: any) => {
       interactions.push({
         drug1: match.drug1Name,
         drug2: match.drug2Name,
@@ -100,9 +100,9 @@ export async function checkDrugInteractions(
 
     for (const match of allergyMatches) {
       // Check if any prescribed med is in the cross-reacting list
-      const reactingMeds = match.crossReactingDrugs || [];
+      const reactingMeds: string[] = match.crossReactingDrugs || [];
       const foundReaction = allIdentifiers.find(id => 
-        reactingMeds.some(rm => rm.toLowerCase() === id.toLowerCase())
+        reactingMeds.some((rm: string) => rm.toLowerCase() === id.toLowerCase())
       );
 
       if (foundReaction) {
