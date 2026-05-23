@@ -96,6 +96,7 @@
     "autoHousekeeping": "تفعيل التوليد التلقائي لمهام التنظيف عند خروج المريض"
   },
   "navigation": {
+    "superAdmin": "الإدارة العامة",
     "dashboard": "لوحة التحكم",
     "patients": "المرضى",
     "appointments": "المواعيد",

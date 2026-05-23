@@ -96,6 +96,7 @@
     "autoHousekeeping": "Automatic housekeeping task generation upon patient discharge"
   },
   "navigation": {
+    "superAdmin": "Super Admin Dashboard",
     "dashboard": "Dashboard",
     "patients": "Patients",
     "appointments": "Appointments",

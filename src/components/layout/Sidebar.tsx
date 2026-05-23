@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useSession, signOut } from "@/lib/auth/client";
+import { useParams } from "next/navigation";
 import { 
   LayoutDashboard, 
   Users, 
@@ -26,7 +27,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  HeartPulse
+  HeartPulse,
+  ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,10 +57,18 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
 
   const user = session?.user;
   const userRole = (user as any)?.role || "DOCTOR";
-  const hospitalSlug = (session?.session as any)?.activeHospitalId || (user as any)?.hospitalId || "system-wide";
+  const params = useParams();
+  const urlHospitalSlug = params?.hospitalSlug as string | undefined;
+  const hospitalSlug = urlHospitalSlug || (session?.session as any)?.activeHospitalId || (user as any)?.hospitalId || "system-wide";
 
   // Navigation schema configured for HMS Egypt modules
   const navItems: SidebarItem[] = [
+    {
+      key: "superAdmin",
+      href: "/super-admin",
+      icon: ShieldCheck,
+      roles: ["SUPER_ADMIN"],
+    },
     {
       key: "dashboard",
       href: `/${hospitalSlug}`,
@@ -162,8 +172,18 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
     }
   ];
 
-  // Helper to filter nav items based on user roles
+  // Helper to filter nav items based on user roles and tenant context
   const filteredItems = navItems.filter(item => {
+    // If in system-wide super admin view, only show the Super Admin Dashboard
+    if (hospitalSlug === "system-wide") {
+      return item.key === "superAdmin";
+    }
+    
+    // If inside a specific hospital view, hide the global Super Admin Dashboard link
+    if (item.key === "superAdmin") {
+      return false;
+    }
+
     if (!item.roles) return true;
     return item.roles.includes(userRole);
   });
