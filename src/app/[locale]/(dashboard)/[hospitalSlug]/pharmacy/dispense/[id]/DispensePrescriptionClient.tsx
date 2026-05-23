@@ -142,26 +142,35 @@ export default function DispensePrescriptionClient({
   const playBeep = (type: "success" | "error") => {
     if (typeof window === "undefined") return;
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const ctx = new AudioContextClass();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
       osc.connect(gain);
       gain.connect(ctx.destination);
       
+      const duration = type === "success" ? 0.1 : 0.3;
+
       if (type === "success") {
         osc.frequency.setValueAtTime(880, ctx.currentTime); // High pitch
         gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.1);
       } else {
         osc.frequency.setValueAtTime(220, ctx.currentTime); // Low buzz
         gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
       }
+
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+
+      // Properly close the context to free up hardware resources
+      osc.onended = () => {
+        ctx.close().catch(() => {});
+      };
     } catch (e) {
-      console.warn("Audio Context not supported", e);
+      console.warn("Audio Context error", e);
     }
   };
 

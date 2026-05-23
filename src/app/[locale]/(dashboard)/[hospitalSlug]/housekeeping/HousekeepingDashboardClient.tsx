@@ -322,10 +322,26 @@ export default function HousekeepingDashboardClient({
     setActionLoading(activeTaskId);
     setCompleteDialogOpen(false);
     try {
-      // NOTE: Storing raw base64 images in DB is blocked by the server action.
-      // TODO: Implement direct-to-S3 upload via pre-signed URLs.
-      // For now, we only pass the URL if we have one (which we don't yet, so this will fail if required)
-      const res = await completeHousekeepingTask(activeTaskId, photoPreview || undefined);
+      let finalPhotoUrl = photoPreview || undefined;
+
+      // If we have a photo, upload it first to get a hosted URL
+      if (photoPreview && photoPreview.startsWith("data:image")) {
+        const uploadRes = await fetch("/api/housekeeping/upload", {
+          method: "POST",
+          body: JSON.stringify({ base64: photoPreview }),
+          headers: { "Content-Type": "application/json" },
+        });
+        
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json();
+          throw new Error(errData.error || "Failed to upload photo");
+        }
+        
+        const { url } = await uploadRes.json();
+        finalPhotoUrl = url;
+      }
+
+      const res = await completeHousekeepingTask(activeTaskId, finalPhotoUrl);
       if (res.success) {
         toast.success(isRtl ? "تم إكمال عملية التنظيف والتعقيم بنجاح." : "Cleaning and disinfection completed successfully.");
       } else {

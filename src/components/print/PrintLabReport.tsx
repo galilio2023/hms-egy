@@ -5,6 +5,8 @@ import { useLocale } from "next-intl";
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 
+import { cn } from "@/lib/utils";
+
 interface LabItem {
   id: string;
   testNameAr: string;
@@ -192,8 +194,4 @@ export function PrintLabReport({
       </div>
     </div>
   );
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
 }
