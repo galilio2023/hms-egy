@@ -78,6 +78,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
 
   // Debounced search
   useEffect(() => {
+    let active = true;
     const timer = setTimeout(async () => {
       if (searchQuery.length < 2) {
         setSearchResults([]);
@@ -85,16 +86,20 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
       }
       setIsSearching(true);
       const res = await searchMedications(searchQuery);
-      if (res.success) {
+      if (active && res.success) {
         setSearchResults(res.data || []);
       }
       setIsSearching(false);
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [searchQuery]);
 
   // Debounced DDI check
   useEffect(() => {
+    let active = true;
     const timer = setTimeout(async () => {
       if (items.length === 0) {
         setDdiResult(null);
@@ -107,18 +112,21 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
         frequency: i.frequency,
         durationDays: i.durationDays
       })));
-      if (res.success) {
+      if (active && res.success) {
         setDdiResult(res.data);
       }
       setIsCheckingDdi(false);
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [items, patientId]);
 
   const addMedication = (med: Medication) => {
     // Check if already added
     if (items.some(i => i.medicationId === med.id)) {
-      toast.error(isRtl ? "هذا الدواء مضاف بالفعل." : "Medication already added.");
+      toast.error(t("medAddedError"));
       return;
     }
 
@@ -145,26 +153,30 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
 
   const updateItem = (index: number, field: keyof PrescriptionItem, value: any) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    let sanitizedValue = value;
+    if (field === "durationDays") {
+      sanitizedValue = isNaN(parseInt(value)) ? 0 : parseInt(value);
+    }
+    newItems[index] = { ...newItems[index], [field]: sanitizedValue };
     setItems(newItems);
   };
 
   const handleSubmit = () => {
     if (items.length === 0) {
-      toast.error(isRtl ? "يرجى إضافة دواء واحد على الأقل." : "Please add at least one medication.");
+      toast.error(t("atLeastOneMedError"));
       return;
     }
 
     // Check for required fields in items
     const incomplete = items.some(i => !i.dosage || !i.frequency);
     if (incomplete) {
-      toast.error(isRtl ? "يرجى إكمال تفاصيل الجرعة والتردد لكل الأدوية." : "Please complete dosage and frequency for all medications.");
+      toast.error(t("completeDetailsError"));
       return;
     }
 
     // Strict block on contraindicated if not overridden (or even with override if your policy is strict)
     if (ddiResult && !ddiResult.isApproved && !hasDdiOverride) {
-      toast.error(isRtl ? "لا يمكن الحفظ لوجود تداخلات دوائية خطيرة. يرجى المراجعة أو تقديم مبرر طبي." : "Cannot save due to contraindicated interactions. Please review or provide a medical justification.");
+      toast.error(t("contraindicatedError"));
       return;
     }
 
@@ -184,7 +196,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
       });
 
       if (res.success) {
-        toast.success(isRtl ? "تم إصدار الوصفة الطبية بنجاح." : "Prescription issued successfully.");
+        toast.success(t("prescriptionSuccess"));
         if (onSuccess) onSuccess(res.rxId);
         // Standard redirection to patient profile
         router.push(`/${locale}/${hospitalSlug}/patients/${patientId}`);
@@ -200,7 +212,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
         <CardHeader className="bg-muted/30 border-b border-border/10">
           <CardTitle className="flex items-center gap-2 text-xl font-black">
             <Pill className="h-6 w-6 text-primary" />
-            {isRtl ? "منشئ الوصفات الطبية" : "Prescription Writer"}
+            {t("prescriptionWriter")}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
@@ -210,7 +222,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
             <div className="relative">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={isRtl ? "ابحث عن دواء بالاسم العلمي أو التجاري..." : "Search medication by generic or brand name..."}
+                placeholder={t("searchMedicationPlaceholder")}
                 className="ps-10 h-12 rounded-xl shadow-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -251,7 +263,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                   <Pill className="h-6 w-6 text-primary/40" />
                 </div>
                 <p className="text-muted-foreground text-sm font-medium">
-                  {isRtl ? "لم يتم إضافة أدوية بعد." : "No medications added yet."}
+                  {t("noMedsAdded")}
                 </p>
               </div>
             ) : (
@@ -260,7 +272,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                     <div className="md:col-span-5">
                       <label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block ps-1">
-                        {isRtl ? "الدواء" : "Medication"}
+                        {t("medication")}
                       </label>
                       <div className="font-bold text-sm truncate">{item.medicationName}</div>
                       <div className="text-[10px] text-muted-foreground truncate">{item.medicationGeneric}</div>
@@ -268,7 +280,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                     
                     <div className="md:col-span-2">
                       <label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block ps-1">
-                        {isRtl ? "الجرعة" : "Dosage"}
+                        {t("dosage")}
                       </label>
                       <Input 
                         placeholder="1 tablet"
@@ -280,7 +292,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
 
                     <div className="md:col-span-2">
                       <label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block ps-1">
-                        {isRtl ? "التردد" : "Frequency"}
+                        {t("frequency")}
                       </label>
                       <Input 
                         placeholder="3x daily"
@@ -292,13 +304,13 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
 
                     <div className="md:col-span-2">
                       <label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block ps-1">
-                        {isRtl ? "المدة (يوم)" : "Duration (days)"}
+                        {t("durationDays")}
                       </label>
                       <Input 
                         type="number"
                         className="h-9 rounded-lg text-xs"
                         value={item.durationDays}
-                        onChange={(e) => updateItem(idx, "durationDays", parseInt(e.target.value))}
+                        onChange={(e) => updateItem(idx, "durationDays", e.target.value)}
                       />
                     </div>
 
@@ -315,7 +327,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
 
                     <div className="md:col-span-12">
                       <Input 
-                        placeholder={isRtl ? "تعليمات إضافية (مثلاً: قبل الأكل)" : "Additional instructions (e.g. before meals)"}
+                        placeholder={t("additionalInstructions")}
                         className="h-8 rounded-lg text-[11px] bg-background/50"
                         value={item.instructions}
                         onChange={(e) => updateItem(idx, "instructions", e.target.value)}
@@ -343,14 +355,14 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                   {isCheckingDdi ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {isRtl ? "جارِ تحليل التداخلات الدوائية..." : "Analyzing drug interactions..."}
+                      {t("analyzingInteractions")}
                     </>
                   ) : (
                     <>
                       {ddiResult?.overallRiskLevel === "high" ? <AlertTriangle className="h-4 w-4" /> : 
                        ddiResult?.overallRiskLevel === "medium" ? <Info className="h-4 w-4" /> : 
                        <CheckCircle2 className="h-4 w-4" />}
-                      {isRtl ? "تحليل السلامة الدوائية" : "Clinical Safety Analysis"}
+                      {t("safetyAnalysis")}
                     </>
                   )}
                 </CardTitle>
@@ -367,7 +379,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                     {ddiResult.interactions.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="text-xs font-black text-muted-foreground uppercase ps-1">
-                          {isRtl ? "التداخلات المكتشفة" : "Detected Interactions"}
+                          {t("detectedInteractions")}
                         </h4>
                         {ddiResult.interactions.map((interaction, i) => (
                           <div key={i} className="flex gap-3 p-3 rounded-xl bg-background/80 shadow-xs border border-border/40">
@@ -397,7 +409,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                     {ddiResult.allergyAlerts.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="text-xs font-black text-muted-foreground uppercase ps-1">
-                          {isRtl ? "تنبيهات الحساسية" : "Allergy Alerts"}
+                          {t("allergyAlerts")}
                         </h4>
                         {ddiResult.allergyAlerts.map((allergy, i) => (
                           <div key={i} className="flex gap-3 p-3 rounded-xl bg-background/80 shadow-xs border border-border/40">
@@ -406,10 +418,10 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                             </div>
                             <div className="space-y-1">
                               <div className="text-xs font-bold">
-                                {isRtl ? "حساسية محتملة:" : "Potential Allergy:"} {allergy.medication}
+                                {t("potentialAllergy")} {allergy.medication}
                               </div>
                               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                                {isRtl ? `يتعارض مع حساسية المريض من: ${allergy.allergen}` : `Reacts with patient's documented allergy: ${allergy.allergen}`}
+                                {t("reactsWithAllergy")} {allergy.allergen}
                               </p>
                               {allergy.notes && <p className="text-[10px] italic text-rose-500">{allergy.notes}</p>}
                             </div>
@@ -423,7 +435,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                       <div className="bg-primary/10 p-3 rounded-xl flex items-center gap-3">
                         <Loader2 className="h-4 w-4 text-primary animate-pulse" />
                         <div className="text-[11px] font-medium text-primary-foreground/80">
-                          {isRtl ? "تنبيه: الحالة تتطلب تدقيقاً معمقاً بالذكاء الاصطناعي (أكثر من 5 أدوية)." : "Complex case detected (>5 meds). Deep AI verification recommended."}
+                          {t("aiEnrichmentWarning")}
                         </div>
                       </div>
                     )}
@@ -433,7 +445,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                       <div className="flex items-center gap-2 text-emerald-600 py-2">
                         <CheckCircle2 className="h-5 w-5" />
                         <span className="text-xs font-bold">
-                          {isRtl ? "لم يتم العثور على تداخلات معروفة في قاعدة البيانات المحلية." : "No known interactions found in the local safety database."}
+                          {t("noInteractionsFound")}
                         </span>
                       </div>
                     )}
@@ -455,13 +467,13 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                   className="w-5 h-5 rounded-lg text-primary focus:ring-primary border-border/40"
                 />
                 <label htmlFor="ddi-override" className="text-sm font-bold cursor-pointer">
-                  {isRtl ? "تجاوز التنبيهات السريرية (يتطلب مبرر)" : "Override clinical alerts (Requires justification)"}
+                  {t("overrideAlerts")}
                 </label>
               </div>
               
               {hasDdiOverride && (
                 <Textarea 
-                  placeholder={isRtl ? "اذكر المبرر الطبي لهذا التجاوز..." : "State medical justification for this override..."}
+                  placeholder={t("overrideReasonPlaceholder")}
                   className="min-h-[80px] text-xs rounded-xl"
                   value={ddiOverrideReason}
                   onChange={(e) => setDdiOverrideReason(e.target.value)}
@@ -473,10 +485,10 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
           {/* Additional Notes */}
           <div className="space-y-2">
             <label className="text-xs font-black uppercase text-muted-foreground ps-1">
-              {isRtl ? "ملاحظات إضافية للصيدلي" : "Additional Notes for Pharmacist"}
+              {t("additionalNotes")}
             </label>
             <Textarea 
-              placeholder={isRtl ? "تعليمات خاصة بصرف الدواء..." : "Special dispensing instructions..."}
+              placeholder={t("dispensingNotesPlaceholder")}
               className="min-h-[100px] rounded-2xl border-border/40 text-sm"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -490,7 +502,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
             disabled={isPending || (ddiResult?.overallRiskLevel === "high" && !hasDdiOverride)}
           >
             {isPending ? <Loader2 className="me-2 h-5 w-5 animate-spin" /> : <Save className="me-2 h-5 w-5" />}
-            {isRtl ? "إصدار الوصفة الطبية وتوثيقها" : "Issue & Document Prescription"}
+            {t("issuePrescription")}
           </Button>
         </CardContent>
       </Card>

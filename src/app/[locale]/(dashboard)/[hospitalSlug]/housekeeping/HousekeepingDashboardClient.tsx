@@ -203,7 +203,7 @@ export default function HousekeepingDashboardClient({
   // Filters tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      const cleanQuery = searchQuery.replace(/[^\d\w\sأ-ي]/g, "").toLowerCase();
+      const cleanQuery = searchQuery.replace(/[^\d\w\s\u0600-\u06FF]/g, "").toLowerCase();
       const roomDigits = task.roomNumber.replace(/[^\d]/g, "");
       const queryDigits = searchQuery.replace(/[^\d]/g, "");
 
@@ -322,13 +322,14 @@ export default function HousekeepingDashboardClient({
     setActionLoading(activeTaskId);
     setCompleteDialogOpen(false);
     try {
-      // Simulate photo upload by sending base64 preview or a fallback URL
+      // NOTE: Storing raw base64 images in DB is not recommended for production.
+      // TODO: Implement direct-to-S3 upload via pre-signed URLs.
       const finalPhotoUrl = photoPreview || "https://objectstorage.hms-egypt.com/housekeeping/mock-completion.jpg";
       const res = await completeHousekeepingTask(activeTaskId, finalPhotoUrl);
       if (res.success) {
         toast.success(isRtl ? "تم إكمال عملية التنظيف والتعقيم بنجاح." : "Cleaning and disinfection completed successfully.");
       } else {
-        toast.error(res.error || (isRtl ? "فشل إكمال المهمة." : "Failed to complete task."));
+        toast.error(res.error || t("completeError"));
       }
     } catch (e: any) {
       toast.error(e.message || "Error");

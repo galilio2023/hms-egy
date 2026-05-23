@@ -56,6 +56,9 @@ export async function checkDrugInteractions(
 
   // 1. Check for Drug-Drug Interactions (DDI)
   // Query all pairs in the list
+  // NOTE: inArray with lower() on columns is used for safety. 
+  // For production scale, ensure a functional index exists: 
+  // CREATE INDEX idx_medication_interactions_lower_drug1 ON medication_interactions (LOWER(drug1_name));
   if (allIdentifiers.length >= 2) {
     const ddiMatches = await db
       .select()

@@ -107,15 +107,19 @@ export async function createHousekeepingTask(payload: {
           isRead: false,
         }));
 
-      if (notificationPayloads.length > 0) {
-        await tx.insert(notifications).values(notificationPayloads);
-      }
-
-      return { success: true, taskId: task.id };
+      return { 
+        success: true, 
+        taskId: task.id,
+        notificationPayloads: notificationPayloads
+      };
     });
 
+    if (result.success && result.notificationPayloads && result.notificationPayloads.length > 0) {
+      await db.insert(notifications).values(result.notificationPayloads);
+    }
+
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
-    return result;
+    return { success: result.success, taskId: result.taskId };
   } catch (error: any) {
     console.error("[CREATE_HOUSEKEEPING_TASK_ERROR]", error);
     return { success: false, error: error.message || "Failed to create task" };
@@ -179,24 +183,29 @@ export async function assignHousekeepingTask(taskId: string, staffId: string) {
         ))
         .limit(1);
 
+      let notification = null;
       if (assignedStaff && assignedStaff.userId) {
-        await tx.insert(notifications).values({
+        notification = {
           hospitalId,
           userId: assignedStaff.userId,
           titleAr: "📌 تم إسناد مهمة تنظيف لك",
           titleEn: "📌 Housekeeping Task Assigned",
           messageAr: `تم إسناد مهمة تنظيف جديدة لك. يرجى مراجعة لوحة المهام والبدء عند الاستعداد.`,
           messageEn: `A new cleaning task has been assigned to you. Please start when ready.`,
-          type: "info",
+          type: "info" as any,
           isRead: false,
-        });
+        };
       }
 
-      return { success: true };
+      return { success: true, notification };
     });
 
+    if (result.success && result.notification) {
+      await db.insert(notifications).values(result.notification);
+    }
+
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
-    return result;
+    return { success: result.success };
   } catch (error: any) {
     console.error("[ASSIGN_HOUSEKEEPING_TASK_ERROR]", error);
     return { success: false, error: error.message || "Failed to assign task" };
@@ -389,30 +398,36 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
           isRead: false,
         }));
 
-      if (nursingNotifications.length > 0) {
-        await tx.insert(notifications).values(nursingNotifications);
-      }
-
-      // 5. Create audit log entry
-      await tx.insert(auditLogs).values({
-        hospitalId,
-        userId: session.user.id,
-        action: "complete_housekeeping_task",
-        entityType: "housekeeping_task",
-        entityId: taskId,
-        payload: {
-          taskId,
-          bedId: task.bedId,
-          completedAt: new Date().toISOString(),
-          completionPhotoUrl: photoUrl || null,
-        },
-      });
-
-      return { success: true };
+      return { 
+        success: true, 
+        nursingNotifications: nursingNotifications,
+        auditLog: {
+          hospitalId,
+          userId: session.user.id,
+          action: "complete_housekeeping_task",
+          entityType: "housekeeping_task",
+          entityId: taskId,
+          payload: {
+            taskId,
+            bedId: task.bedId,
+            completedAt: new Date().toISOString(),
+            completionPhotoUrl: photoUrl || null,
+          },
+        }
+      };
     });
 
+    if (result.success) {
+      if (result.nursingNotifications && result.nursingNotifications.length > 0) {
+        await db.insert(notifications).values(result.nursingNotifications);
+      }
+      if (result.auditLog) {
+        await db.insert(auditLogs).values(result.auditLog);
+      }
+    }
+
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
-    return result;
+    return { success: result.success };
   } catch (error: any) {
     console.error("[COMPLETE_HOUSEKEEPING_TASK_ERROR]", error);
     return { success: false, error: error.message || "Failed to complete task" };
