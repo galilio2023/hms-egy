@@ -443,7 +443,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                         errors.governorate ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
                     >
-                      <option value="">{isRtl ? "-- اختر المحافظة --" : "-- Select Governorate --"}</option>
+                      <option value="">{t("selectGovernorate")}</option>
                       {Object.values(GOVERNORATES).map((gov) => (
                         <option key={gov.code} value={gov.code}>
                           {isRtl ? gov.ar : gov.en}

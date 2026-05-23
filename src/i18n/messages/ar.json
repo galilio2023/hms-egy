@@ -133,6 +133,7 @@
     "phone": "رقم الهاتف المحمول",
     "email": "البريد الإلكتروني",
     "governorate": "المحافظة",
+    "selectGovernorate": "-- اختر المحافظة --",
     "address": "العنوان بالتفصيل",
     "bloodType": "فصيلة الدم",
     "insuranceProvider": "الجهة التأمينية",

@@ -133,6 +133,7 @@
     "phone": "Phone Number",
     "email": "Email Address",
     "governorate": "Governorate",
+    "selectGovernorate": "-- Select Governorate --",
     "address": "Resident Address",
     "bloodType": "Blood Type",
     "insuranceProvider": "Insurance Provider",
