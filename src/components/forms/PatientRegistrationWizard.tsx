@@ -443,7 +443,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                       {...register("governorate")}
                       disabled={!!nidInfo}
                       className={cn(
-                        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                        nativeSelectClasses,
                         nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : "",
                         errors.governorate ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
@@ -571,7 +571,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                     <select
                       {...register("bloodType")}
                       className={cn(
-                        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                        nativeSelectClasses,
                         errors.bloodType ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
                     >
@@ -681,7 +681,7 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                     <select 
                       {...register("insuranceProviderId")} 
                       className={cn(
-                        "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+                        nativeSelectClasses,
                         errors.insuranceProviderId ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
                     >

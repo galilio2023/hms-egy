@@ -74,6 +74,9 @@ export const authInstance = betterAuth({
   ],
 });
 
+// Dev-only optimization: caches the mock hospital UUID in memory to prevent blocking DB queries 
+// on every auth check during local development. Do not use this pattern for production logic 
+// as serverless environments will reset this cache unpredictably.
 let cachedMockHospitalId: string | null = null;
 
 /**
@@ -161,7 +164,7 @@ export async function auth(): Promise<Session | null> {
           email: "admin@alshifa.com.eg",
           name: "د. أحمد الشافعي",
           role: "ADMIN",
-          hospitalId: cachedMockHospitalId || "al-shifa",
+          hospitalId: cachedMockHospitalId || "00000000-0000-0000-0000-000000000000",
         },
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       };

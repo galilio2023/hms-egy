@@ -113,9 +113,9 @@ export default async function NursingPage({
         )
         .then((res) => res[0]),
 
-      // C. Fetch recent vitals for active inpatients (last 24 hours)
+      // C. Fetch recent vitals for active inpatients (last 24 hours), strictly getting the latest record per patient
       tx
-        .select({
+        .selectDistinctOn([vitalsFlowsheet.patientId], {
           patientId: vitalsFlowsheet.patientId,
           recordedAt: vitalsFlowsheet.recordedAt,
           bloodPressureSystolic: vitalsFlowsheet.bloodPressureSystolic,
@@ -139,7 +139,7 @@ export default async function NursingPage({
             sql`${vitalsFlowsheet.recordedAt} > now() - interval '24 hours'`
           )
         )
-        .orderBy(desc(vitalsFlowsheet.recordedAt))
+        .orderBy(vitalsFlowsheet.patientId, desc(vitalsFlowsheet.recordedAt))
     ]);
 
     const pendingCleaningCount = pendingCleaningRes?.count || 0;

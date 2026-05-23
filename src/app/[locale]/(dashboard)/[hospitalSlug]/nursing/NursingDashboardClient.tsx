@@ -21,14 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-export function normalizeArabic(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/[أإآا]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/ة/g, "ه");
-}
+import { normalizeArabic } from "@/lib/utils/egypt";
 
 interface ActivePatient {
   admissionId: string;
