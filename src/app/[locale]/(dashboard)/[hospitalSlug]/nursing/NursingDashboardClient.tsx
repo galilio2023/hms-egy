@@ -51,7 +51,7 @@ interface VitalRecord {
   bloodPressureSystolic: number | null;
   bloodPressureDiastolic: number | null;
   heartRate: number | null;
-  temperature: string | null;
+  temperature: string | number | null; // Postgres decimal casted or raw string
   oxygenSaturation: number | null;
 }
 
@@ -87,6 +87,31 @@ export default function NursingDashboardClient({
         (p.roomNumber && p.roomNumber.toLowerCase().includes(lowerQ))
     );
   }, [activePatients, searchQuery]);
+
+  const criticalAlertsCount = useMemo(() => {
+    let count = 0;
+    Object.values(vitalsByPatient).forEach((records) => {
+      const recentVitals = records?.[0];
+      if (!recentVitals) return;
+      
+      const hr = recentVitals.heartRate;
+      const spo2 = recentVitals.oxygenSaturation;
+      const sys = recentVitals.bloodPressureSystolic;
+      const tempStr = recentVitals.temperature;
+      const temp = tempStr !== null && tempStr !== undefined ? Number(tempStr) : null;
+
+      // Basic physiological thresholds
+      if (
+        (hr !== null && (hr > 120 || hr < 50)) ||
+        (spo2 !== null && spo2 < 90) ||
+        (temp !== null && (temp > 38.5 || temp < 35)) ||
+        (sys !== null && (sys > 180 || sys < 90))
+      ) {
+        count++;
+      }
+    });
+    return count;
+  }, [vitalsByPatient]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -157,9 +182,9 @@ export default function NursingDashboardClient({
               <span className="text-sm font-bold text-rose-700 dark:text-rose-500 uppercase tracking-wider">
                 {t("criticalAlerts")}
               </span>
-              <span className="text-4xl font-black text-rose-700 dark:text-rose-400 mt-2">0</span>
+              <span className="text-4xl font-black text-rose-700 dark:text-rose-400 mt-2">{criticalAlertsCount}</span>
               <p className="text-xs font-semibold text-rose-600/80 mt-1">
-                {t("noCriticalVitals")}
+                {criticalAlertsCount === 0 ? t("noCriticalVitals") : t("interventionRequired")}
               </p>
             </div>
           </CardContent>

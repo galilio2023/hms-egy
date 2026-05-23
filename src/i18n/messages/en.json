@@ -300,6 +300,7 @@
     "noCriticalVitals": "No recent critical vitals",
     "currentShiftPatients": "Current Shift Patients",
     "noActivePatients": "No active patients found.",
+    "interventionRequired": "Immediate intervention required",
     "bp": "BP",
     "hr": "HR",
     "temp": "Temp",

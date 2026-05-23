@@ -300,6 +300,7 @@
     "noCriticalVitals": "لا توجد مؤشرات حرجة حديثة",
     "currentShiftPatients": "حالات المناوبة الحالية",
     "noActivePatients": "لا توجد حالات حالية",
+    "interventionRequired": "حالات تتطلب تدخل فوري",
     "bp": "ضغط الدم",
     "hr": "نبض القلب",
     "temp": "الحرارة",
