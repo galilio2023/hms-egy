@@ -82,19 +82,28 @@ export default function NursingDashboardClient({
 
   const [searchQuery, setSearchQuery] = useState("");
 
+  const normalizedPatients = useMemo(() => {
+    return activePatients.map(p => ({
+      ...p,
+      normalizedNameEn: normalizeSearchTerm(p.patientNameEn || ""),
+      normalizedNumber: normalizeSearchTerm(p.patientNumber || ""),
+      normalizedRoom: p.roomNumber ? normalizeSearchTerm(p.roomNumber) : ""
+    }));
+  }, [activePatients]);
+
   const filteredPatients = useMemo(() => {
-    if (!searchQuery.trim()) return activePatients;
+    if (!searchQuery.trim()) return normalizedPatients;
     
     const normalizedQuery = normalizeSearchTerm(searchQuery);
 
-    return activePatients.filter(
+    return normalizedPatients.filter(
       (p) =>
         (p.patientNormalizedNameAr && p.patientNormalizedNameAr.includes(normalizedQuery)) ||
-        normalizeSearchTerm(p.patientNameEn || "").includes(normalizedQuery) ||
-        normalizeSearchTerm(p.patientNumber || "").includes(normalizedQuery) ||
-        (p.roomNumber && normalizeSearchTerm(p.roomNumber).includes(normalizedQuery))
+        p.normalizedNameEn.includes(normalizedQuery) ||
+        p.normalizedNumber.includes(normalizedQuery) ||
+        p.normalizedRoom.includes(normalizedQuery)
     );
-  }, [activePatients, searchQuery]);
+  }, [normalizedPatients, searchQuery]);
 
   const criticalAlertsCount = useMemo(() => {
     let count = 0;

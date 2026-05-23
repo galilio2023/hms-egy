@@ -344,6 +344,9 @@ export function normalizeArabic(text: string): string {
  * and returns a standard numeric value or null.
  */
 /**
+ * NOTE: Strictly for clinical inputs (vitals, weights). Do not use for financial 
+ * calculations or invoices as it will corrupt thousands-separator commas (e.g. 1,250.50).
+ * 
  * Normalizes Eastern Arabic (٠-٩) and Persian (۰-۹) numerals to standard Western digits (0-9)
  * and converts Arabic/localized decimal separators (٫, ،) to standard dots (.).
  */

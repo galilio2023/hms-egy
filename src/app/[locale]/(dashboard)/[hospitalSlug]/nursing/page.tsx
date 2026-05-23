@@ -46,7 +46,7 @@ export default async function NursingPage({
   }
 
   // Page-level RBAC: Restrict to clinical and administrative roles
-  const ALLOWED_NURSING_ROLES = ["SUPER_ADMIN", "ADMIN", "NURSE", "OR_NURSE", "HOUSEKEEPING"];
+  const ALLOWED_NURSING_ROLES = ["SUPER_ADMIN", "ADMIN", "NURSE", "OR_NURSE", "HOUSEKEEPING", "DOCTOR", "SURGEON"];
   if (!ALLOWED_NURSING_ROLES.includes(session.user.role)) {
     notFound();
   }
