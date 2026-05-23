@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
               ilike(medications.nameEn, `%${query}%`),
               ilike(medications.nameAr, `%${query}%`),
               ilike(medications.genericName, `%${query}%`),
-              ilike(medications.barcode || "", `%${query}%`)
+              ilike(medications.barcode, `%${query}%`)
             )
           )
         )

@@ -203,17 +203,14 @@ export default function HousekeepingDashboardClient({
   // Filters tasks
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
-      const cleanQuery = searchQuery.replace(/[^\d\w\s\u0600-\u06FF]/g, "").toLowerCase();
-      const roomDigits = task.roomNumber.replace(/[^\d]/g, "");
-      const queryDigits = searchQuery.replace(/[^\d]/g, "");
-
+      const normalizedQuery = normalizeSearchTerm(searchQuery);
+      
       const matchQuery =
         searchQuery === "" ||
-        task.roomNumber.toLowerCase().includes(cleanQuery) ||
-        (queryDigits !== "" && roomDigits.includes(queryDigits)) ||
-        (task.bedNumber && task.bedNumber.toLowerCase().includes(cleanQuery)) ||
-        (task.assignedStaffNameAr && task.assignedStaffNameAr.includes(searchQuery)) ||
-        (task.assignedStaffNameEn && task.assignedStaffNameEn.toLowerCase().includes(cleanQuery));
+        normalizeSearchTerm(task.roomNumber).includes(normalizedQuery) ||
+        (task.bedNumber && normalizeSearchTerm(task.bedNumber).includes(normalizedQuery)) ||
+        (task.assignedStaffNameAr && normalizeSearchTerm(task.assignedStaffNameAr).includes(normalizedQuery)) ||
+        (task.assignedStaffNameEn && normalizeSearchTerm(task.assignedStaffNameEn).includes(normalizedQuery));
 
       const matchPriority = filterPriority === "all" || task.priority === filterPriority;
       const matchType = filterType === "all" || task.type === filterType;

@@ -125,6 +125,12 @@ export async function createLabOrder(data: CreateLabOrderInput) {
 
       await tx.insert(labOrderItems).values(itemsToInsert);
 
+      // Trigger out-of-band notification for STAT orders
+      if (data.priority === "stat") {
+        // TODO: Integrate with local SMS/WhatsApp provider (e.g. CEQUENS, VictoryLink)
+        console.log(`[OUT-OF-BAND] Trigger STAT alert for patient ${data.patientId}`);
+      }
+
       // Fetch hospital slug for revalidation
       const [hospital] = await tx
         .select({ slug: hospitals.slug })
@@ -252,7 +258,17 @@ export async function saveLabResults(data: SaveLabResultInput) {
 
       if (!recorder) throw new Error("Recorder staff profile not found");
 
-      // 2. Update each item
+      // 2. Fetch order metadata once to avoid N+1 queries for critical alerts
+      const orderMeta = await tx
+        .select({ patientId: labOrders.patientId, doctorId: labOrders.doctorId })
+        .from(labOrders)
+        .where(and(eq(labOrders.id, data.orderId), eq(labOrders.hospitalId, hospitalId)))
+        .limit(1)
+        .then((res) => res[0]);
+
+      if (!orderMeta) throw new Error("Lab order not found");
+
+      // 3. Update each item
       for (const item of data.items) {
         await tx
           .update(labOrderItems)
@@ -266,29 +282,23 @@ export async function saveLabResults(data: SaveLabResultInput) {
           })
           .where(and(eq(labOrderItems.id, item.itemId), eq(labOrderItems.hospitalId, hospitalId)));
 
-        // 3. Trigger Critical Alert if item is critical
+        // 4. Trigger Critical Alert if item is critical
         if (item.isCritical) {
-          const [orderInfo] = await tx
-            .select({ patientId: labOrders.patientId, doctorId: labOrders.doctorId })
-            .from(labOrders)
-            .innerJoin(labOrderItems, eq(labOrders.id, labOrderItems.labOrderId))
-            .where(eq(labOrderItems.id, item.itemId))
-            .limit(1);
+          await tx.insert(criticalValueAlerts).values({
+            hospitalId,
+            labOrderItemId: item.itemId,
+            patientId: orderMeta.patientId,
+            notifiedDoctorId: orderMeta.doctorId,
+            method: "in_app",
+            notes: `Critical value recorded: ${item.resultValue}`,
+          });
 
-          if (orderInfo) {
-            await tx.insert(criticalValueAlerts).values({
-              hospitalId,
-              labOrderItemId: item.itemId,
-              patientId: orderInfo.patientId,
-              notifiedDoctorId: orderInfo.doctorId,
-              method: "in_app",
-              notes: `Critical value recorded: ${item.resultValue}`,
-            });
-          }
+          // TODO: Trigger emergency out-of-band alert (SMS/WhatsApp)
+          console.log(`[OUT-OF-BAND] Emergency critical value alert for doctor ${orderMeta.doctorId}`);
         }
       }
 
-      // 4. Check if all items are completed to mark order as completed
+      // 5. Check if all items are completed to mark order as completed
       const remainingItems = await tx
         .select()
         .from(labOrderItems)
