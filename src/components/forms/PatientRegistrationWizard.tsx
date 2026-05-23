@@ -434,14 +434,12 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       {t("governorate")}
-                      {nidInfo && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+                      {nidInfo && <Sparkles className="w-3.5 h-3.5 text-emerald-500" />}
                     </label>
                     <select
                       {...register("governorate")}
-                      disabled={!!nidInfo}
                       className={cn(
                         "hms-select-native",
-                        nidInfo ? "bg-muted/40 cursor-not-allowed opacity-80" : "",
                         errors.governorate ? "border-destructive focus-visible:ring-destructive" : ""
                       )}
                     >

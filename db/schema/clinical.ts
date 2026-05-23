@@ -85,7 +85,7 @@ export const admissions = pgTable("admissions", {
   id: uuid("id").primaryKey().defaultRandom(),
   hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "restrict" }).notNull(),
   patientId: uuid("patient_id").references(() => patients.id, { onDelete: "restrict" }).notNull(),
-  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "restrict" }).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "restrict" }),
   bedId: uuid("bed_id").references(() => beds.id, { onDelete: "set null" }),
   admittingDoctorId: uuid("admitting_doctor_id").references(() => staff.id, { onDelete: "restrict" }).notNull(),
   admissionDate: timestamp("admission_date").notNull(),
