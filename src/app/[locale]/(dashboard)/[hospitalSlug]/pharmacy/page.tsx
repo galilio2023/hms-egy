@@ -127,7 +127,10 @@ export default async function PharmacyPage({
     ]);
 
     return {
-      pendingPrescriptions: pendingPrescriptionsRes,
+      pendingPrescriptions: pendingPrescriptionsRes.map(p => ({
+        ...p,
+        patientName: locale === "ar" ? p.patientNameAr : p.patientNameEn
+      })),
       lowStock: lowStockRes,
       recentTransactions: recentTransactionsRes,
     };

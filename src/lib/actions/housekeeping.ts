@@ -112,7 +112,7 @@ export async function createHousekeepingTask(payload: {
       return { success: true, taskId: task.id };
     });
 
-    revalidatePath(`/[locale]/${hospitalId}/housekeeping`, "page");
+    revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return result;
   } catch (error: any) {
     console.error("[CREATE_HOUSEKEEPING_TASK_ERROR]", error);
@@ -156,16 +156,25 @@ export async function assignHousekeepingTask(taskId: string, staffId: string) {
       }
 
       // Update the assignment
-      await tx
+      const [updatedTask] = await tx
         .update(housekeepingTasks)
         .set({ assignedTo: staffId })
-        .where(eq(housekeepingTasks.id, taskId));
+        .where(and(
+          eq(housekeepingTasks.id, taskId),
+          eq(housekeepingTasks.hospitalId, hospitalId)
+        ))
+        .returning();
+
+      if (!updatedTask) throw new Error("Task not found or unauthorized");
 
       // Notify the assigned staff member
       const [assignedStaff] = await tx
         .select({ userId: staff.userId })
         .from(staff)
-        .where(eq(staff.id, staffId))
+        .where(and(
+          eq(staff.id, staffId),
+          eq(staff.hospitalId, hospitalId)
+        ))
         .limit(1);
 
       if (assignedStaff && assignedStaff.userId) {
@@ -184,7 +193,7 @@ export async function assignHousekeepingTask(taskId: string, staffId: string) {
       return { success: true };
     });
 
-    revalidatePath(`/[locale]/${hospitalId}/housekeeping`, "page");
+    revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return result;
   } catch (error: any) {
     console.error("[ASSIGN_HOUSEKEEPING_TASK_ERROR]", error);
@@ -216,10 +225,13 @@ export async function startHousekeepingTask(taskId: string) {
       const [task] = await tx
         .select()
         .from(housekeepingTasks)
-        .where(eq(housekeepingTasks.id, taskId))
+        .where(and(
+          eq(housekeepingTasks.id, taskId),
+          eq(housekeepingTasks.hospitalId, hospitalId)
+        ))
         .limit(1);
 
-      if (!task) throw new Error("Task not found");
+      if (!task) throw new Error("Task not found or unauthorized");
 
       // Housekeepers can only start tasks assigned to them
       if (isHk) {
@@ -241,12 +253,15 @@ export async function startHousekeepingTask(taskId: string) {
           status: "in_progress", 
           startedAt: new Date()
         })
-        .where(eq(housekeepingTasks.id, taskId));
+        .where(and(
+          eq(housekeepingTasks.id, taskId),
+          eq(housekeepingTasks.hospitalId, hospitalId)
+        ));
 
       return { success: true };
     });
 
-    revalidatePath(`/[locale]/${hospitalId}/housekeeping`, "page");
+    revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return result;
   } catch (error: any) {
     console.error("[START_HOUSEKEEPING_TASK_ERROR]", error);
@@ -279,10 +294,13 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
       const [task] = await tx
         .select()
         .from(housekeepingTasks)
-        .where(eq(housekeepingTasks.id, taskId))
+        .where(and(
+          eq(housekeepingTasks.id, taskId),
+          eq(housekeepingTasks.hospitalId, hospitalId)
+        ))
         .limit(1);
 
-      if (!task) throw new Error("Task not found");
+      if (!task) throw new Error("Task not found or unauthorized");
 
       // Housekeepers can only complete tasks assigned to them
       if (isHk) {
@@ -306,7 +324,10 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
           completedAt: new Date(),
           completionPhotoUrl: photoUrl || null
         })
-        .where(eq(housekeepingTasks.id, taskId));
+        .where(and(
+          eq(housekeepingTasks.id, taskId),
+          eq(housekeepingTasks.hospitalId, hospitalId)
+        ));
 
       let bedDetailsAr = "السرير";
       let bedDetailsEn = "A bed";
@@ -316,7 +337,10 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
         await tx
           .update(beds)
           .set({ status: "available", updatedAt: new Date() })
-          .where(eq(beds.id, task.bedId));
+          .where(and(
+            eq(beds.id, task.bedId),
+            eq(beds.hospitalId, hospitalId)
+          ));
 
         const [bedRoom] = await tx
           .select({
@@ -325,7 +349,10 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
           })
           .from(beds)
           .innerJoin(rooms, eq(beds.roomId, rooms.id))
-          .where(eq(beds.id, task.bedId))
+          .where(and(
+            eq(beds.id, task.bedId),
+            eq(beds.hospitalId, hospitalId)
+          ))
           .limit(1);
 
         if (bedRoom) {
@@ -377,7 +404,7 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
       return { success: true };
     });
 
-    revalidatePath(`/[locale]/${hospitalId}/housekeeping`, "page");
+    revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return result;
   } catch (error: any) {
     console.error("[COMPLETE_HOUSEKEEPING_TASK_ERROR]", error);

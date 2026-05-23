@@ -60,13 +60,6 @@ export default async function HousekeepingPage({
 
   // Query database in tenant context
   const dashboardData = await withTenantContext(hospital.id, async (tx) => {
-    // Calculate Cairo timezone-correct start of today
-    const cairoOffset = 3; // Cairo is UTC+3
-    const nowUtc = new Date();
-    const localCairoTime = new Date(nowUtc.getTime() + (cairoOffset * 60 * 60 * 1000));
-    localCairoTime.setUTCHours(0, 0, 0, 0);
-    const startOfDayCairoUtc = new Date(localCairoTime.getTime() - (cairoOffset * 60 * 60 * 1000));
-
     const [
       roomsList,
       bedsWithRooms,
@@ -173,7 +166,7 @@ export default async function HousekeepingPage({
           and(
             eq(housekeepingTasks.hospitalId, hospital.id),
             eq(housekeepingTasks.status, "completed"),
-            sql`${housekeepingTasks.completedAt} >= ${startOfDayCairoUtc}`
+            sql`(${housekeepingTasks.completedAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')::date = CURRENT_DATE`
           )
         ),
 

@@ -494,7 +494,7 @@ export default function HousekeepingDashboardClient({
                 placeholder={isRtl ? "البحث برقم الغرفة، السرير، أو الموظف..." : "Search by room, bed, or staff..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-9"
+                className="w-full ps-9 pe-9"
               />
             </div>
             
@@ -629,7 +629,7 @@ export default function HousekeepingDashboardClient({
                                 onClick={() => handleAssignToMe(task.id)}
                                 disabled={actionLoading === task.id}
                               >
-                                {actionLoading === task.id ? <Loader2 className="h-3 w-3 animate-spin mr-1 ml-1" /> : <UserCheck className="h-3.5 w-3.5 mr-1.5 ml-1.5" />}
+                                {actionLoading === task.id ? <Loader2 className="h-3 w-3 animate-spin mx-1" /> : <UserCheck className="h-3.5 w-3.5 mx-1.5" />}
                                 {t("assignToMe")}
                               </Button>
                             ) : isAssignedToMe ? (
@@ -641,7 +641,7 @@ export default function HousekeepingDashboardClient({
                                   onClick={() => handleStartTask(task.id)}
                                   disabled={actionLoading === task.id}
                                 >
-                                  {actionLoading === task.id ? <Loader2 className="h-3 w-3 animate-spin mr-1 ml-1" /> : <Clock className="h-3.5 w-3.5 mr-1.5 ml-1.5" />}
+                                  {actionLoading === task.id ? <Loader2 className="h-3 w-3 animate-spin mx-1" /> : <Clock className="h-3.5 w-3.5 mx-1.5" />}
                                   {t("startTask")}
                                 </Button>
                               ) : (
@@ -652,7 +652,7 @@ export default function HousekeepingDashboardClient({
                                   onClick={() => openCompleteDialog(task.id)}
                                   disabled={actionLoading === task.id}
                                 >
-                                  {actionLoading === task.id ? <Loader2 className="h-3 w-3 animate-spin mr-1 ml-1" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 ml-1.5" />}
+                                  {actionLoading === task.id ? <Loader2 className="h-3 w-3 animate-spin mx-1" /> : <CheckCircle2 className="h-3.5 w-3.5 mx-1.5" />}
                                   {t("completeWithPhoto")}
                                 </Button>
                               )
@@ -887,7 +887,7 @@ export default function HousekeepingDashboardClient({
               disabled={photoRequired && !photoPreview}
               className="font-black bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
             >
-              <Check className="h-4 w-4 mr-1.5 ml-1.5" />
+              <Check className="h-4 w-4 mx-1.5" />
               {t("completeTask")}
             </Button>
           </DialogFooter>
@@ -986,7 +986,7 @@ export default function HousekeepingDashboardClient({
                 className="font-black bg-primary hover:scale-102 transition-all cursor-pointer"
                 disabled={actionLoading === "create"}
               >
-                {actionLoading === "create" ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1 ml-1" /> : <Check className="h-4 w-4 mr-1.5 ml-1.5" />}
+                {actionLoading === "create" ? <Loader2 className="h-3.5 w-3.5 animate-spin mx-1" /> : <Check className="h-4 w-4 mx-1.5" />}
                 {isRtl ? "تقديم طلب التنظيف" : "Submit Request"}
               </Button>
             </DialogFooter>
