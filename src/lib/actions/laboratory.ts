@@ -2,9 +2,10 @@
 
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
-import { labTests, labOrders, labOrderItems } from "@db/schema/laboratory";
+import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "@db/schema/laboratory";
 import { staff, hospitals } from "@db/schema/core";
 import { admissions } from "@db/schema/clinical";
+import { patients } from "@db/schema/patients";
 import { eq, and, sql, ilike, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
