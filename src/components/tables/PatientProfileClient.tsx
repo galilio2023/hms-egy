@@ -24,6 +24,7 @@ import {
   Stethoscope,
   BriefcaseMedical,
   Plus,
+  Pill,
   Thermometer,
   Droplet,
   Weight,

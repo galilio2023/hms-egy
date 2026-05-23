@@ -113,16 +113,12 @@ export async function createHousekeepingTask(payload: {
           isRead: false,
         }));
 
-      return { 
-        success: true, 
-        taskId: task.id,
-        notificationPayloads: notificationPayloads
-      };
-    });
+      if (notificationPayloads.length > 0) {
+        await tx.insert(notifications).values(notificationPayloads);
+      }
 
-    if (result.success && result.notificationPayloads && result.notificationPayloads.length > 0) {
-      await db.insert(notifications).values(result.notificationPayloads);
-    }
+      return { success: true, taskId: task.id };
+    });
 
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return { success: result.success, taskId: result.taskId };
@@ -189,9 +185,8 @@ export async function assignHousekeepingTask(taskId: string, staffId: string) {
         ))
         .limit(1);
 
-      let notification = null;
       if (assignedStaff && assignedStaff.userId) {
-        notification = {
+        await tx.insert(notifications).values({
           hospitalId,
           userId: assignedStaff.userId,
           titleAr: "📌 تم إسناد مهمة تنظيف لك",
@@ -200,15 +195,11 @@ export async function assignHousekeepingTask(taskId: string, staffId: string) {
           messageEn: `A new cleaning task has been assigned to you. Please start when ready.`,
           type: "info" as any,
           isRead: false,
-        };
+        });
       }
 
-      return { success: true, notification };
+      return { success: true };
     });
-
-    if (result.success && result.notification) {
-      await db.insert(notifications).values(result.notification);
-    }
 
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return { success: result.success };
@@ -306,9 +297,13 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
     return { success: false, error: "Forbidden: You do not have permission to complete housekeeping tasks." };
   }
 
-  // Security: Block raw base64 data to prevent database bloat
+  // Security: Restrict raw base64 data to prevent massive database bloat
+  // TEMPORARY: Allowing small base64 (max 500KB) until direct-to-S3 upload is implemented
   if (photoUrl && photoUrl.startsWith("data:image")) {
-    return { success: false, error: "Security Error: Raw image data is not allowed. Please use the designated upload service." };
+    const sizeInBytes = (photoUrl.length * 3) / 4;
+    if (sizeInBytes > 500 * 1024) {
+      return { success: false, error: "Photo too large. Please reduce resolution or use the upload service (Max 500KB)." };
+    }
   }
 
   try {
@@ -409,33 +404,27 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
           isRead: false,
         }));
 
-      return { 
-        success: true, 
-        nursingNotifications: nursingNotifications,
-        auditLog: {
-          hospitalId,
-          userId: session.user.id,
-          action: "complete_housekeeping_task",
-          entityType: "housekeeping_task",
-          entityId: taskId,
-          payload: {
-            taskId,
-            bedId: task.bedId,
-            completedAt: new Date().toISOString(),
-            completionPhotoUrl: photoUrl || null,
-          },
-        }
-      };
-    });
+      if (nursingNotifications.length > 0) {
+        await tx.insert(notifications).values(nursingNotifications);
+      }
 
-    if (result.success) {
-      if (result.nursingNotifications && result.nursingNotifications.length > 0) {
-        await db.insert(notifications).values(result.nursingNotifications);
-      }
-      if (result.auditLog) {
-        await db.insert(auditLogs).values(result.auditLog);
-      }
-    }
+      // 5. Create audit log entry
+      await tx.insert(auditLogs).values({
+        hospitalId,
+        userId: session.user.id,
+        action: "complete_housekeeping_task",
+        entityType: "housekeeping_task",
+        entityId: taskId,
+        payload: {
+          taskId,
+          bedId: task.bedId,
+          completedAt: new Date().toISOString(),
+          completionPhotoUrl: photoUrl?.startsWith("data:") ? "[BASE64_IMAGE]" : (photoUrl || null),
+        },
+      });
+
+      return { success: true };
+    });
 
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return { success: result.success };

@@ -42,6 +42,11 @@ export default async function PrescribePage({
 
   const patient = patientRes.data;
 
+  // Security: Verify patient ownership
+  if (patient.hospitalId !== hospital.id) {
+    notFound();
+  }
+
   return (
     <PageShell
       title={locale === "ar" ? "إصدار وصفة طبية" : "Issue Prescription"}

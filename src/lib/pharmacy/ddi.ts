@@ -34,8 +34,7 @@ export async function checkDrugInteractions(
   medications: { name: string; genericName?: string }[],
   patientAllergies: string[],
   chronicConditions: string[] = [],
-  renalFunction: string = "normal",
-  hepaticFunction: string = "normal"
+  tx: any = db // Fallback to global db if called outside tx
 ): Promise<DdiResult> {
   const interactions: Interaction[] = [];
   const allergyAlerts: AllergyAlert[] = [];
@@ -61,7 +60,7 @@ export async function checkDrugInteractions(
   // CREATE INDEX idx_medication_interactions_lower_drug1 ON medication_interactions (LOWER(drug1_name));
   // CREATE INDEX idx_medication_interactions_lower_drug2 ON medication_interactions (LOWER(drug2_name));
   if (allIdentifiers.length >= 2) {
-    const ddiMatches = await db
+    const ddiMatches = await tx
       .select()
       .from(medicationInteractions)
       .where(
@@ -92,7 +91,7 @@ export async function checkDrugInteractions(
 
   // 2. Check for Patient Allergies
   if (patientAllergies.length > 0) {
-    const allergyMatches = await db
+    const allergyMatches = await tx
       .select()
       .from(drugAllergyCrossReferences)
       .where(

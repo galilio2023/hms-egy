@@ -62,7 +62,8 @@ export async function runDdiCheck(patientId: string, itemInputs: PrescriptionIte
       const results = await checkDrugInteractions(
         medDetails.map(m => ({ name: m.name, genericName: m.genericName })),
         patient.allergies || [],
-        patient.chronicConditions || []
+        patient.chronicConditions || [],
+        tx
       );
 
       return { success: true, data: results };
@@ -122,7 +123,8 @@ export async function createPrescription(payload: {
       const ddiCheck = await checkDrugInteractions(
         medDetails.map(m => ({ name: m.name, genericName: m.genericName })),
         patient.allergies || [],
-        patient.chronicConditions || []
+        patient.chronicConditions || [],
+        tx
       );
 
       // Enforce hard-stops and justification requirements

@@ -179,6 +179,12 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
       return;
     }
 
+    const invalidDuration = items.some(i => i.durationDays <= 0);
+    if (invalidDuration) {
+      toast.error(isRtl ? "يجب أن تكون مدة العلاج يوماً واحداً على الأقل." : "Duration must be at least 1 day.");
+      return;
+    }
+
     // Strict block on contraindicated if not overridden (or even with override if your policy is strict)
     if (ddiResult && !ddiResult.isApproved && !hasDdiOverride) {
       toast.error(t("contraindicatedError"));
