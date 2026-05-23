@@ -56,12 +56,14 @@ export default async function NursingPage({
 
   // Fetch dashboard data within tenant context
   const dashboardData = await withTenantContext(hospital.id, async (tx) => {
+    const userDeptId = session.user.departmentId;
+
     const [
       activePatientsRes,
       pendingCleaningRes,
       recentVitalsRes
     ] = await Promise.all([
-      // A. Fetch active admissions with patient and bed info
+      // A. Fetch active admissions with patient and bed info (filtered by nurse department if available)
       tx
         .select({
           admissionId: admissions.id,
@@ -96,19 +98,22 @@ export default async function NursingPage({
         .where(
           and(
             eq(admissions.hospitalId, hospital.id),
-            eq(admissions.status, "active")
+            eq(admissions.status, "active"),
+            userDeptId ? eq(rooms.departmentId, userDeptId) : sql`TRUE`
           )
         )
         .orderBy(desc(admissions.admissionDate)),
 
-      // B. Count beds in pending_cleaning status
+      // B. Count beds in pending_cleaning status (filtered by nurse department if available)
       tx
         .select({ count: sql<number>`count(*)::int` })
         .from(beds)
+        .innerJoin(rooms, eq(beds.roomId, rooms.id))
         .where(
           and(
             eq(beds.hospitalId, hospital.id),
-            eq(beds.status, "pending_cleaning")
+            eq(beds.status, "pending_cleaning"),
+            userDeptId ? eq(rooms.departmentId, userDeptId) : sql`TRUE`
           )
         )
         .then((res) => res[0]),

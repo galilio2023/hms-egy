@@ -7,6 +7,7 @@ import { bedStatusEnum } from "./enums";
 export const rooms = pgTable("rooms", {
   id: uuid("id").primaryKey().defaultRandom(),
   hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "set null" }),
   roomNumber: varchar("room_number", { length: 50 }).notNull(),
   type: varchar("type", { length: 50 }).notNull(), // general, icu, pediatric, isolation, standard
   floor: text("floor").notNull(),
@@ -18,6 +19,7 @@ export const rooms = pgTable("rooms", {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
     hospitalRoomIdx: index("room_hospital_number_idx").on(table.hospitalId, table.roomNumber),
+    hospitalDeptIdx: index("room_hospital_dept_idx").on(table.hospitalId, table.departmentId),
   };
 }).enableRLS();
 

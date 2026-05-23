@@ -65,6 +65,10 @@ export const roomsRelations = relations(rooms, ({ one, many }) => ({
     fields: [rooms.hospitalId],
     references: [hospitals.id],
   }),
+  department: one(departments, {
+    fields: [rooms.departmentId],
+    references: [departments.id],
+  }),
   beds: many(beds),
 }));
 
