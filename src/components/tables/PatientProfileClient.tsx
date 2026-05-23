@@ -319,6 +319,7 @@ export function PatientProfileClient({
   const tabs = [
     { id: "medical", label: isRtl ? "السجل الطبي" : "Medical Records", icon: Stethoscope },
     { id: "admissions", label: isRtl ? "التنويم والرعاية" : "Admissions & Care", icon: BriefcaseMedical },
+    { id: "laboratory", label: isRtl ? "المختبر" : "Laboratory", icon: FlaskConical },
     { id: "surgical", label: isRtl ? "السجل الجراحي" : "Surgical History", icon: Scissors, badge: surgeries.length },
     { id: "referrals", label: isRtl ? "الإحالات الداخلية" : "Internal Referrals", icon: BriefcaseMedical, badge: referrals.length },
     { id: "certificates", label: isRtl ? "الشهادات الطبية" : "Medical Certificates", icon: FileText, badge: certificates.length },
@@ -620,6 +621,12 @@ export function PatientProfileClient({
                   <Link href={`/${hospitalSlug}/patients/${patient.id}/prescribe`}>
                     <Pill className="w-4 h-4" />
                     {isRtl ? "صرف دواء" : "Prescribe Meds"}
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 border-purple-500/30 text-purple-600 hover:bg-purple-50">
+                  <Link href={`/${hospitalSlug}/patients/${patient.id}/labs/new`}>
+                    <FlaskConical className="w-4 h-4" />
+                    {isRtl ? "طلب فحص" : "Order Labs"}
                   </Link>
                 </Button>
                 <Button asChild size="sm" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 bg-primary hover:bg-primary/95 text-primary-foreground">
