@@ -45,6 +45,12 @@ export default async function NursingPage({
     redirect(`/${locale}/login`);
   }
 
+  // Page-level RBAC: Restrict to clinical and administrative roles
+  const ALLOWED_NURSING_ROLES = ["SUPER_ADMIN", "ADMIN", "NURSE", "OR_NURSE", "HOUSEKEEPING"];
+  if (!ALLOWED_NURSING_ROLES.includes(session.user.role)) {
+    notFound();
+  }
+
   const hospital = await getHospitalBySlug(hospitalSlug);
   if (!hospital) {
     notFound();

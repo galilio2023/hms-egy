@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { normalizeArabic, normalizeDecimal } from "@/lib/utils/egypt";
+import { normalizeSearchTerm, normalizeDecimal } from "@/lib/utils/egypt";
 
 interface ActivePatient {
   admissionId: string;
@@ -83,18 +83,14 @@ export default function NursingDashboardClient({
   const filteredPatients = useMemo(() => {
     if (!searchQuery.trim()) return activePatients;
     
-    const normalizedQuery = normalizeArabic(searchQuery.toLowerCase());
-    // Translate Eastern digits to Western standard digits for numeric comparisons
-    const westernQuery = normalizedQuery.replace(/[٠-٩]/g, (d) => 
-      "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString()
-    );
+    const normalizedQuery = normalizeSearchTerm(searchQuery);
 
     return activePatients.filter(
       (p) =>
-        normalizeArabic(p.patientNameAr?.toLowerCase() || "").includes(normalizedQuery) ||
-        (p.patientNameEn?.toLowerCase() || "").includes(westernQuery) ||
-        (p.patientNumber?.toLowerCase() || "").includes(westernQuery) ||
-        (p.roomNumber && p.roomNumber.toLowerCase().includes(westernQuery))
+        normalizeSearchTerm(p.patientNameAr || "").includes(normalizedQuery) ||
+        normalizeSearchTerm(p.patientNameEn || "").includes(normalizedQuery) ||
+        normalizeSearchTerm(p.patientNumber || "").includes(normalizedQuery) ||
+        (p.roomNumber && normalizeSearchTerm(p.roomNumber).includes(normalizedQuery))
     );
   }, [activePatients, searchQuery]);
 
