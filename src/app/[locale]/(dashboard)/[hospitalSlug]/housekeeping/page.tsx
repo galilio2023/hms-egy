@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 import { rooms, beds } from "@db/schema/clinical";
 import { staff } from "@db/schema/core";
 import { housekeepingTasks } from "@db/schema/housekeeping";
-import { eq, and, or, inArray, desc, sql } from "drizzle-orm";
+import { eq, and, or, inArray, desc, sql, gte, lt } from "drizzle-orm";
 import HousekeepingDashboardClient from "./HousekeepingDashboardClient";
 
 export async function generateMetadata({
@@ -60,6 +60,30 @@ export default async function HousekeepingPage({
 
   // Query database in tenant context
   const dashboardData = await withTenantContext(hospital.id, async (tx) => {
+    // Calculate Cairo day boundaries in UTC for a sargable query
+    const now = new Date();
+    const cairoFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Cairo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const parts = cairoFormatter.formatToParts(now);
+    const year = parts.find(p => p.type === "year")?.value;
+    const month = parts.find(p => p.type === "month")?.value;
+    const day = parts.find(p => p.type === "day")?.value;
+    
+    // Create UTC boundaries by assuming Cairo is between UTC+2 and UTC+3
+    // A safer way is to let the DB calculate the UTC timestamp for 00:00:00 Cairo time
+    const [timeBoundaries] = await tx.execute(sql`
+      SELECT 
+        (CURRENT_DATE AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as start_utc,
+        ((CURRENT_DATE + 1) AT TIME ZONE 'Africa/Cairo' AT TIME ZONE 'UTC') as end_utc
+    `);
+    
+    const startOfCairoDayUtc = new Date((timeBoundaries as any).start_utc);
+    const endOfCairoDayUtc = new Date((timeBoundaries as any).end_utc);
+
     const [
       roomsList,
       bedsWithRooms,
@@ -166,7 +190,8 @@ export default async function HousekeepingPage({
           and(
             eq(housekeepingTasks.hospitalId, hospital.id),
             eq(housekeepingTasks.status, "completed"),
-            sql`(${housekeepingTasks.completedAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Cairo')::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Cairo')::date`
+            gte(housekeepingTasks.completedAt, startOfCairoDayUtc),
+            lt(housekeepingTasks.completedAt, endOfCairoDayUtc)
           )
         ),
 

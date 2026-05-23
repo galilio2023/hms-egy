@@ -21,11 +21,43 @@ import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Link } from "@/i18n/routing";
 
+export interface PendingPrescription {
+  id: string;
+  createdAt: string | Date;
+  status: string;
+  patientName: string;
+  patientNameAr: string;
+  patientNameEn: string;
+  patientNumber: string;
+  doctorNameAr: string | null;
+  doctorNameEn: string | null;
+  itemCount: number;
+}
+
+export interface LowStockMedication {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  stockCount: number;
+  minStockLevel: number;
+}
+
+export interface RecentTransaction {
+  id: string;
+  type: string;
+  quantity: number;
+  createdAt: string | Date;
+  medicationNameAr: string;
+  medicationNameEn: string;
+  performedByNameAr: string | null;
+  performedByNameEn: string | null;
+}
+
 interface PharmacyDashboardClientProps {
   initialData: {
-    pendingPrescriptions: any[];
-    lowStock: any[];
-    recentTransactions: any[];
+    pendingPrescriptions: PendingPrescription[];
+    lowStock: LowStockMedication[];
+    recentTransactions: RecentTransaction[];
   };
   hospitalSlug: string;
   locale: string;
@@ -39,22 +71,21 @@ export default function PharmacyDashboardClient({
   const t = useTranslations("pharmacy");
   const isRtl = locale === "ar";
 
-  const prescriptionColumns: ColumnDef<any>[] = [
+  const prescriptionColumns: ColumnDef<PendingPrescription>[] = [
     {
       accessorKey: "patientName",
       header: t("patient"),
       cell: ({ row }) => {
-        const name = isRtl ? row.original.patientNameAr : row.original.patientNameEn;
         return (
           <div className="flex flex-col">
-            <span className="font-bold">{name}</span>
+            <span className="font-bold">{row.original.patientName}</span>
             <span className="text-xs text-muted-foreground">{row.original.patientNumber}</span>
           </div>
         );
       },
     },
     {
-      accessorKey: "doctorName",
+      id: "doctorName",
       header: t("doctor"),
       cell: ({ row }) => (isRtl ? row.original.doctorNameAr : row.original.doctorNameEn),
     },
@@ -89,9 +120,9 @@ export default function PharmacyDashboardClient({
     },
   ];
 
-  const lowStockColumns: ColumnDef<any>[] = [
+  const lowStockColumns: ColumnDef<LowStockMedication>[] = [
     {
-      accessorKey: "name",
+      id: "name",
       header: t("medication"),
       cell: ({ row }) => (isRtl ? row.original.nameAr : row.original.nameEn),
     },
@@ -249,7 +280,7 @@ export default function PharmacyDashboardClient({
                       </span>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="text-[10px] h-4 px-1 py-0 uppercase font-black">
-                          {tx.type.replace('_', ' ')}
+                          {tx.type?.replace('_', ' ') ?? 'Unknown'}
                         </Badge>
                         <span className={cn(
                           "text-xs font-black",
