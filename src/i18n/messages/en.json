@@ -383,7 +383,13 @@
     "requestCleaning": "Request Cleaning",
     "newCleaningRequest": "New Cleaning Request",
     "selectBedRoomToClean": "Select the bed or room to clean",
-    "submitRequest": "Submit Request"
+    "submitRequest": "Submit Request",
+    "staffProfileRequired": "Active staff profile required to perform this action.",
+    "assignSuccess": "Task assigned successfully.",
+    "assignError": "Failed to assign task.",
+    "startSuccess": "Cleaning task started successfully.",
+    "startError": "Failed to start task.",
+    "completeSuccess": "Cleaning and disinfection completed successfully."
   },
   "pharmacy": {
     "title": "Pharmacy Dashboard",

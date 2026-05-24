@@ -383,7 +383,13 @@
     "requestCleaning": "تقديم طلب تنظيف",
     "newCleaningRequest": "طلب تنظيف جديد",
     "selectBedRoomToClean": "اختر السرير أو الغرفة المراد تنظيفها",
-    "submitRequest": "تقديم طلب التنظيف"
+    "submitRequest": "تقديم طلب التنظيف",
+    "staffProfileRequired": "مطلوب سجل موظف نشط للقيام بهذا الإجراء.",
+    "assignSuccess": "تم إسناد المهمة بنجاح.",
+    "assignError": "فشل إسناد المهمة.",
+    "startSuccess": "تم بدء العمل في المهمة بنجاح.",
+    "startError": "فشل بدء المهمة.",
+    "completeSuccess": "تم إكمال عملية التنظيف والتعقيم بنجاح."
   },
   "pharmacy": {
     "title": "لوحة تحكم الصيدلية",

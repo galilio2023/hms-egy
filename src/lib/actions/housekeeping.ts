@@ -37,22 +37,28 @@ export async function createHousekeepingTask(payload: {
   try {
     const result = await withTenantContext(hospitalId, async (tx) => {
       // 1. Resolve room details and bed numbers
-      const [bedInfo] = await tx
-        .select({
-          roomId: beds.roomId,
-          bedNumber: beds.bedNumber,
-          roomNumber: rooms.roomNumber,
-        })
-        .from(beds)
-        .innerJoin(rooms, eq(beds.roomId, rooms.id))
-        .where(and(
-          eq(beds.id, payload.bedId),
-          eq(beds.hospitalId, hospitalId)
-        ))
-        .limit(1);
+      let targetRoomId = payload.roomId;
+      
+      if (payload.bedId) {
+        const [bedInfo] = await tx
+          .select({
+            roomId: beds.roomId,
+            bedNumber: beds.bedNumber,
+            roomNumber: rooms.roomNumber,
+          })
+          .from(beds)
+          .innerJoin(rooms, eq(beds.roomId, rooms.id))
+          .where(and(
+            eq(beds.id, payload.bedId),
+            eq(beds.hospitalId, hospitalId)
+          ))
+          .limit(1);
 
-      if (!bedInfo) throw new Error("Bed not found or unauthorized access");
-      const targetRoomId = payload.roomId || bedInfo.roomId;
+        if (!bedInfo) throw new Error("Bed not found or unauthorized access");
+        if (!targetRoomId) targetRoomId = bedInfo.roomId;
+      }
+
+      if (!targetRoomId) throw new Error("Target Room ID is required for housekeeping tasks.");
 
       // 2. Resolve staff record for requester
       const requester = await tx
@@ -77,18 +83,20 @@ export async function createHousekeepingTask(payload: {
         })
         .returning();
 
-      // 4. Ensure bed is in pending_cleaning
-      await tx
-        .update(beds)
-        .set({ 
-          status: "pending_cleaning", 
-          cleaningRequestedAt: new Date(), 
-          updatedAt: new Date() 
-        })
-        .where(and(
-          eq(beds.id, payload.bedId),
-          eq(beds.hospitalId, hospitalId)
-        ));
+      // 4. Ensure bed is in pending_cleaning (Only if bedId is provided)
+      if (payload.bedId) {
+        await tx
+          .update(beds)
+          .set({ 
+            status: "pending_cleaning", 
+            cleaningRequestedAt: new Date(), 
+            updatedAt: new Date() 
+          })
+          .where(and(
+            eq(beds.id, payload.bedId),
+            eq(beds.hospitalId, hospitalId)
+          ));
+      }
 
       // 5. Notify all active housekeeping staff in this hospital
       const hkStaff = await tx

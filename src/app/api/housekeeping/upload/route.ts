@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import fs from "fs";
+import path from "path";
 
 /**
  * Temporary upload API for housekeeping photos.
  * In production, this should interface with S3/R2 via pre-signed URLs.
- * For now, it validates the base64 size and "simulates" a hosted URL.
+ * For now, it validates the base64 size, verifies magic bytes, and 
+ * saves to local disk as a fallback to prevent silent data loss.
  */
 export async function POST(req: Request) {
   const session = await auth();
@@ -35,8 +38,6 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(imageContent, "base64");
     
     // Check for real image headers (Magic Bytes)
-    // JPEG: FF D8 FF
-    // PNG: 89 50 4E 47
     const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
     const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
     const isWebp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
@@ -45,16 +46,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Security Error: Unsupported or malicious file type detected" }, { status: 400 });
     }
 
-    // 3. In a real implementation, we would stream this buffer to S3/R2 here.
-    // For now, to unblock the flow, we return a "simulated" URL that contains the ID.
-    // NOTE: This is still technically base64 but it passes the "starts with data:image" check 
-    // in the server action if we prefix it differently, OR we just allow it for now.
+    // 3. DEVELOPMENT FALLBACK: Save to local public/uploads directory
+    // This ensures that even without S3, the files exist on disk for audit/review.
+    const fileName = `hk-${Date.now()}.${isJpeg ? "jpg" : isPng ? "png" : "webp"}`;
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "housekeeping");
     
-    // Actually, to TRULY fix the bloat issue, we should not return base64.
-    // We'll return a dummy URL for now to demonstrate the flow.
-    const mockUrl = `https://storage.hms-egypt.com/housekeeping/uploads/${Date.now()}.jpg`;
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    const filePath = path.join(uploadDir, fileName);
+    fs.writeFileSync(filePath, buffer);
 
-    return NextResponse.json({ url: mockUrl });
+    // Return the accessible public URL
+    const publicUrl = `/uploads/housekeeping/${fileName}`;
+
+    return NextResponse.json({ url: publicUrl });
   } catch (error) {
     console.error("[UPLOAD_ERROR]", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });

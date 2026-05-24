@@ -239,7 +239,7 @@ export default function HousekeepingDashboardClient({
   // Actions handlers
   const handleAssignToMe = async (taskId: string) => {
     if (!currentUserStaff) {
-      toast.error(isRtl ? "مطلوب سجل موظف نشط لإسناد المهمة." : "Active staff profile required to assign tasks.");
+      toast.error(t("staffProfileRequired"));
       return;
     }
 
@@ -247,9 +247,9 @@ export default function HousekeepingDashboardClient({
     try {
       const res = await assignHousekeepingTask(taskId, currentUserStaff.id);
       if (res.success) {
-        toast.success(isRtl ? "تم إسناد المهمة إليك بنجاح." : "Task successfully assigned to you.");
+        toast.success(t("assignSuccess"));
       } else {
-        toast.error(res.error || (isRtl ? "فشل إسناد المهمة." : "Failed to assign task."));
+        toast.error(res.error || t("assignError"));
       }
     } catch (e: any) {
       toast.error(e.message || "Error");
@@ -263,9 +263,9 @@ export default function HousekeepingDashboardClient({
     try {
       const res = await assignHousekeepingTask(taskId, staffId);
       if (res.success) {
-        toast.success(isRtl ? "تم إسناد المهمة بنجاح." : "Task assigned successfully.");
+        toast.success(t("assignSuccess"));
       } else {
-        toast.error(res.error || (isRtl ? "فشل إسناد المهمة." : "Failed to assign task."));
+        toast.error(res.error || t("assignError"));
       }
     } catch (e: any) {
       toast.error(e.message || "Error");
@@ -279,9 +279,9 @@ export default function HousekeepingDashboardClient({
     try {
       const res = await startHousekeepingTask(taskId);
       if (res.success) {
-        toast.success(isRtl ? "تم بدء العمل في مهمة التنظيف." : "Cleaning task started successfully.");
+        toast.success(t("startSuccess"));
       } else {
-        toast.error(res.error || (isRtl ? "فشل بدء المهمة." : "Failed to start task."));
+        toast.error(res.error || t("startError"));
       }
     } catch (e: any) {
       toast.error(e.message || "Error");
@@ -341,7 +341,7 @@ export default function HousekeepingDashboardClient({
 
       const res = await completeHousekeepingTask(activeTaskId, finalPhotoUrl);
       if (res.success) {
-        toast.success(isRtl ? "تم إكمال عملية التنظيف والتعقيم بنجاح." : "Cleaning and disinfection completed successfully.");
+        toast.success(t("completeSuccess"));
       } else {
         toast.error(res.error || t("completeError"));
       }

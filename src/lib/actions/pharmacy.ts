@@ -495,34 +495,35 @@ export async function dispensePrescription(
       const itemIds = items.map(i => i.prescriptionItemId);
       const medIds = items.map(i => i.medicationId);
 
-      // 3. Pre-fetch all needed data to avoid N+1 reads
+      // 3. Pre-fetch all needed data with FOR UPDATE locking to prevent concurrency race conditions
       const [existingRxItems, existingMeds] = await Promise.all([
-        tx.select().from(prescriptionItems).where(inArray(prescriptionItems.id, itemIds)),
-        tx.select().from(medications).where(and(eq(medications.hospitalId, hospitalId), inArray(medications.id, medIds)))
+        tx.select().from(prescriptionItems).where(inArray(prescriptionItems.id, itemIds)).for("update"),
+        tx.select().from(medications).where(and(eq(medications.hospitalId, hospitalId), inArray(medications.id, medIds))).for("update")
       ]);
 
-      // 4. Process each item in parallel (within tx)
-      await Promise.all(items.map(async (item) => {
-        if (item.quantity <= 0) return;
+      // 4. Process each item sequentially to maintain transaction integrity and avoid unpredictable driver behavior
+      for (const item of items) {
+        if (item.quantity <= 0) continue;
 
         const rxItem = existingRxItems.find(i => i.id === item.prescriptionItemId);
         if (!rxItem) throw new Error(`Prescription item not found: ${item.prescriptionItemId}`);
 
-        // 4b. Safety Check: Verify cumulative dispense count doesn't exceed prescribed quantity
-        // prescribedQuantity is calculated as durationDays * frequency (assuming standard frequency parsing)
-        // For simplicity here, we compare new cumulative total against a known limit if available, 
-        // or just ensure we don't over-dispense if the frontend sends a bad value.
-        // NOTE: In production, use a more robust frequency-to-unit conversion helper.
-        const newDispensedCount = rxItem.dispensedCount + item.quantity;
-        
-        // This is a basic guard; a full clinical implementation would calculate units from sig
-        if (rxItem.durationDays && rxItem.dosage) {
-           // Basic logic: dosage is often "1 tablet", frequency "BID" (2 times). 
-           // We'll trust the database dispensedCount logic but ensure no massive over-dispense.
-        }
-
         const med = existingMeds.find(m => m.id === item.medicationId);
         if (!med) throw new Error(`Medication not found: ${item.medicationId}`);
+        
+        // 4b. Safety Check: Verify cumulative dispense count doesn't exceed prescribed quantity
+        const newDispensedCount = rxItem.dispensedCount + item.quantity;
+        
+        // Basic Guard: DurationDays is mandatory in our schema. 
+        // In a real system, we'd multiply dosage (parsed) by frequency (parsed) by duration.
+        // For now, we'll implement a safety ceiling if duration is set.
+        if (rxItem.durationDays > 0) {
+            // Placeholder: Assume max 100 units per day safety limit if logic is complex
+            const dailyLimit = 100; 
+            if (newDispensedCount > (rxItem.durationDays * dailyLimit)) {
+               throw new Error(`Safety Error: Attempting to dispense more than the maximum clinical limit for ${med.nameEn}`);
+            }
+        }
         
         if (med.stockCount < item.quantity) {
           throw new Error(`Insufficient stock for ${med.nameEn} / ${med.nameAr}. Available: ${med.stockCount}, Requested: ${item.quantity}`);
@@ -547,7 +548,7 @@ export async function dispensePrescription(
           })
           .where(eq(medications.id, item.medicationId));
 
-        // Update prescription item (reusing newDispensedCount calculated earlier)
+        // Update prescription item
         await tx
           .update(prescriptionItems)
           .set({
@@ -555,7 +556,7 @@ export async function dispensePrescription(
             status: "dispensed",
           })
           .where(eq(prescriptionItems.id, item.prescriptionItemId));
-      }));
+      }
 
       // 5. Check if all items in prescription are completed/dispensed
       const allItems = await tx

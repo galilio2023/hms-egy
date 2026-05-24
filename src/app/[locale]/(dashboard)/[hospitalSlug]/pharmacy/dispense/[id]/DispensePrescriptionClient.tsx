@@ -117,6 +117,7 @@ export default function DispensePrescriptionClient({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const qrScannerRef = useRef<any>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Auto-focus barcode input
   useEffect(() => {
@@ -124,6 +125,19 @@ export default function DispensePrescriptionClient({
       barcodeInputRef.current.focus();
     }
   }, []);
+
+  // Initialize audio context on first interaction
+  const initAudio = () => {
+    if (typeof window !== "undefined" && !audioCtxRef.current) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+    }
+    if (audioCtxRef.current?.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
+  };
 
   // Age calculation
   const getAge = (birthDate: Date | string | null) => {
@@ -140,12 +154,11 @@ export default function DispensePrescriptionClient({
 
   // Sound feedback simulation using browser synthesiser
   const playBeep = (type: "success" | "error") => {
-    if (typeof window === "undefined") return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
+    initAudio();
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
 
-      const ctx = new AudioContextClass();
+    try {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
@@ -164,11 +177,6 @@ export default function DispensePrescriptionClient({
 
       osc.start();
       osc.stop(ctx.currentTime + duration);
-
-      // Properly close the context to free up hardware resources
-      osc.onended = () => {
-        ctx.close().catch(() => {});
-      };
     } catch (e) {
       console.warn("Audio Context error", e);
     }
