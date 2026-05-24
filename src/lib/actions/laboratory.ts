@@ -10,7 +10,6 @@ import { eq, and, sql, ilike, or, ne, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
-import { normalizeDecimal } from "@/lib/utils/egypt";
 
 /**
  * Searches for lab tests in the hospital's catalog.
@@ -292,8 +291,18 @@ export async function saveLabResults(data: SaveLabResultInput) {
           
           // Pattern: Optional relational op (<, >, <=, >=) followed by numeric
           // We extract the numeric part for range comparison
-          const numericPart = cleanValue.replace(/^[<>=]+/, "").trim();
-          const numericValue = normalizeDecimal(numericPart);
+          const relationalMatch = cleanValue.match(/^([<>=]+)?\s*(.+)$/);
+          const operator = relationalMatch?.[1];
+          const numericPart = relationalMatch?.[2] || "";
+          
+          // Normalize Eastern Arabic/Persian numerals
+          const normalizedPart = numericPart.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
+                                           .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString())
+                                           .replace(/[،,٫]/g, ".");
+
+          // Strict numeric check to avoid silent truncation (e.g. "10.5.2")
+          const isStrictlyNumeric = /^\d+(\.\d+)?$/.test(normalizedPart);
+          const numericValue = isStrictlyNumeric ? parseFloat(normalizedPart) : null;
 
           if (numericValue !== null) {
             const low = (specs.criticalLow !== null && specs.criticalLow !== undefined) 
@@ -304,9 +313,9 @@ export async function saveLabResults(data: SaveLabResultInput) {
               : null;
             
             // Handle relational logic if present (e.g. ">150")
-            if (cleanValue.startsWith(">")) {
+            if (operator === ">" || operator === ">=") {
                if (high !== null && numericValue >= high) finalIsCritical = true;
-            } else if (cleanValue.startsWith("<")) {
+            } else if (operator === "<" || operator === "<=") {
                if (low !== null && numericValue <= low) finalIsCritical = true;
             } else {
                // Standard range check

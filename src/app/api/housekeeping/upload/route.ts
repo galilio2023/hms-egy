@@ -2,17 +2,29 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
+import { uploadLimiter } from "@/lib/utils/ratelimit";
 
 /**
  * Temporary upload API for housekeeping photos.
- * In production, this should interface with S3/R2 via pre-signed URLs.
- * For now, it validates the base64 size, verifies magic bytes, and 
- * saves to local disk as a fallback to prevent silent data loss.
+ * 
+ * ⚠️ PRODUCTION ALERT:
+ * This implementation uses local filesystem writes which are ephemeral in serverless
+ * environments (Vercel/Neon) and present a DoS risk. 
+ * TODO: Replace with Cloudflare R2 or AWS S3 pre-signed URLs before production.
  */
 export async function POST(req: Request) {
   const session = await auth();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 0. Rate Limiting (DoS Mitigation)
+  if (uploadLimiter) {
+    const ip = req.headers.get("x-forwarded-for") || "anonymous";
+    const { success } = await uploadLimiter.limit(ip);
+    if (!success) {
+      return NextResponse.json({ error: "Too many upload requests. Please try again later." }, { status: 429 });
+    }
   }
 
   // Role-Based Authorization Check
