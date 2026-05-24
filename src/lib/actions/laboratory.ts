@@ -287,11 +287,15 @@ export async function saveLabResults(data: SaveLabResultInput) {
 
         // Automatic Server-Side Criticality Detection (Patient Safety Fix)
         if (specs && item.resultValue) {
-          // Strips leading non-numeric characters like <, >, = and whitespace before parsing
-          const numericString = item.resultValue.replace(/[^0-9.]/g, "");
-          const numericValue = parseFloat(numericString);
+          const cleanValue = item.resultValue.trim();
           
-          if (!isNaN(numericValue)) {
+          // Pattern: Optional relational op (<, >, <=, >=) followed by numeric
+          // We extract the numeric part for range comparison
+          const numericPart = cleanValue.replace(/^[<>=]+/, "").trim();
+          const isNumeric = /^\d+(\.\d+)?$/.test(numericPart);
+
+          if (isNumeric) {
+            const numericValue = parseFloat(numericPart);
             const low = (specs.criticalLow !== null && specs.criticalLow !== undefined) 
               ? parseFloat(specs.criticalLow) 
               : null;
@@ -299,12 +303,20 @@ export async function saveLabResults(data: SaveLabResultInput) {
               ? parseFloat(specs.criticalHigh) 
               : null;
             
-            if ((low !== null && numericValue <= low) || (high !== null && numericValue >= high)) {
-              finalIsCritical = true;
+            // Handle relational logic if present (e.g. ">150")
+            if (cleanValue.startsWith(">")) {
+               if (high !== null && numericValue >= high) finalIsCritical = true;
+            } else if (cleanValue.startsWith("<")) {
+               if (low !== null && numericValue <= low) finalIsCritical = true;
+            } else {
+               // Standard range check
+               if ((low !== null && numericValue <= low) || (high !== null && numericValue >= high)) {
+                 finalIsCritical = true;
+               }
             }
           } else {
             // Qualitative Criticality Detection (e.g. "Positive", "Detected", "Reactive")
-            const qualitativeLower = item.resultValue.toLowerCase().trim();
+            const qualitativeLower = cleanValue.toLowerCase();
             const criticalKeywords = ["positive", "reactive", "detected", "إيجابي", "نشط", "ايجابي"];
             if (criticalKeywords.some(keyword => qualitativeLower.includes(keyword))) {
               finalIsCritical = true;

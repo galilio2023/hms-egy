@@ -518,15 +518,9 @@ export async function dispensePrescription(
         // 4b. Safety Check: Verify cumulative dispense count doesn't exceed prescribed quantity
         const newDispensedCount = rxItem.dispensedCount + item.quantity;
         
-        // Basic Guard: DurationDays is mandatory in our schema. 
-        // In a real system, we'd multiply dosage (parsed) by frequency (parsed) by duration.
-        // For now, we'll implement a safety ceiling if duration is set.
-        if (rxItem.durationDays > 0) {
-            // Placeholder: Assume max 100 units per day safety limit if logic is complex
-            const dailyLimit = 100; 
-            if (newDispensedCount > (rxItem.durationDays * dailyLimit)) {
-               throw new Error(`Safety Error: Attempting to dispense more than the maximum clinical limit for medication`);
-            }
+        // Enforce the actual prescribedQuantity limit if it's set in the database
+        if (rxItem.prescribedQuantity !== null && newDispensedCount > rxItem.prescribedQuantity) {
+           throw new Error(`Safety Error: Attempting to dispense ${newDispensedCount} units which exceeds the prescribed limit of ${rxItem.prescribedQuantity} units.`);
         }
         
         if (currentStock < item.quantity) {
