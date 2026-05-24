@@ -63,9 +63,8 @@ export default async function HousekeepingPage({
   // Query database in tenant context
   const dashboardData = await withTenantContext(hospital.id, async (tx) => {
     // Calculate Cairo day boundaries in UTC for a sargable query using application logic
-    const cairoTime = toZonedTime(new Date(), "Africa/Cairo");
-    const startOfCairoDayUtc = startOfDay(cairoTime);
-    const endOfCairoDayUtc = endOfDay(cairoTime);
+    const startOfCairoDayUtc = startOfDay(new Date(), { timeZone: "Africa/Cairo" });
+    const endOfCairoDayUtc = endOfDay(new Date(), { timeZone: "Africa/Cairo" });
 
     const [
       roomsList,

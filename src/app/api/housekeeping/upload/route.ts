@@ -15,6 +15,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Role-Based Authorization Check
+  const ALLOWED_UPLOAD_ROLES = ["SUPER_ADMIN", "ADMIN", "HOUSEKEEPING", "NURSE", "OR_NURSE"];
+  if (!ALLOWED_UPLOAD_ROLES.includes(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden: Insufficient permissions to upload photos." }, { status: 403 });
+  }
+
   try {
     // 1. Restrict body payload size (e.g. 5MB) using content-length header
     const contentLength = req.headers.get("content-length");
