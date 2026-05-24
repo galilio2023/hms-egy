@@ -136,7 +136,7 @@ export function PrintLabReport({
               <td className="border border-black/20 p-3 text-center text-slate-600">
                 {item.unit || "—"}
               </td>
-              <td className="border border-black/20 p-3 text-center text-slate-500 font-mono italic">
+              <td className="border border-black/20 p-3 text-center text-slate-500 font-mono italic" dir="ltr">
                 {item.normalRange || "—"}
               </td>
               <td className="border border-black/20 p-3 text-center font-black">

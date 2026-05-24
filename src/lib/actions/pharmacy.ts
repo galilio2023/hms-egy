@@ -255,11 +255,11 @@ export async function adjustStock(payload: {
         performedBy: performer?.id || null,
       });
 
-      // 4. Update medication stock count
+      // 4. Update medication stock count ATOMICALLY using SQL expressions to prevent lost updates
       await tx
         .update(medications)
         .set({ 
-          stockCount: med.stockCount + payload.quantity,
+          stockCount: sql`${medications.stockCount} + ${payload.quantity}`,
           updatedAt: new Date()
         })
         .where(eq(medications.id, payload.medicationId));

@@ -249,15 +249,19 @@ export default function DispensePrescriptionClient({
   // Initialize and close camera scanner
   useEffect(() => {
     let isMounted = true;
+    let html5QrCode: any = null;
 
-    if (isCameraOpen && Html5Qrcode) {
+    if (isCameraOpen) {
       const startScanner = async () => {
         try {
+          // Dynamic import inside useEffect to avoid race conditions with component mount
+          const { Html5Qrcode: Html5QrcodeClass } = await import("html5-qrcode");
+          
           // Add a short delay to ensure the DOM element #reader is mounted
           await new Promise((resolve) => setTimeout(resolve, 300));
           if (!isMounted) return;
           
-          const html5QrCode = new Html5Qrcode("reader");
+          html5QrCode = new Html5QrcodeClass("reader");
           qrScannerRef.current = html5QrCode;
 
           await html5QrCode.start(
@@ -293,8 +297,8 @@ export default function DispensePrescriptionClient({
 
     return () => {
       isMounted = false;
-      if (qrScannerRef.current && qrScannerRef.current.isScanning) {
-        qrScannerRef.current
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode
           .stop()
           .then(() => {
             qrScannerRef.current = null;
@@ -302,7 +306,7 @@ export default function DispensePrescriptionClient({
           .catch((err: any) => console.error("Scanner stop error:", err));
       }
     };
-  }, [isCameraOpen]);
+  }, [isCameraOpen, isRtl]);
 
   // Adjust dispensing quantities
   const updateQty = (id: string, val: number) => {

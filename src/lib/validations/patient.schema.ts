@@ -129,7 +129,7 @@ export const patientSchema = z.object({
         // For HMS, we'll enforce integrity for those born locally.
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Birth governorate in National ID does not match the selected governorate.",
+          message: `National ID Error: The birth governorate encoded in your ID (${parsed.governorate.en}) does not match the selected governorate. Please select your governorate of birth.`,
           path: ["governorate"],
         });
       }
