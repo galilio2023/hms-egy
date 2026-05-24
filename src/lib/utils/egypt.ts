@@ -103,7 +103,7 @@ export function validateNationalId(nid: string): boolean {
 /**
  * Parses birth date, gender, and governorate from Egyptian National ID.
  */
-export function parseNationalId(nid: string) {
+export function parseEgyptianNationalId(nid: string) {
   if (!validateNationalId(nid)) return null;
 
   const centuryCode = parseInt(nid[0]);
@@ -121,6 +121,11 @@ export function parseNationalId(nid: string) {
 
   return { dob, gender, governorate, century };
 }
+
+/**
+ * @deprecated Use parseEgyptianNationalId instead
+ */
+export const parseNationalId = parseEgyptianNationalId;
 
 /**
  * Formats a unique patient number.
@@ -337,6 +342,17 @@ export function normalizeArabic(text: string): string {
     .replace(/ة/g, "ه")
     // Normalize Yeh
     .replace(/ي/g, "ى");
+}
+
+/**
+ * Normalizes Eastern Arabic (٠-٩) and Persian (۰-۹) numerals to standard Western digits (0-9).
+ * Use this for IDs, phone numbers, and other non-decimal numeric strings.
+ */
+export function latinizeNumerals(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
+    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵٦٧٨٩".indexOf(d).toString());
 }
 
 /**

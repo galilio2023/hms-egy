@@ -259,14 +259,20 @@ export async function saveLabResults(data: SaveLabResultInput) {
       if (!recorder) throw new Error("Recorder staff profile not found");
 
       // 2. Fetch order metadata once to avoid N+1 queries for critical alerts
+      // Also strictly validates that the order belongs to the current hospital context (Multi-Tenancy Hardening)
       const orderMeta = await tx
         .select({ patientId: labOrders.patientId, doctorId: labOrders.doctorId })
         .from(labOrders)
-        .where(and(eq(labOrders.id, data.orderId), eq(labOrders.hospitalId, hospitalId)))
+        .where(and(
+          eq(labOrders.id, data.orderId), 
+          eq(labOrders.hospitalId, hospitalId)
+        ))
         .limit(1)
         .then((res) => res[0]);
 
-      if (!orderMeta) throw new Error("Lab order not found");
+      if (!orderMeta) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Lab order not found or access denied.");
+      }
 
       // 3. Pre-fetch lab test specifications for automatic criticality detection
       const allOriginalItems = await tx

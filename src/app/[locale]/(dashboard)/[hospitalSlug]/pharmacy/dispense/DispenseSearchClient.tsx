@@ -63,8 +63,8 @@ export default function DispenseSearchClient({
     e.preventDefault();
     if (!barcodeInput.trim()) return;
 
-    // Check if the barcode input is a valid UUID (which matches our prescription ID)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    // Check if the barcode input is a valid UUID (version agnostic to support v7)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(barcodeInput.trim())) {
       toast.success(isRtl ? "تم التعرف على رمز الوصفة" : "Prescription code recognized");
       router.push(`/${hospitalSlug}/pharmacy/dispense/${barcodeInput.trim()}`);
