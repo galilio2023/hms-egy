@@ -62,6 +62,7 @@ export const prescriptionItems = pgTable("prescription_items", {
   frequency: text("frequency").notNull(), // e.g. "three times daily"
   durationDays: integer("duration_days").notNull(),
   instructions: text("instructions"),
+  prescribedQuantity: integer("prescribed_quantity"), // Structured total units for dispensing ceilings
   dispensedCount: integer("dispensed_count").default(0).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, dispensed, partial, cancelled
 }, (table) => {

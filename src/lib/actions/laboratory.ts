@@ -292,8 +292,12 @@ export async function saveLabResults(data: SaveLabResultInput) {
           const numericValue = parseFloat(numericString);
           
           if (!isNaN(numericValue)) {
-            const low = specs.criticalLow ? parseFloat(specs.criticalLow) : null;
-            const high = specs.criticalHigh ? parseFloat(specs.criticalHigh) : null;
+            const low = (specs.criticalLow !== null && specs.criticalLow !== undefined) 
+              ? parseFloat(specs.criticalLow) 
+              : null;
+            const high = (specs.criticalHigh !== null && specs.criticalHigh !== undefined) 
+              ? parseFloat(specs.criticalHigh) 
+              : null;
             
             if ((low !== null && numericValue <= low) || (high !== null && numericValue >= high)) {
               finalIsCritical = true;

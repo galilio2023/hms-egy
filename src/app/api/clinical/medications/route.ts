@@ -24,21 +24,31 @@ export async function GET(req: NextRequest) {
 
   try {
     const results = await withTenantContext(hospitalId, async (tx) => {
-      // NOTE: For production scale, use GIN indexes with pg_trgm extension to optimize these ILIKE queries:
-      // CREATE EXTENSION IF NOT EXISTS pg_trgm;
-      // CREATE INDEX idx_meds_trgm_en ON medications USING gin (name_en gin_trgm_ops);
+      const isNumericBarcode = /^\d+$/.test(query);
+
+      const conditions = [
+        eq(medications.hospitalId, hospitalId),
+        eq(medications.isActive, true),
+      ];
+
+      if (isNumericBarcode && query.length >= 8) {
+        return await tx
+          .select()
+          .from(medications)
+          .where(and(...conditions, eq(medications.barcode, query)))
+          .limit(20);
+      }
+
       return await tx
         .select()
         .from(medications)
         .where(
           and(
-            eq(medications.hospitalId, hospitalId),
-            eq(medications.isActive, true),
+            ...conditions,
             or(
               ilike(medications.nameEn, `%${query}%`),
               ilike(medications.nameAr, `%${query}%`),
-              ilike(medications.genericName, `%${query}%`),
-              ilike(medications.barcode, `%${query}%`)
+              ilike(medications.genericName, `%${query}%`)
             )
           )
         )
