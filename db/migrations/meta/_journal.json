@@ -106,6 +106,13 @@
       "when": 1779620420638,
       "tag": "0014_tearful_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1779624961420,
+      "tag": "0015_oval_gideon",
+      "breakpoints": true
     }
   ]
 }

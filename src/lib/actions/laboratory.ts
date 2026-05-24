@@ -6,7 +6,7 @@ import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "@db/sch
 import { staff, hospitals } from "@db/schema/core";
 import { admissions } from "@db/schema/clinical";
 import { patients } from "@db/schema/patients";
-import { eq, and, sql, ilike, or, ne } from "drizzle-orm";
+import { eq, and, sql, ilike, or, ne, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
@@ -268,13 +268,41 @@ export async function saveLabResults(data: SaveLabResultInput) {
 
       if (!orderMeta) throw new Error("Lab order not found");
 
-      // 3. Update all items and trigger alerts sequentially to maintain transaction stability
+      // 3. Pre-fetch lab test specifications for automatic criticality detection
+      const allOriginalItems = await tx
+        .select({
+          itemId: labOrderItems.id,
+          testId: labOrderItems.labTestId,
+          criticalLow: labTests.criticalLow,
+          criticalHigh: labTests.criticalHigh,
+        })
+        .from(labOrderItems)
+        .innerJoin(labTests, eq(labOrderItems.labTestId, labTests.id))
+        .where(eq(labOrderItems.labOrderId, data.orderId));
+
+      // 4. Update all items and trigger alerts sequentially
       for (const item of data.items) {
+        const specs = allOriginalItems.find(oi => oi.itemId === item.itemId);
+        let finalIsCritical = item.isCritical; // Manual override from UI
+
+        // Automatic Server-Side Criticality Detection (Patient Safety Fix)
+        if (specs && item.resultValue) {
+          const numericValue = parseFloat(item.resultValue);
+          if (!isNaN(numericValue)) {
+            const low = specs.criticalLow ? parseFloat(specs.criticalLow) : null;
+            const high = specs.criticalHigh ? parseFloat(specs.criticalHigh) : null;
+            
+            if ((low !== null && numericValue <= low) || (high !== null && numericValue >= high)) {
+              finalIsCritical = true;
+            }
+          }
+        }
+
         await tx
           .update(labOrderItems)
           .set({
             resultValue: item.resultValue,
-            isCritical: item.isCritical,
+            isCritical: finalIsCritical,
             status: "completed",
             resultRecordedBy: recorder.id,
             resultRecordedAt: new Date(),
@@ -282,8 +310,8 @@ export async function saveLabResults(data: SaveLabResultInput) {
           })
           .where(and(eq(labOrderItems.id, item.itemId), eq(labOrderItems.hospitalId, hospitalId)));
 
-        // 4. Trigger Critical Alert if item is critical
-        if (item.isCritical) {
+        // 5. Trigger Critical Alert if item is critical
+        if (finalIsCritical) {
           await tx.insert(criticalValueAlerts).values({
             hospitalId,
             labOrderItemId: item.itemId,
@@ -298,7 +326,7 @@ export async function saveLabResults(data: SaveLabResultInput) {
         }
       }
 
-      // 5. Check if all items are completed to mark order as completed
+      // 6. Check if all items are completed to mark order as completed
       const remainingItems = await tx
         .select()
         .from(labOrderItems)
@@ -373,7 +401,13 @@ export async function acknowledgeCriticalAlert(alertId: string) {
           acknowledgedByDoctor: true,
           acknowledgedAt: new Date(),
         })
-        .where(and(eq(criticalValueAlerts.id, alertId), eq(criticalValueAlerts.hospitalId, hospitalId)));
+        .where(
+          and(
+            eq(criticalValueAlerts.id, alertId),
+            eq(criticalValueAlerts.notifiedDoctorId, doctor.id), // Enforce ownership
+            eq(criticalValueAlerts.hospitalId, hospitalId)
+          )
+        );
 
       // Fetch hospital slug for revalidation
       const [hospital] = await tx
