@@ -9,7 +9,7 @@ import { staff } from "@db/schema/core";
 import { housekeepingTasks } from "@db/schema/housekeeping";
 import { eq, and, or, inArray, desc, sql, gte, lt } from "drizzle-orm";
 import HousekeepingDashboardClient from "./HousekeepingDashboardClient";
-import { toZonedTime } from "date-fns-tz";
+import { toZonedTime, zonedTimeToUtc } from "date-fns-tz";
 import { startOfDay, endOfDay } from "date-fns";
 
 export async function generateMetadata({

@@ -126,6 +126,7 @@ export const patientSchema = z.object({
         // NOTE: The NID encodes the governorate of BIRTH. Patients often reside elsewhere.
         // We will no longer block registration based on this mismatch to improve UX,
         // but it remains useful for clinical record matching and audit.
+        // We ensure 'parsed' is defined before this block (it is defined at the start of hasNid block).
       }
     }
   }

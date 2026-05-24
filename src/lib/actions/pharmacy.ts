@@ -500,10 +500,16 @@ export async function dispensePrescription(
       const itemIds = items.map(i => i.prescriptionItemId);
       const medIds = items.map(i => i.medicationId);
 
+      if (itemIds.length === 0 || medIds.length === 0) return { success: true };
+
       // 3. Pre-fetch all needed data with FOR UPDATE locking to prevent concurrency race conditions
+      // Sort IDs to guarantee consistent lock ordering and eliminate deadlocks
+      const sortedItemIds = [...new Set(itemIds)].sort();
+      const sortedMedIds = [...new Set(medIds)].sort();
+
       const [existingRxItems, existingMeds] = await Promise.all([
-        tx.select().from(prescriptionItems).where(inArray(prescriptionItems.id, itemIds)).for("update"),
-        tx.select().from(medications).where(and(eq(medications.hospitalId, hospitalId), inArray(medications.id, medIds))).for("update")
+        tx.select().from(prescriptionItems).where(inArray(prescriptionItems.id, sortedItemIds)).for("update"),
+        tx.select().from(medications).where(and(eq(medications.hospitalId, hospitalId), inArray(medications.id, sortedMedIds))).for("update")
       ]);
 
       // Track running stock levels in memory to handle duplicate medication entries correctly

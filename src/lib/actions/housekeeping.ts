@@ -312,11 +312,16 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
 
   // Security: Sanitize photoUrl to prevent Stored XSS
   if (photoUrl) {
-    const isRelative = photoUrl.startsWith("/uploads/housekeeping/");
-    const isAllowedCDN = !!(process.env.NEXT_PUBLIC_CDN_URL && photoUrl.startsWith(process.env.NEXT_PUBLIC_CDN_URL));
-    
-    if (!isRelative && !isAllowedCDN) {
-      return { success: false, error: "Security Error: Untrusted image source URL detected." };
+    try {
+      const isRelative = photoUrl.startsWith("/uploads/housekeeping/");
+      const cdnUrl = process.env.NEXT_PUBLIC_CDN_URL;
+      const isAllowedCDN = !!(cdnUrl && photoUrl.startsWith(cdnUrl));
+      
+      if (!isRelative && !isAllowedCDN) {
+        return { success: false, error: "Security Error: Untrusted image source URL detected." };
+      }
+    } catch (err) {
+      return { success: false, error: "Security Error: Invalid image URL format." };
     }
   }
 
