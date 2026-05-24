@@ -295,6 +295,13 @@ export async function saveLabResults(data: SaveLabResultInput) {
             if ((low !== null && numericValue <= low) || (high !== null && numericValue >= high)) {
               finalIsCritical = true;
             }
+          } else {
+            // Qualitative Criticality Detection (e.g. "Positive", "Detected", "Reactive")
+            const qualitativeLower = item.resultValue.toLowerCase().trim();
+            const criticalKeywords = ["positive", "reactive", "detected", "إيجابي", "نشط", "ايجابي"];
+            if (criticalKeywords.some(keyword => qualitativeLower.includes(keyword))) {
+              finalIsCritical = true;
+            }
           }
         }
 

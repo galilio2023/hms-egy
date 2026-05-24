@@ -27,11 +27,10 @@ export const medications = pgTable("medications", {
     barcodeIdx: index("med_barcode_idx").on(table.barcode),
     // Performance: Non-negative stock constraint
     stockCountNonNegative: check("stock_count_non_negative", sql`stock_count >= 0`),
-    // NOTE: For production scale, use GIN indexes with pg_trgm for autocomplete:
-    // CREATE EXTENSION IF NOT EXISTS pg_trgm;
-    // CREATE INDEX idx_meds_trgm_en ON medications USING gin (name_en gin_trgm_ops);
-    // CREATE INDEX idx_meds_trgm_ar ON medications USING gin (name_ar gin_trgm_ops);
-    // CREATE INDEX idx_meds_trgm_generic ON medications USING gin (generic_name gin_trgm_ops);
+    // Performance: GIN Trigram indexes for high-performance Arabic/English search
+    trgmEnIdx: index("idx_meds_trgm_en").using("gin", sql`${table.nameEn} gin_trgm_ops`),
+    trgmArIdx: index("idx_meds_trgm_ar").using("gin", sql`${table.nameAr} gin_trgm_ops`),
+    trgmGenericIdx: index("idx_meds_trgm_generic").using("gin", sql`${table.genericName} gin_trgm_ops`),
   };
 }).enableRLS();
 

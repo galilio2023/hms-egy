@@ -120,10 +120,13 @@ export const patientSchema = z.object({
 
       // Validate Governorate Match (Cross-check embedded ID governorate code)
       const inputGovCode = getGovernorateCode(data.governorate);
-      if (parsed.governorate && parsed.governorate.code !== inputGovCode) {
+      const isForeignBorn = data.nationalId!.substring(7, 9) === "88";
+
+      if (!isForeignBorn && parsed.governorate && parsed.governorate.code !== inputGovCode) {
         // NOTE: While people move, the NID encodes the governorate of BIRTH.
-        // We'll add an issue only if it's clearly a mismatch in a scenario where it's required to match,
-        // or just keep it as a clinical warning. For HMS, we'll enforce integrity.
+        // For citizens born in Egypt, we enforce a match with their provided governorate
+        // if it's treated as a registration requirement, otherwise it's just a warning.
+        // For HMS, we'll enforce integrity for those born locally.
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Birth governorate in National ID does not match the selected governorate.",
