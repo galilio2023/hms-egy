@@ -122,6 +122,11 @@ export async function createPrescription(payload: {
 
       if (!patient) throw new Error("Patient not found");
 
+      // Verify all medications belong to this hospital context to prevent DDI bypass
+      if (medDetails.length !== payload.items.length) {
+        throw new Error("Safety Error: One or more medications could not be validated in the current hospital catalog.");
+      }
+
       const ddiCheck = await checkDrugInteractions(
         medDetails.map(m => ({ name: m.name, genericName: m.genericName })),
         patient.allergies || [],

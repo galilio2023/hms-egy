@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { medications } from "@db/schema/pharmacy";
-import { eq, and, or, ilike } from "drizzle-orm";
+import { eq, and, or, ilike, sql } from "drizzle-orm";
 import { withTenantContext } from "@/lib/db/tenant";
 
 export async function GET(req: NextRequest) {

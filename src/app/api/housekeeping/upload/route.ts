@@ -54,7 +54,8 @@ export async function POST(req: Request) {
 
     // 3. DEVELOPMENT FALLBACK: Save to local public/uploads directory
     // This ensures that even without S3, the files exist on disk for audit/review.
-    const fileName = `hk-${Date.now()}.${isJpeg ? "jpg" : isPng ? "png" : "webp"}`;
+    const fileId = crypto.randomUUID();
+    const fileName = `hk-${fileId}.${isJpeg ? "jpg" : isPng ? "png" : "webp"}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads", "housekeeping");
     
     if (!fs.existsSync(uploadDir)) {
