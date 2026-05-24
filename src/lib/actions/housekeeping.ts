@@ -310,6 +310,16 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
     return { success: false, error: "Security Error: Raw image data is not allowed. Please use the designated upload service to obtain an HTTPS URL." };
   }
 
+  // Security: Sanitize photoUrl to prevent Stored XSS
+  if (photoUrl) {
+    const isRelative = photoUrl.startsWith("/uploads/housekeeping/");
+    const isAllowedCDN = !!(process.env.NEXT_PUBLIC_CDN_URL && photoUrl.startsWith(process.env.NEXT_PUBLIC_CDN_URL));
+    
+    if (!isRelative && !isAllowedCDN) {
+      return { success: false, error: "Security Error: Untrusted image source URL detected." };
+    }
+  }
+
   try {
     const result = await withTenantContext(hospitalId, async (tx) => {
       // 1. Resolve task to get bedId

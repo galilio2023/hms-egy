@@ -117,6 +117,19 @@ export const patientSchema = z.object({
           path: ["dob"],
         });
       }
+
+      // Validate Governorate Match (Cross-check embedded ID governorate code)
+      const inputGovCode = getGovernorateCode(data.governorate);
+      if (parsed.governorate && parsed.governorate.code !== inputGovCode) {
+        // NOTE: While people move, the NID encodes the governorate of BIRTH.
+        // We'll add an issue only if it's clearly a mismatch in a scenario where it's required to match,
+        // or just keep it as a clinical warning. For HMS, we'll enforce integrity.
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Birth governorate in National ID does not match the selected governorate.",
+          path: ["governorate"],
+        });
+      }
     }
   }
 });
