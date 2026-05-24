@@ -160,16 +160,25 @@ export async function createPrescription(payload: {
       if (!newRx) throw new Error("Failed to create prescription");
 
       // 3. Create prescription items
-      const itemsToInsert = payload.items.map(item => ({
-        hospitalId,
-        prescriptionId: newRx.id,
-        medicationId: item.medicationId,
-        dosage: item.dosage,
-        frequency: item.frequency,
-        durationDays: item.durationDays,
-        instructions: item.instructions,
-        status: "pending",
-      }));
+      const itemsToInsert = payload.items.map(item => {
+        // Heuristic calculation: Extract the first digit from frequency (e.g. "3 times daily") 
+        // and multiply by duration. Defaults to 1 if no digit is found.
+        const freqMatch = item.frequency.match(/\d+/);
+        const freqValue = freqMatch ? parseInt(freqMatch[0]) : 1;
+        const calculatedQty = freqValue * item.durationDays;
+
+        return {
+          hospitalId,
+          prescriptionId: newRx.id,
+          medicationId: item.medicationId,
+          dosage: item.dosage,
+          frequency: item.frequency,
+          durationDays: item.durationDays,
+          prescribedQuantity: calculatedQty,
+          instructions: item.instructions,
+          status: "pending",
+        };
+      });
 
       await tx.insert(prescriptionItems).values(itemsToInsert);
 

@@ -10,6 +10,7 @@ import { eq, and, sql, ilike, or, ne, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
+import { normalizeDecimal } from "@/lib/utils/egypt";
 
 /**
  * Searches for lab tests in the hospital's catalog.
@@ -292,10 +293,9 @@ export async function saveLabResults(data: SaveLabResultInput) {
           // Pattern: Optional relational op (<, >, <=, >=) followed by numeric
           // We extract the numeric part for range comparison
           const numericPart = cleanValue.replace(/^[<>=]+/, "").trim();
-          const isNumeric = /^\d+(\.\d+)?$/.test(numericPart);
+          const numericValue = normalizeDecimal(numericPart);
 
-          if (isNumeric) {
-            const numericValue = parseFloat(numericPart);
+          if (numericValue !== null) {
             const low = (specs.criticalLow !== null && specs.criticalLow !== undefined) 
               ? parseFloat(specs.criticalLow) 
               : null;

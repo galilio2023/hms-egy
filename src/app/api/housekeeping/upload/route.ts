@@ -46,7 +46,8 @@ export async function POST(req: Request) {
     // Check for real image headers (Magic Bytes)
     const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
     const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
-    const isWebp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+    const isWebp = buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 && // "RIFF"
+                   buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;  // "WEBP"
 
     if (!isJpeg && !isPng && !isWebp) {
       return NextResponse.json({ error: "Security Error: Unsupported or malicious file type detected" }, { status: 400 });

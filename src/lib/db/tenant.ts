@@ -37,6 +37,24 @@ export async function withTenantContext<T>(
 }
 
 /**
+ * Executes a callback within a PostgreSQL transaction with auth lookup enabled.
+ * ONLY for authentication-phase queries before a hospital context is established.
+ * 
+ * Scopes the database session using `set_config('app.auth_lookup_active', 'true', true)`.
+ * 
+ * @param callback A function returning a promise that accepts the transaction client.
+ */
+export async function withAuthContext<T>(
+  callback: (tx: DbTransaction) => Promise<T>
+): Promise<T> {
+  return await db.transaction(async (tx) => {
+    // Set the app.auth_lookup_active local session variable
+    await tx.execute(sql`SELECT set_config('app.auth_lookup_active', 'true', true)`);
+    return await callback(tx);
+  });
+}
+
+/**
  * Executes a callback within a PostgreSQL transaction with RLS bypassed.
  * ONLY for background workflows, super-admin overrides, and system-level batch scripts.
  * 
