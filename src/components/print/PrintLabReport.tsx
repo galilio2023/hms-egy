@@ -128,7 +128,7 @@ export function PrintLabReport({
                   {item.loincCode && <span className="text-[9px] font-mono text-slate-500">{item.loincCode}</span>}
                 </div>
               </td>
-              <td className="border border-black/20 p-3 text-center text-lg">
+              <td className="border border-black/20 p-3 text-center text-lg" dir="ltr">
                 <span className={cn(item.isCritical && "text-rose-600 underline underline-offset-4")}>
                   {item.resultValue || "PENDING"}
                 </span>

@@ -118,20 +118,14 @@ export const patientSchema = z.object({
         });
       }
 
-      // Validate Governorate Match (Cross-check embedded ID governorate code)
+      // Cross-check embedded ID governorate code (Clinical Note)
       const inputGovCode = getGovernorateCode(data.governorate);
       const isForeignBorn = data.nationalId!.substring(7, 9) === "88";
 
       if (!isForeignBorn && parsed.governorate && parsed.governorate.code !== inputGovCode) {
-        // NOTE: While people move, the NID encodes the governorate of BIRTH.
-        // For citizens born in Egypt, we enforce a match with their provided governorate
-        // if it's treated as a registration requirement, otherwise it's just a warning.
-        // For HMS, we'll enforce integrity for those born locally.
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `National ID Error: The birth governorate encoded in your ID (${parsed.governorate.en}) does not match the selected governorate. Please select your governorate of birth.`,
-          path: ["governorate"],
-        });
+        // NOTE: The NID encodes the governorate of BIRTH. Patients often reside elsewhere.
+        // We will no longer block registration based on this mismatch to improve UX,
+        // but it remains useful for clinical record matching and audit.
       }
     }
   }

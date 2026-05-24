@@ -287,7 +287,10 @@ export async function saveLabResults(data: SaveLabResultInput) {
 
         // Automatic Server-Side Criticality Detection (Patient Safety Fix)
         if (specs && item.resultValue) {
-          const numericValue = parseFloat(item.resultValue);
+          // Strips leading non-numeric characters like <, >, = and whitespace before parsing
+          const numericString = item.resultValue.replace(/[^0-9.]/g, "");
+          const numericValue = parseFloat(numericString);
+          
           if (!isNaN(numericValue)) {
             const low = specs.criticalLow ? parseFloat(specs.criticalLow) : null;
             const high = specs.criticalHigh ? parseFloat(specs.criticalHigh) : null;

@@ -501,6 +501,10 @@ export async function dispensePrescription(
         tx.select().from(medications).where(and(eq(medications.hospitalId, hospitalId), inArray(medications.id, medIds))).for("update")
       ]);
 
+      // Track running stock levels in memory to handle duplicate medication entries correctly
+      const runningStock: Record<string, number> = {};
+      existingMeds.forEach(m => { runningStock[m.id] = m.stockCount; });
+
       // 4. Process each item sequentially to maintain transaction integrity and avoid unpredictable driver behavior
       for (const item of items) {
         if (item.quantity <= 0) continue;
@@ -508,8 +512,8 @@ export async function dispensePrescription(
         const rxItem = existingRxItems.find(i => i.id === item.prescriptionItemId);
         if (!rxItem) throw new Error(`Prescription item not found: ${item.prescriptionItemId}`);
 
-        const med = existingMeds.find(m => m.id === item.medicationId);
-        if (!med) throw new Error(`Medication not found: ${item.medicationId}`);
+        const currentStock = runningStock[item.medicationId];
+        if (typeof currentStock === "undefined") throw new Error(`Medication not found: ${item.medicationId}`);
         
         // 4b. Safety Check: Verify cumulative dispense count doesn't exceed prescribed quantity
         const newDispensedCount = rxItem.dispensedCount + item.quantity;
@@ -521,13 +525,17 @@ export async function dispensePrescription(
             // Placeholder: Assume max 100 units per day safety limit if logic is complex
             const dailyLimit = 100; 
             if (newDispensedCount > (rxItem.durationDays * dailyLimit)) {
-               throw new Error(`Safety Error: Attempting to dispense more than the maximum clinical limit for ${med.nameEn}`);
+               throw new Error(`Safety Error: Attempting to dispense more than the maximum clinical limit for medication`);
             }
         }
         
-        if (med.stockCount < item.quantity) {
-          throw new Error(`Insufficient stock for ${med.nameEn} / ${med.nameAr}. Available: ${med.stockCount}, Requested: ${item.quantity}`);
+        if (currentStock < item.quantity) {
+          const med = existingMeds.find(m => m.id === item.medicationId);
+          throw new Error(`Insufficient stock for ${med?.nameEn || "medication"}. Available: ${currentStock}, Requested: ${item.quantity}`);
         }
+
+        // Update running stock
+        runningStock[item.medicationId] -= item.quantity;
 
         // Update stock transactions
         await tx.insert(stockTransactions).values({
