@@ -46,12 +46,10 @@ export async function GET(req: NextRequest) {
           and(
             ...conditions,
             or(
-              ilike(medications.nameEn, `%${query}%`),
-              ilike(medications.nameAr, `%${query}%`),
-              ilike(medications.genericName, `%${query}%`),
-              // High-performance Trigram Similarity Search
+              // High-performance Trigram Similarity Search (Index-friendly)
               sql`${medications.nameEn} % ${query}`,
               sql`${medications.nameAr} % ${query}`,
+              sql`${medications.genericName} % ${query}`,
               sql`similarity(${medications.nameEn}, ${query}) > 0.3`,
               sql`similarity(${medications.nameAr}, ${query}) > 0.3`
             )

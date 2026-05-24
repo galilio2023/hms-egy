@@ -209,13 +209,13 @@ export async function searchMedications(query: string) {
             eq(medications.hospitalId, hospitalId),
             eq(medications.isActive, true),
             or(
-              ilike(medications.nameEn, `%${query}%`),
-              ilike(medications.nameAr, `%${query}%`),
-              ilike(medications.genericName, `%${query}%`),
-              ilike(medications.barcode || "", `%${query}%`),
-              // High-performance Trigram Similarity Search
+              // High-performance Trigram Similarity Search (Index-friendly)
+              sql`${medications.nameEn} % ${query}`,
+              sql`${medications.nameAr} % ${query}`,
+              sql`${medications.genericName} % ${query}`,
               sql`similarity(${medications.nameEn}, ${query}) > 0.3`,
-              sql`similarity(${medications.nameAr}, ${query}) > 0.3`
+              sql`similarity(${medications.nameAr}, ${query}) > 0.3`,
+              ilike(medications.barcode || "", `%${query}%`)
             )
           )
         )

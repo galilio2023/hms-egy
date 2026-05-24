@@ -311,21 +311,25 @@ export async function saveLabResults(data: SaveLabResultInput) {
           const numericValue = isStrictlyNumeric ? parseFloat(normalizedPart) : null;
 
           if (numericValue !== null) {
-            const low = (specs.criticalLow !== null && specs.criticalLow !== undefined) 
-              ? parseFloat(specs.criticalLow) 
+            // Safety: Use integer-based comparison (x1000) to avoid floating-point precision issues
+            // standard numeric(10,3) fields are safe at this scale.
+            const scaledVal = Math.round(numericValue * 1000);
+
+            const lowVal = (specs.criticalLow !== null && specs.criticalLow !== undefined) 
+              ? Math.round(parseFloat(specs.criticalLow) * 1000) 
               : null;
-            const high = (specs.criticalHigh !== null && specs.criticalHigh !== undefined) 
-              ? parseFloat(specs.criticalHigh) 
+            const highVal = (specs.criticalHigh !== null && specs.criticalHigh !== undefined) 
+              ? Math.round(parseFloat(specs.criticalHigh) * 1000) 
               : null;
             
             // Handle relational logic if present (e.g. ">150")
             if (operator === ">" || operator === ">=") {
-               if (high !== null && numericValue >= high) finalIsCritical = true;
+               if (highVal !== null && scaledVal >= highVal) finalIsCritical = true;
             } else if (operator === "<" || operator === "<=") {
-               if (low !== null && numericValue <= low) finalIsCritical = true;
+               if (lowVal !== null && scaledVal <= lowVal) finalIsCritical = true;
             } else {
                // Standard range check
-               if ((low !== null && numericValue <= low) || (high !== null && numericValue >= high)) {
+               if ((lowVal !== null && scaledVal <= lowVal) || (highVal !== null && scaledVal >= highVal)) {
                  finalIsCritical = true;
                }
             }

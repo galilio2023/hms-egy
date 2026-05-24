@@ -65,21 +65,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Security Error: Unsupported or malicious file type detected" }, { status: 400 });
     }
 
-    // 3. DEVELOPMENT FALLBACK: Save to local public/uploads directory
-    // This ensures that even without S3, the files exist on disk for audit/review.
+    // 3. DEVELOPMENT FALLBACK: Save to private storage directory (Security Hardening)
+    // Moving out of /public to prevent direct URL access to PHI.
     const fileId = crypto.randomUUID();
     const fileName = `hk-${fileId}.${isJpeg ? "jpg" : isPng ? "png" : "webp"}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "housekeeping");
+    const storageDir = path.join(process.cwd(), "storage", "housekeeping");
     
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    if (!fs.existsSync(storageDir)) {
+      fs.mkdirSync(storageDir, { recursive: true });
     }
     
-    const filePath = path.join(uploadDir, fileName);
+    const filePath = path.join(storageDir, fileName);
     fs.writeFileSync(filePath, buffer);
 
-    // Return the accessible public URL
-    const publicUrl = `/uploads/housekeeping/${fileName}`;
+    // Return the authenticated proxy URL
+    const publicUrl = `/api/housekeeping/image/${fileName}`;
 
     return NextResponse.json({ url: publicUrl });
   } catch (error) {
