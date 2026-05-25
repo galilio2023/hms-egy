@@ -303,11 +303,14 @@ export async function saveLabResults(data: SaveLabResultInput) {
           const numericPart = relationalMatch?.[2] || "";
           
           // Normalize Eastern Arabic/Persian numerals
-          const normalizedPart = latinizeNumerals(numericPart).replace(/[،,٫]/g, ".");
+          const normalizedInput = latinizeNumerals(numericPart).replace(/[،,٫]/g, ".");
 
-          // Strict numeric check to avoid silent truncation (e.g. "10.5.2")
-          const isStrictlyNumeric = /^\d+(\.\d+)?$/.test(normalizedPart);
-          const numericValue = isStrictlyNumeric ? parseFloat(normalizedPart) : null;
+          // Extract leading numeric part (handles integers and decimals, e.g., "11.5 g/dL" -> "11.5")
+          const numericMatch = normalizedInput.trim().match(/^([+-]?\d+(?:\.\d+)?)/);
+          const normalizedNumericPart = numericMatch ? numericMatch[1] : "";
+
+          const isStrictlyNumeric = normalizedNumericPart !== "";
+          const numericValue = isStrictlyNumeric ? parseFloat(normalizedNumericPart) : null;
 
           if (numericValue !== null) {
             // Safety: Use integer-based comparison (x1000) to avoid floating-point precision issues

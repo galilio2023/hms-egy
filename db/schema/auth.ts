@@ -23,10 +23,7 @@ export const users = pgTable("user", {
       to: "public", 
       using: sql`(current_setting('app.bypass_rls', true) = 'true') 
                  OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)
-                 OR (
-                   current_setting('app.auth_lookup_active', true) = 'true' AND 
-                   (hospital_id IS NULL OR true) -- True here allows lookups by email globally during auth phase
-                 )` 
+                 OR (current_setting('app.auth_lookup_active', true) = 'true')` 
     }),
     hospitalIdIdx: index("user_hospital_idx").on(table.hospitalId),
     emailIdx: index("user_email_idx").on(table.email),
