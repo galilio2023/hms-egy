@@ -51,6 +51,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Image content too short or invalid" }, { status: 400 });
     }
 
+    const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
+    // Extract format from data URL (e.g., data:image/jpeg;base64,...)
+    const formatMatch = base64.match(/^data:image\/([a-zA-Z+]+);base64,/);
+    const format = formatMatch ? formatMatch[1].toLowerCase() : "";
+    const extension = format === "jpeg" ? "jpg" : format;
+
+    if (!ALLOWED_EXTENSIONS.includes(extension)) {
+      return NextResponse.json({ error: "Security Error: Prohibited file extension detected" }, { status: 400 });
+    }
+
     // Convert base64 to buffer for byte-level inspection
     const buffer = Buffer.from(imageContent, "base64");
     

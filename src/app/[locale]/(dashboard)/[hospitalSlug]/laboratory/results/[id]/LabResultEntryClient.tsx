@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { saveLabResults } from "@/lib/actions/laboratory";
 import { toast } from "sonner";
+import { latinizeNumerals } from "@/lib/utils/egypt";
 
 interface LabItem {
   id: string;
@@ -66,9 +67,14 @@ export default function LabResultEntryClient({
   );
 
   const updateItem = (itemId: string, field: string, value: any) => {
+    let finalValue = value;
+    if (field === "resultValue" && typeof value === "string") {
+      finalValue = latinizeNumerals(value);
+    }
+    
     setFormItems((prev) =>
       prev.map((item) =>
-        item.itemId === itemId ? { ...item, [field]: value } : item
+        item.itemId === itemId ? { ...item, [field]: finalValue } : item
       )
     );
   };

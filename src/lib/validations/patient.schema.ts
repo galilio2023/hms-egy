@@ -129,13 +129,16 @@ export const patientSchema = z.object({
 
       // Cross-check embedded ID governorate code (Clinical Note)
       const inputGovCode = getGovernorateCode(data.governorate);
-      const isForeignBorn = data.nationalId!.substring(7, 9) === "88";
+      
+      // Safety: Only parse if NID exists and is full length (Already validated by validateNationalId)
+      if (data.nationalId && data.nationalId.length === 14) {
+        const isForeignBorn = data.nationalId.substring(7, 9) === "88";
 
-      if (!isForeignBorn && parsed.governorate && parsed.governorate.code !== inputGovCode) {
-        // NOTE: The NID encodes the governorate of BIRTH. Patients often reside elsewhere.
-        // We will no longer block registration based on this mismatch to improve UX,
-        // but it remains useful for clinical record matching and audit.
-        // We ensure 'parsed' is defined before this block (it is defined at the start of hasNid block).
+        if (!isForeignBorn && parsed.governorate && parsed.governorate.code !== inputGovCode) {
+          // NOTE: The NID encodes the governorate of BIRTH. Patients often reside elsewhere.
+          // We will no longer block registration based on this mismatch to improve UX,
+          // but it remains useful for clinical record matching and audit.
+        }
       }
     }
   }

@@ -31,8 +31,16 @@ export async function POST(req: Request) {
   try {
     const { contentType, extension } = await req.json();
 
-    if (!contentType || !contentType.startsWith("image/")) {
-      return NextResponse.json({ error: "Invalid content type" }, { status: 400 });
+    const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+    const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
+
+    if (
+      !contentType || 
+      !ALLOWED_MIME_TYPES.includes(contentType) || 
+      !extension || 
+      !ALLOWED_EXTENSIONS.includes(extension.toLowerCase())
+    ) {
+      return NextResponse.json({ error: "Security Error: Invalid or prohibited file type detected." }, { status: 400 });
     }
 
     const fileId = crypto.randomUUID();

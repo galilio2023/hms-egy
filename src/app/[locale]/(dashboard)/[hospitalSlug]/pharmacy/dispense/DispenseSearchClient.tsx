@@ -14,6 +14,7 @@ import { Link, useRouter } from "@/i18n/routing";
 import { Pill, Search, ClipboardList, Scan, Loader2, ArrowRight } from "lucide-react";
 import { searchActivePrescriptions } from "@/lib/actions/pharmacy";
 import { toast } from "sonner";
+import { latinizeNumerals } from "@/lib/utils/egypt";
 
 interface PrescriptionSummary {
   id: string;
@@ -49,8 +50,9 @@ export default function DispenseSearchClient({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanQuery = latinizeNumerals(query.trim());
     startTransition(async () => {
-      const res = await searchActivePrescriptions(query);
+      const res = await searchActivePrescriptions(cleanQuery);
       if (res.success && "data" in res && res.data) {
         setPrescriptionsData(res.data);
       } else {
@@ -61,18 +63,19 @@ export default function DispenseSearchClient({
 
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!barcodeInput.trim()) return;
+    const cleanBarcode = latinizeNumerals(barcodeInput.trim());
+    if (!cleanBarcode) return;
 
     // Check if the barcode input is a valid UUID (version agnostic to support v7)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(barcodeInput.trim())) {
+    if (uuidRegex.test(cleanBarcode)) {
       toast.success(isRtl ? "تم التعرف على رمز الوصفة" : "Prescription code recognized");
-      router.push(`/${hospitalSlug}/pharmacy/dispense/${barcodeInput.trim()}`);
+      router.push(`/${hospitalSlug}/pharmacy/dispense/${cleanBarcode}`);
     } else {
       // Treat as a general search query
-      setQuery(barcodeInput);
+      setQuery(cleanBarcode);
       startTransition(async () => {
-        const res = await searchActivePrescriptions(barcodeInput);
+        const res = await searchActivePrescriptions(cleanBarcode);
         if (res.success && "data" in res && res.data && res.data.length > 0) {
           setPrescriptionsData(res.data);
           toast.success(isRtl ? `تم العثور على ${res.data.length} وصفة` : `Found ${res.data.length} prescriptions`);
