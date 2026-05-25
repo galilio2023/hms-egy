@@ -38,9 +38,11 @@ export async function createHousekeepingTask(payload: {
     const result = await withTenantContext(hospitalId, async (tx) => {
       // 1. Resolve room details and bed numbers
       let targetRoomId = payload.roomId;
+      let bedNumber: string | null = null;
+      let roomNumber: string | null = null;
       
       if (payload.bedId) {
-        const [bedInfo] = await tx
+        const [bedDetails] = await tx
           .select({
             roomId: beds.roomId,
             bedNumber: beds.bedNumber,
@@ -54,8 +56,17 @@ export async function createHousekeepingTask(payload: {
           ))
           .limit(1);
 
-        if (!bedInfo) throw new Error("Bed not found or unauthorized access");
-        if (!targetRoomId) targetRoomId = bedInfo.roomId;
+        if (!bedDetails) throw new Error("Bed not found or unauthorized access");
+        if (!targetRoomId) targetRoomId = bedDetails.roomId;
+        bedNumber = bedDetails.bedNumber;
+        roomNumber = bedDetails.roomNumber;
+      } else if (targetRoomId) {
+        const [roomDetails] = await tx
+          .select({ roomNumber: rooms.roomNumber })
+          .from(rooms)
+          .where(and(eq(rooms.id, targetRoomId), eq(rooms.hospitalId, hospitalId)))
+          .limit(1);
+        roomNumber = roomDetails?.roomNumber || "Unknown";
       }
 
       if (!targetRoomId) throw new Error("Target Room ID is required for housekeeping tasks.");
@@ -115,8 +126,12 @@ export async function createHousekeepingTask(payload: {
           userId: member.userId!,
           titleAr: "🧹 طلب تنظيف جديد",
           titleEn: "🧹 New Cleaning Request",
-          messageAr: `مطلوب تنظيف وتعقيم السرير رقم ${bedInfo.bedNumber} في الغرفة رقم ${bedInfo.roomNumber}. الأولوية: ${payload.priority === "urgent" ? "عاجل" : "عادي"}.`,
-          messageEn: `Cleaning requested for bed ${bedInfo.bedNumber} in room ${bedInfo.roomNumber}. Priority: ${payload.priority}.`,
+          messageAr: bedNumber 
+            ? `مطلوب تنظيف وتعقيم السرير رقم ${bedNumber} في الغرفة رقم ${roomNumber}. الأولوية: ${payload.priority === "urgent" ? "عاجل" : "عادي"}.`
+            : `مطلوب تنظيف وتعقيم في الغرفة رقم ${roomNumber}. الأولوية: ${payload.priority === "urgent" ? "عاجل" : "عادي"}.`,
+          messageEn: bedNumber
+            ? `Cleaning requested for bed ${bedNumber} in room ${roomNumber}. Priority: ${payload.priority}.`
+            : `Cleaning requested for room ${roomNumber}. Priority: ${payload.priority}.`,
           type: (payload.priority === "urgent" ? "warning" : "info") as any,
           isRead: false,
         }));

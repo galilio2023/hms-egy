@@ -116,7 +116,8 @@ export function LabOrderForm({ patientId, onSuccess }: LabOrderFormProps) {
         if (onSuccess && "orderId" in res) onSuccess(res.orderId as string);
         router.push(`/${locale}/${hospitalSlug}/patients/${patientId}`);
       } else {
-        toast.error(res.error || "Failed to create lab order");
+        const errorMessage = "error" in res ? res.error : "Failed to create lab order";
+        toast.error(errorMessage);
       }
     });
   };

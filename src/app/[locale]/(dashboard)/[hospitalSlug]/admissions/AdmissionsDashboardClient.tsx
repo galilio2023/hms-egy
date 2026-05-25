@@ -215,7 +215,8 @@ export default function AdmissionsDashboardClient({
       if (res.success && res.data) {
         setSearchResults(res.data);
       } else {
-        toast.error(res.error || "Failed to search patients.");
+        const errorMessage = res && "error" in res ? res.error : "Failed to search patients.";
+        toast.error(errorMessage as string);
       }
     } catch {
       toast.error("Error occurred while searching.");

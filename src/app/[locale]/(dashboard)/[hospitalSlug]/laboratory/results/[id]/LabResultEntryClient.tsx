@@ -90,7 +90,8 @@ export default function LabResultEntryClient({
         toast.success(isRtl ? "تم حفظ النتائج واعتمادها بنجاح" : "Results saved and finalized successfully");
         router.push(`/${locale}/${hospitalSlug}/laboratory`);
       } else {
-        toast.error(res.error || "Failed to save results");
+        const errorMessage = "error" in res ? res.error : "Failed to save results";
+        toast.error(errorMessage);
       }
     });
   };

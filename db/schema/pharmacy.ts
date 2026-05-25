@@ -113,6 +113,9 @@ export const medicationInteractions = pgTable("medication_interactions", {
     lowerDrug2NameIdx: index("idx_ddi_lower_drug2_name").on(sql`lower(${table.drug2Name})`),
     lowerDrug1GenericIdx: index("idx_ddi_lower_drug1_generic").on(sql`lower(${table.drug1Generic})`),
     lowerDrug2GenericIdx: index("idx_ddi_lower_drug2_generic").on(sql`lower(${table.drug2Generic})`),
+    // Performance: GIN Trigram indexes for fast fuzzy matching in real-time DDI checks
+    drug1GenericTrgmIdx: index("idx_ddi_trgm_d1_generic").using("gin", sql`${table.drug1Generic} gin_trgm_ops`),
+    drug2GenericTrgmIdx: index("idx_ddi_trgm_d2_generic").using("gin", sql`${table.drug2Generic} gin_trgm_ops`),
   };
 });
 

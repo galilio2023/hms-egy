@@ -249,7 +249,8 @@ export default function HousekeepingDashboardClient({
       if (res.success) {
         toast.success(t("assignSuccess"));
       } else {
-        toast.error(res.error || t("assignError"));
+        const errorMessage = "error" in res ? res.error : t("assignError");
+        toast.error(errorMessage);
       }
     } catch (e: any) {
       toast.error(e.message || "Error");
@@ -265,7 +266,8 @@ export default function HousekeepingDashboardClient({
       if (res.success) {
         toast.success(t("assignSuccess"));
       } else {
-        toast.error(res.error || t("assignError"));
+        const errorMessage = "error" in res ? res.error : t("assignError");
+        toast.error(errorMessage);
       }
     } catch (e: any) {
       toast.error(e.message || "Error");
@@ -281,7 +283,8 @@ export default function HousekeepingDashboardClient({
       if (res.success) {
         toast.success(t("startSuccess"));
       } else {
-        toast.error(res.error || t("startError"));
+        const errorMessage = "error" in res ? res.error : t("startError");
+        toast.error(errorMessage);
       }
     } catch (e: any) {
       toast.error(e.message || "Error");
@@ -343,7 +346,8 @@ export default function HousekeepingDashboardClient({
       if (res.success) {
         toast.success(t("completeSuccess"));
       } else {
-        toast.error(res.error || t("completeError"));
+        const errorMessage = "error" in res ? res.error : t("completeError");
+        toast.error(errorMessage);
       }
     } catch (e: any) {
       toast.error(e.message || "Error");
@@ -375,7 +379,8 @@ export default function HousekeepingDashboardClient({
         setSelectedBedId("");
         setTaskNotes("");
       } else {
-        toast.error(res.error || (isRtl ? "فشل إنشاء المهمة." : "Failed to create task."));
+        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل إنشاء المهمة." : "Failed to create task.");
+        toast.error(errorMessage);
       }
     } catch (e: any) {
       toast.error(e.message || "Error");

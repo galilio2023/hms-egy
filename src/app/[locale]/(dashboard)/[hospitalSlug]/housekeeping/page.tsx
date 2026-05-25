@@ -9,7 +9,7 @@ import { staff } from "@db/schema/core";
 import { housekeepingTasks } from "@db/schema/housekeeping";
 import { eq, and, or, inArray, desc, sql, gte, lt } from "drizzle-orm";
 import HousekeepingDashboardClient from "./HousekeepingDashboardClient";
-import { toZonedTime, zonedTimeToUtc } from "date-fns-tz";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { startOfDay, endOfDay } from "date-fns";
 
 export async function generateMetadata({
@@ -67,8 +67,8 @@ export default async function HousekeepingPage({
     const now = new Date();
     const cairoTime = toZonedTime(now, timeZone);
     
-    const startOfCairoDayUtc = zonedTimeToUtc(startOfDay(cairoTime), timeZone);
-    const endOfCairoDayUtc = zonedTimeToUtc(endOfDay(cairoTime), timeZone);
+    const startOfCairoDayUtc = fromZonedTime(startOfDay(cairoTime), timeZone);
+    const endOfCairoDayUtc = fromZonedTime(endOfDay(cairoTime), timeZone);
 
     const [
       roomsList,

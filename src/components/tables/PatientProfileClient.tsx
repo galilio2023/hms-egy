@@ -23,6 +23,7 @@ import {
   AlertOctagon,
   Stethoscope,
   BriefcaseMedical,
+  FlaskConical,
   Plus,
   Pill,
   Thermometer,
@@ -157,7 +158,7 @@ export function PatientProfileClient({
   const locale = useLocale();
   const isRtl = locale === "ar";
   
-  const [activeTab, setActiveTab] = useState<"medical" | "admissions" | "surgical" | "financials" | "consents" | "referrals" | "certificates">("medical");
+  const [activeTab, setActiveTab] = useState<"medical" | "admissions" | "surgical" | "financials" | "consents" | "referrals" | "certificates" | "laboratory">("medical");
   const [expandedSurgeryId, setExpandedSurgeryId] = useState<string | null>(null);
 
   // Referrals State
@@ -249,7 +250,8 @@ export function PatientProfileClient({
         setReferralUrgency("routine");
         setReferralNotes("");
       } else {
-        toast.error(res.error || (isRtl ? "فشل إنشاء الإحالة." : "Failed to create referral."));
+        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل إنشاء الإحالة." : "Failed to create referral.");
+        toast.error(errorMessage);
       }
     } catch (err: any) {
       toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
@@ -264,7 +266,8 @@ export function PatientProfileClient({
       if (res.success) {
         toast.success(isRtl ? "تم تحديث حالة الإحالة بنجاح." : "Referral status updated successfully.");
       } else {
-        toast.error(res.error || (isRtl ? "فشل تحديث حالة الإحالة." : "Failed to update referral status."));
+        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل تحديث حالة الإحالة." : "Failed to update referral status.");
+        toast.error(errorMessage);
       }
     } catch (err: any) {
       toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
@@ -307,7 +310,8 @@ export function PatientProfileClient({
         setCertRestDays(0);
         setCertNotes("");
       } else {
-        toast.error(res.error || (isRtl ? "فشل إصدار الشهادة." : "Failed to issue medical certificate."));
+        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل إصدار الشهادة." : "Failed to issue medical certificate.");
+        toast.error(errorMessage);
       }
     } catch (err: any) {
       toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));

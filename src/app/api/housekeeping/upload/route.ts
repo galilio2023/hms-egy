@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import fs from "fs";
-import path from "path";
+import { uploadFile } from "@/lib/storage";
 import { uploadLimiter } from "@/lib/utils/ratelimit";
 
 /**
@@ -78,25 +77,8 @@ export async function POST(req: Request) {
     const fileId = crypto.randomUUID();
     const fileName = `hk-${fileId}.${isJpeg ? "jpg" : isPng ? "png" : "webp"}`;
 
-    if (useCloudStorage) {
-       // TODO: Implement direct stream to R2/S3 here
-       // For now, we return 501 until the storage lib is fully integrated
-       return NextResponse.json({ error: "Cloud storage integration pending implementation." }, { status: 501 });
-    }
-
-    // DEVELOPMENT FALLBACK: Save to private storage directory
-    // Moving out of /public to prevent direct URL access to PHI.
-    const storageDir = path.join(process.cwd(), "storage", "housekeeping");
-    
-    if (!fs.existsSync(storageDir)) {
-      fs.mkdirSync(storageDir, { recursive: true });
-    }
-    
-    const filePath = path.join(storageDir, fileName);
-    fs.writeFileSync(filePath, buffer);
-
-    // Return the authenticated proxy URL
-    const publicUrl = `/api/housekeeping/image/${fileName}`;
+    // 4. PERSISTENT STORAGE (S3/R2 with Local Fallback)
+    const { publicUrl } = await uploadFile(buffer, fileName, "housekeeping");
 
     return NextResponse.json({ url: publicUrl });
   } catch (error) {

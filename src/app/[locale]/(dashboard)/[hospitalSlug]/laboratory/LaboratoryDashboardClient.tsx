@@ -95,7 +95,8 @@ export default function LaboratoryDashboardClient({
       if (res.success) {
         toast.success(isRtl ? "تم تأكيد المتابعة بنجاح" : "Acknowledgment successful");
       } else {
-        toast.error(res.error || "Failed to acknowledge");
+        const errorMessage = "error" in res ? res.error : "Failed to acknowledge";
+        toast.error(errorMessage);
       }
     } catch (err) {
       toast.error("An unexpected error occurred");
