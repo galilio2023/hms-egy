@@ -6,6 +6,7 @@
 - [x] Fix floating-point precision in lab criticality checks (Integer-based comparison)
 - [x] Harden qualitative critical detection to prevent false positives on negations (e.g. 'Not Detected')
 - [x] Optimize laboratory result saving by batching database updates to eliminate N+1 roundtrips
+- [x] Implement in-app physician notifications for life-threatening critical lab values
 - [ ] Implement ICD-10 search with Arabic support
 - [ ] Nursing assessment forms
 

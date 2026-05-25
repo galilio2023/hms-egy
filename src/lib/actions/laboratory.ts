@@ -6,6 +6,7 @@ import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "@db/sch
 import { staff, hospitals } from "@db/schema/core";
 import { admissions } from "@db/schema/clinical";
 import { patients } from "@db/schema/patients";
+import { notifications } from "@db/schema/system";
 import { eq, and, sql, ilike, or, ne, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -273,8 +274,13 @@ export async function saveLabResults(data: SaveLabResultInput) {
       // 2. Fetch order metadata once to avoid N+1 queries for critical alerts
       // Also strictly validates that the order belongs to the current hospital context (Multi-Tenancy Hardening)
       const orderMeta = await tx
-        .select({ patientId: labOrders.patientId, doctorId: labOrders.doctorId })
+        .select({ 
+          patientId: labOrders.patientId, 
+          doctorId: labOrders.doctorId,
+          doctorUserId: staff.userId
+        })
         .from(labOrders)
+        .innerJoin(staff, eq(labOrders.doctorId, staff.id))
         .where(and(
           eq(labOrders.id, data.orderId), 
           eq(labOrders.hospitalId, hospitalId)
@@ -376,6 +382,20 @@ export async function saveLabResults(data: SaveLabResultInput) {
             method: "in_app",
             notes: `Critical value recorded: ${item.resultValue}`,
           });
+
+          // Also trigger in-app notification for the ordering physician
+          if (orderMeta.doctorUserId) {
+            await tx.insert(notifications).values({
+              hospitalId,
+              userId: orderMeta.doctorUserId,
+              titleAr: "🚨 قيمة حرجة لنتائج المختبر",
+              titleEn: "🚨 Critical Lab Result Alert",
+              messageAr: `تم تسجيل قيمة حرجة لنتائج مختبر المريض. القيمة: ${item.resultValue}`,
+              messageEn: `A critical lab value has been recorded for your patient. Value: ${item.resultValue}`,
+              type: "error" as any,
+              isRead: false,
+            });
+          }
 
           // TODO: Trigger emergency out-of-band alert (SMS/WhatsApp)
           console.log(`[OUT-OF-BAND] Emergency critical value alert for doctor ${orderMeta.doctorId}`);

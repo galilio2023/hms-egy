@@ -39,6 +39,10 @@ export async function GET(req: NextRequest) {
           .limit(20);
       }
 
+      // High-performance Trigram Optimization: Use % operator for guaranteed GIN index utilization.
+      // Set the threshold for the current transaction only (true flag).
+      await tx.execute(sql`SELECT set_config('pg_trgm.similarity_threshold', '0.3', true)`);
+
       return await tx
         .select()
         .from(medications)
@@ -46,10 +50,10 @@ export async function GET(req: NextRequest) {
           and(
             ...conditions,
             or(
-              // Inline Trigram Similarity Matching (Index-friendly)
-              sql`similarity(${medications.nameEn}, ${query}) > 0.3`,
-              sql`similarity(${medications.nameAr}, ${query}) > 0.3`,
-              sql`similarity(${medications.genericName}, ${query}) > 0.3`
+              // Index-supported Trigram Similarity Matching (%)
+              sql`${medications.nameEn} % ${query}`,
+              sql`${medications.nameAr} % ${query}`,
+              sql`${medications.genericName} % ${query}`
             )
           )
         )

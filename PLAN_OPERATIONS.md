@@ -7,5 +7,6 @@
 - [x] Add GIN Trigram indexes to medication_interactions for real-time DDI performance
 - [x] Optimize trigram matching logic using % operator for guaranteed index utilization
 - [x] Prevent cross-table deadlocks by enforcing deterministic sequential locking order in dispensing
+- [x] Add composite index to housekeeping_tasks for high-performance KPI reporting
 - [ ] Implement ETA E-invoicing integration
 - [ ] Stock adjustment audit logs

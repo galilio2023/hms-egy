@@ -22,6 +22,7 @@ export const users = pgTable("user", {
       for: "all", 
       to: "public", 
       using: sql`(current_setting('app.bypass_rls', true) = 'true') 
+                 OR (hospital_id IS NULL AND NULLIF(current_setting('app.current_hospital_id', true), '') IS NULL)
                  OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)
                  OR (current_setting('app.auth_lookup_active', true) = 'true')` 
     }),
