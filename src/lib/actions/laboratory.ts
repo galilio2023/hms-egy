@@ -298,8 +298,8 @@ export async function saveLabResults(data: SaveLabResultInput) {
         .innerJoin(labTests, eq(labOrderItems.labTestId, labTests.id))
         .where(eq(labOrderItems.labOrderId, data.orderId));
 
-      // 4. Update all items and trigger alerts sequentially
-      for (const item of data.items) {
+      // 4. Process all items and prepare database operations
+      const updatePromises = data.items.map(async (item) => {
         const specs = allOriginalItems.find(oi => oi.itemId === item.itemId);
         let finalIsCritical = item.isCritical; // Manual override from UI
 
@@ -307,61 +307,53 @@ export async function saveLabResults(data: SaveLabResultInput) {
         if (specs && item.resultValue) {
           const cleanValue = (item.resultValue || "").trim();
           
-          if (!cleanValue) continue;
-          
-          // Pattern: Optional relational op (<, >, <=, >=) followed by numeric
-          // We extract the numeric part for range comparison
-          const relationalMatch = cleanValue.match(/^([<>=]+)?\s*(.+)$/);
-          const operator = relationalMatch?.[1];
-          const numericPart = relationalMatch?.[2] || "";
-          
-          // Normalize Eastern Arabic/Persian numerals
-          const normalizedInput = latinizeNumerals(numericPart).replace(/[،,٫]/g, ".");
-
-          // Extract leading numeric part (handles integers and decimals, e.g., "11.5 g/dL" -> "11.5")
-          const numericMatch = normalizedInput.trim().match(/^([+-]?\d+(?:\.\d+)?)/);
-          const normalizedNumericPart = numericMatch ? numericMatch[1] : "";
-
-          const isStrictlyNumeric = normalizedNumericPart !== "";
-          const numericValue = isStrictlyNumeric ? parseFloat(normalizedNumericPart) : null;
-
-          if (numericValue !== null) {
-            // Safety: Use integer-based comparison (x1000) to avoid floating-point precision issues
-            // standard numeric(10,3) fields are safe at this scale.
-            const scaledVal = Math.round(numericValue * 1000);
-
-            const lowVal = (specs.criticalLow !== null && specs.criticalLow !== undefined) 
-              ? Math.round(parseFloat(specs.criticalLow) * 1000) 
-              : null;
-            const highVal = (specs.criticalHigh !== null && specs.criticalHigh !== undefined) 
-              ? Math.round(parseFloat(specs.criticalHigh) * 1000) 
-              : null;
+          if (cleanValue) {
+            // Pattern: Optional relational op (<, >, <=, >=) followed by numeric
+            const relationalMatch = cleanValue.match(/^([<>=]+)?\s*(.+)$/);
+            const operator = relationalMatch?.[1];
+            const numericPart = relationalMatch?.[2] || "";
             
-            // Handle relational logic if present (e.g. ">150")
-            if (operator === ">" || operator === ">=") {
-               if (highVal !== null && scaledVal >= highVal) finalIsCritical = true;
-            } else if (operator === "<" || operator === "<=") {
-               if (lowVal !== null && scaledVal <= lowVal) finalIsCritical = true;
+            // Normalize Eastern Arabic/Persian numerals
+            const normalizedInput = latinizeNumerals(numericPart).replace(/[،,٫]/g, ".");
+
+            const numericMatch = normalizedInput.trim().match(/^([+-]?\d+(?:\.\d+)?)/);
+            const normalizedNumericPart = numericMatch ? numericMatch[1] : "";
+
+            const isStrictlyNumeric = normalizedNumericPart !== "";
+            const numericValue = isStrictlyNumeric ? parseFloat(normalizedNumericPart) : null;
+
+            if (numericValue !== null) {
+              const scaledVal = Math.round(numericValue * 1000);
+              const lowVal = (specs.criticalLow !== null && specs.criticalLow !== undefined) 
+                ? Math.round(parseFloat(specs.criticalLow) * 1000) 
+                : null;
+              const highVal = (specs.criticalHigh !== null && specs.criticalHigh !== undefined) 
+                ? Math.round(parseFloat(specs.criticalHigh) * 1000) 
+                : null;
+              
+              if (operator === ">" || operator === ">=") {
+                 if (highVal !== null && scaledVal >= highVal) finalIsCritical = true;
+              } else if (operator === "<" || operator === "<=") {
+                 if (lowVal !== null && scaledVal <= lowVal) finalIsCritical = true;
+              } else {
+                 if ((lowVal !== null && scaledVal <= lowVal) || (highVal !== null && scaledVal >= highVal)) {
+                   finalIsCritical = true;
+                 }
+              }
             } else {
-               // Standard range check
-               if ((lowVal !== null && scaledVal <= lowVal) || (highVal !== null && scaledVal >= highVal)) {
-                 finalIsCritical = true;
-               }
-            }
-          } else {
-            // Qualitative Criticality Detection (e.g. "Positive", "Detected", "Reactive")
-            const qualitativeLower = cleanValue.toLowerCase();
-            const negations = ["not", "non", "un", "no", "غير", "لا", "سلبي", "negative"];
+              const qualitativeLower = cleanValue.toLowerCase();
+              const negations = ["not", "non", "un", "no", "غير", "لا", "سلبي", "negative"];
+              const hasNegation = negations.some(neg => qualitativeLower.includes(neg));
+              const criticalKeywords = ["positive", "reactive", "detected", "إيجابي", "نشط", "ايجابي"];
 
-            const hasNegation = negations.some(neg => qualitativeLower.includes(neg));
-            const criticalKeywords = ["positive", "reactive", "detected", "إيجابي", "نشط", "ايجابي"];
-
-            if (!hasNegation && criticalKeywords.some(keyword => qualitativeLower.includes(keyword))) {
-              finalIsCritical = true;
+              if (!hasNegation && criticalKeywords.some(keyword => qualitativeLower.includes(keyword))) {
+                finalIsCritical = true;
+              }
             }
           }
         }
 
+        // Perform the update
         await tx
           .update(labOrderItems)
           .set({
@@ -388,7 +380,10 @@ export async function saveLabResults(data: SaveLabResultInput) {
           // TODO: Trigger emergency out-of-band alert (SMS/WhatsApp)
           console.log(`[OUT-OF-BAND] Emergency critical value alert for doctor ${orderMeta.doctorId}`);
         }
-      }
+      });
+
+      // Execute all updates in parallel to eliminate N+1 roundtrips
+      await Promise.all(updatePromises);
 
       // 6. Check if all items are completed to mark order as completed
       const remainingItems = await tx

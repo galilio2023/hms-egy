@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { labOrders, labOrderItems, criticalValueAlerts } from "@db/schema/laboratory";
 import { staff } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
-import { eq, and, desc, sql, ne } from "drizzle-orm";
+import { eq, and, desc, sql, ne, inArray } from "drizzle-orm";
 import LaboratoryDashboardClient from "./LaboratoryDashboardClient";
 import { getTranslations } from "next-intl/server";
 
@@ -112,7 +112,7 @@ export default async function LaboratoryPage({
         .where(
           and(
             eq(labOrders.hospitalId, hospital.id),
-            sql`${labOrders.status} IN ('collected', 'processing')`
+            inArray(labOrders.status, ["collected", "processing"])
           )
         )
         .orderBy(desc(labOrders.createdAt)),

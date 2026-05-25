@@ -21,11 +21,8 @@ export const patientSchema = z.object({
   nationalId: latinizedString
     .optional()
     .or(z.literal(""))
-    .refine((val) => {
-      if (!val || val === "") return true;
-      return /^[23]\d{13}$/.test(val);
-    }, {
-      message: "Invalid Egyptian National ID: Must be 14 digits starting with 2 or 3.",
+    .refine((val) => !val || val === "" || validateNationalId(val), {
+      message: "Invalid Egyptian National ID checksum or format.",
     }),
   passportNumber: latinizedString.optional().or(z.literal("")),
   nameAr: z.string().min(3, "Name in Arabic must be at least 3 characters"),

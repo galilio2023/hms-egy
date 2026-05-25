@@ -98,6 +98,10 @@ export async function checkDrugInteractions(
     const unresolvedIds = lowerIdentifiers.filter(id => !resolvedIds.has(id));
 
     if (unresolvedIds.length >= 1) {
+      // High-performance Trigram Optimization: Use % operator for guaranteed GIN index utilization.
+      // Set the threshold for the current transaction only (true flag).
+      await tx.execute(sql`SELECT set_config('pg_trgm.similarity_threshold', '0.4', true)`);
+
       const fuzzyMatches = await tx
         .select()
         .from(medicationInteractions)
@@ -105,8 +109,8 @@ export async function checkDrugInteractions(
           or(
             ...unresolvedIds.map(id => 
               or(
-                sql`similarity(${medicationInteractions.drug1Generic}, ${id}) > 0.4`,
-                sql`similarity(${medicationInteractions.drug2Generic}, ${id}) > 0.4`
+                sql`${medicationInteractions.drug1Generic} % ${id}`,
+                sql`${medicationInteractions.drug2Generic} % ${id}`
               )
             )
           )

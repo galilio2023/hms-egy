@@ -326,7 +326,7 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
   }
 
   // Security: Sanitize photoUrl to prevent Stored XSS
-  if (photoUrl) {
+  if (photoUrl && typeof photoUrl === "string") {
     try {
       const isRelative = photoUrl.startsWith("/api/housekeeping/image/");
       const cdnUrl = process.env.NEXT_PUBLIC_CDN_URL;
