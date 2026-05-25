@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import fs from "fs";
 import path from "path";
 
@@ -23,6 +24,39 @@ const s3Client = (STORAGE_PROVIDER === "s3" || STORAGE_PROVIDER === "r2")
       },
     })
   : null;
+
+/**
+ * Generates a pre-signed URL for direct browser-to-cloud upload.
+ * Bypasses Next.js server payload limits (e.g. Vercel 4.5MB).
+ */
+export async function getUploadPresignedUrl(
+  fileName: string,
+  contentType: string,
+  folder: string = "general"
+): Promise<{ uploadUrl: string; publicUrl: string; isLocal: boolean }> {
+  if (s3Client && BUCKET_NAME) {
+    const key = `${folder}/${fileName}`;
+    const command = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 }); // 10 minutes
+    return {
+      uploadUrl,
+      publicUrl: `/api/housekeeping/image/${fileName}`, // Still proxied for BOLA
+      isLocal: false,
+    };
+  }
+
+  // Local fallback: Return the API endpoint for standard multipart upload
+  return {
+    uploadUrl: `/api/housekeeping/upload`, 
+    publicUrl: `/api/housekeeping/image/${fileName}`,
+    isLocal: true,
+  };
+}
 
 export interface UploadResult {
   fileName: string;

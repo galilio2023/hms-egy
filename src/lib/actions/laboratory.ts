@@ -83,7 +83,18 @@ export async function createLabOrder(data: CreateLabOrderInput) {
         throw new AppError(ErrorCode.NOT_FOUND, "Staff profile not found");
       }
 
-      // 2. Check for active admission
+      // 2. BOLA Protection: Verify patient belongs to this hospital tenant
+      const [patientRecord] = await tx
+        .select({ id: patients.id })
+        .from(patients)
+        .where(and(eq(patients.id, data.patientId), eq(patients.hospitalId, hospitalId)))
+        .limit(1);
+
+      if (!patientRecord) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Patient not found in this hospital context");
+      }
+
+      // 3. Check for active admission
       const activeAdmission = await tx
         .select({ id: admissions.id })
         .from(admissions)
@@ -294,7 +305,9 @@ export async function saveLabResults(data: SaveLabResultInput) {
 
         // Automatic Server-Side Criticality Detection (Patient Safety Fix)
         if (specs && item.resultValue) {
-          const cleanValue = item.resultValue.trim();
+          const cleanValue = (item.resultValue || "").trim();
+          
+          if (!cleanValue) continue;
           
           // Pattern: Optional relational op (<, >, <=, >=) followed by numeric
           // We extract the numeric part for range comparison

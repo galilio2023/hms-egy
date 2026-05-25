@@ -55,56 +55,94 @@ export async function checkDrugInteractions(
 
   // 1. Check for Drug-Drug Interactions (DDI)
   if (allIdentifiers.length >= 2) {
-    // Performance: Use Trigram Similarity for Generic Names (Fuzzy Matching)
-    // This handles variations like "Bisoprolol" vs "Bisoprolol Fumarate"
-    await tx.execute(sql`SELECT set_config('pg_trgm.similarity_threshold', '0.4', true)`);
+    const lowerIdentifiers = allIdentifiers.map(n => n.toLowerCase());
 
-    const ddiMatches = await tx
+    // Optimization: First attempt an exact case-insensitive match for generic names (Fast Path)
+    // This handles the majority of standard interactions without trigram overhead.
+    const fastPathMatches = await tx
       .select()
       .from(medicationInteractions)
       .where(
         or(
-          // Fast Path: Exact case-insensitive match for brand names
+          // Brand name exact match
           and(
-            inArray(sql`lower(${medicationInteractions.drug1Name})`, allIdentifiers.map(n => n.toLowerCase())),
-            inArray(sql`lower(${medicationInteractions.drug2Name})`, allIdentifiers.map(n => n.toLowerCase()))
+            inArray(sql`lower(${medicationInteractions.drug1Name})`, lowerIdentifiers),
+            inArray(sql`lower(${medicationInteractions.drug2Name})`, lowerIdentifiers)
           ),
-          // Robust Path: Trigram similarity for generic names
+          // Generic name exact match
+          and(
+            inArray(sql`lower(${medicationInteractions.drug1Generic})`, lowerIdentifiers),
+            inArray(sql`lower(${medicationInteractions.drug2Generic})`, lowerIdentifiers)
+          )
+        )
+      );
+
+    // Track which identifiers were resolved via fast path
+    const resolvedIds = new Set<string>();
+    fastPathMatches.forEach((match: any) => {
+      resolvedIds.add(match.drug1Generic?.toLowerCase() || match.drug1Name.toLowerCase());
+      resolvedIds.add(match.drug2Generic?.toLowerCase() || match.drug2Name.toLowerCase());
+      
+      interactions.push({
+        drug1: match.drug1Name,
+        drug2: match.drug2Name,
+        severity: match.severity as any,
+        mechanismAr: match.mechanismAr || undefined,
+        mechanismEn: match.mechanismEn || undefined,
+        effectAr: match.clinicalEffectAr || undefined,
+        effectEn: match.clinicalEffectEn || undefined,
+      });
+    });
+
+    // 2. Fuzzy Path: Only for unresolved identifiers to prevent polypharmacy query blow-up
+    const unresolvedIds = lowerIdentifiers.filter(id => !resolvedIds.has(id));
+
+    if (unresolvedIds.length >= 1) {
+      await tx.execute(sql`SELECT set_config('pg_trgm.similarity_threshold', '0.4', true)`);
+
+      const fuzzyMatches = await tx
+        .select()
+        .from(medicationInteractions)
+        .where(
           or(
-            ...allIdentifiers.map(id => 
+            ...unresolvedIds.map(id => 
               or(
                 sql`${medicationInteractions.drug1Generic} % ${id}`,
                 sql`${medicationInteractions.drug2Generic} % ${id}`
               )
             )
           )
-        )
-      );
+        );
 
-    // Filter matches in JS to ensure BOTH drugs in the interaction are in our prescribed list
-    const lowerIdentifiers = allIdentifiers.map(n => n.toLowerCase());
-    
-    ddiMatches.forEach((match: any) => {
-      const d1 = match.drug1Generic?.toLowerCase() || match.drug1Name.toLowerCase();
-      const d2 = match.drug2Generic?.toLowerCase() || match.drug2Name.toLowerCase();
-      
-      // We need to confirm that this interaction record's TWO drugs are BOTH represented in our prescibed identifiers
-      // either by exact match or by similarity (since the DB already gave us candidates)
-      const isDrug1Present = lowerIdentifiers.some(id => d1.includes(id) || id.includes(d1));
-      const isDrug2Present = lowerIdentifiers.some(id => d2.includes(id) || id.includes(d2));
+      fuzzyMatches.forEach((match: any) => {
+        const d1 = match.drug1Generic?.toLowerCase() || match.drug1Name.toLowerCase();
+        const d2 = match.drug2Generic?.toLowerCase() || match.drug2Name.toLowerCase();
+        
+        // Ensure BOTH drugs are in our prescribed list (one might be fuzzy, other might be exact)
+        const isDrug1Present = lowerIdentifiers.some(id => d1.includes(id) || id.includes(d1));
+        const isDrug2Present = lowerIdentifiers.some(id => d2.includes(id) || id.includes(d2));
 
-      if (isDrug1Present && isDrug2Present) {
-        interactions.push({
-          drug1: match.drug1Name,
-          drug2: match.drug2Name,
-          severity: match.severity as any,
-          mechanismAr: match.mechanismAr || undefined,
-          mechanismEn: match.mechanismEn || undefined,
-          effectAr: match.clinicalEffectAr || undefined,
-          effectEn: match.clinicalEffectEn || undefined,
-        });
-      }
-    });
+        if (isDrug1Present && isDrug2Present) {
+          // Avoid duplicate interactions already found in fast path
+          const isDuplicate = interactions.some(i => 
+            (i.drug1 === match.drug1Name && i.drug2 === match.drug2Name) ||
+            (i.drug1 === match.drug2Name && i.drug2 === match.drug1Name)
+          );
+
+          if (!isDuplicate) {
+            interactions.push({
+              drug1: match.drug1Name,
+              drug2: match.drug2Name,
+              severity: match.severity as any,
+              mechanismAr: match.mechanismAr || undefined,
+              mechanismEn: match.mechanismEn || undefined,
+              effectAr: match.clinicalEffectAr || undefined,
+              effectEn: match.clinicalEffectEn || undefined,
+            });
+          }
+        }
+      });
+    }
   }
 
   // 2. Check for Patient Allergies

@@ -323,23 +323,50 @@ export default function HousekeepingDashboardClient({
     setActionLoading(activeTaskId);
     setCompleteDialogOpen(false);
     try {
-      let finalPhotoUrl = photoPreview || undefined;
+      let finalPhotoUrl = undefined;
 
-      // If we have a photo, upload it first to get a hosted URL
+      // Direct-to-Cloud Upload Strategy (Pre-signed URLs)
       if (photoPreview && photoPreview.startsWith("data:image")) {
-        const uploadRes = await fetch("/api/housekeeping/upload", {
+        // 1. Get pre-signed URL from API
+        const extension = photoPreview.split(';')[0].split('/')[1];
+        const contentType = photoPreview.split(';')[0].split(':')[1];
+        
+        const presignRes = await fetch("/api/housekeeping/presign", {
           method: "POST",
-          body: JSON.stringify({ base64: photoPreview }),
+          body: JSON.stringify({ contentType, extension }),
           headers: { "Content-Type": "application/json" },
         });
+
+        if (!presignRes.ok) throw new Error("Failed to initialize upload");
         
-        if (!uploadRes.ok) {
-          const errData = await uploadRes.json();
-          throw new Error(errData.error || "Failed to upload photo");
+        const { uploadUrl, publicUrl, isLocal } = await presignRes.json();
+        
+        // 2. Perform binary upload
+        const response = await fetch(photoPreview);
+        const blob = await response.blob();
+
+        if (isLocal) {
+          // Standard multipart for local dev fallback
+          const formData = new FormData();
+          formData.append("file", blob);
+          
+          const localRes = await fetch(uploadUrl, {
+            method: "POST",
+            body: JSON.stringify({ base64: photoPreview }), // existing local api expects base64
+            headers: { "Content-Type": "application/json" },
+          });
+          if (!localRes.ok) throw new Error("Local upload failed");
+        } else {
+          // Direct high-performance binary upload to S3/R2
+          const cloudRes = await fetch(uploadUrl, {
+            method: "PUT",
+            body: blob,
+            headers: { "Content-Type": contentType },
+          });
+          if (!cloudRes.ok) throw new Error("Cloud upload failed");
         }
         
-        const { url } = await uploadRes.json();
-        finalPhotoUrl = url;
+        finalPhotoUrl = publicUrl;
       }
 
       const res = await completeHousekeepingTask(activeTaskId, finalPhotoUrl);
