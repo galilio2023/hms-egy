@@ -10,6 +10,7 @@ import { eq, and, sql, ilike, or, ne, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
+import { latinizeNumerals } from "@/lib/utils/egypt";
 
 /**
  * Searches for lab tests in the hospital's catalog.
@@ -302,9 +303,7 @@ export async function saveLabResults(data: SaveLabResultInput) {
           const numericPart = relationalMatch?.[2] || "";
           
           // Normalize Eastern Arabic/Persian numerals
-          const normalizedPart = numericPart.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
-                                           .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString())
-                                           .replace(/[،,٫]/g, ".");
+          const normalizedPart = latinizeNumerals(numericPart).replace(/[،,٫]/g, ".");
 
           // Strict numeric check to avoid silent truncation (e.g. "10.5.2")
           const isStrictlyNumeric = /^\d+(\.\d+)?$/.test(normalizedPart);

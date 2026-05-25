@@ -352,7 +352,7 @@ export function latinizeNumerals(str: string): string {
   if (!str) return "";
   return str
     .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
-    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵٦٧٨٩".indexOf(d).toString());
+    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
 }
 
 /**

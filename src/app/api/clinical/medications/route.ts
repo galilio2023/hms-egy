@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const results = await withTenantContext(hospitalId, async (tx) => {
+      // High-performance Trigram Search Optimization (Index-friendly)
+      await tx.execute(sql`SELECT set_config('pg_trgm.similarity_threshold', '0.3', true)`);
+
       const isNumericBarcode = /^\d+$/.test(query);
 
       const conditions = [
@@ -46,12 +49,10 @@ export async function GET(req: NextRequest) {
           and(
             ...conditions,
             or(
-              // High-performance Trigram Similarity Search (Index-friendly)
+              // Index-supported Trigram Similarity Matching (%)
               sql`${medications.nameEn} % ${query}`,
               sql`${medications.nameAr} % ${query}`,
-              sql`${medications.genericName} % ${query}`,
-              sql`similarity(${medications.nameEn}, ${query}) > 0.3`,
-              sql`similarity(${medications.nameAr}, ${query}) > 0.3`
+              sql`${medications.genericName} % ${query}`
             )
           )
         )

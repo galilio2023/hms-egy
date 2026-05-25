@@ -201,6 +201,10 @@ export async function searchMedications(query: string) {
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
+      // High-performance Trigram Search Optimization (Index-friendly)
+      // We set the threshold for the current session/transaction to leverage the GIN index efficiently
+      await tx.execute(sql`SELECT set_config('pg_trgm.similarity_threshold', '0.3', true)`);
+
       const results = await tx
         .select()
         .from(medications)
@@ -209,12 +213,10 @@ export async function searchMedications(query: string) {
             eq(medications.hospitalId, hospitalId),
             eq(medications.isActive, true),
             or(
-              // High-performance Trigram Similarity Search (Index-friendly)
+              // Index-supported Trigram Similarity Matching (%)
               sql`${medications.nameEn} % ${query}`,
               sql`${medications.nameAr} % ${query}`,
               sql`${medications.genericName} % ${query}`,
-              sql`similarity(${medications.nameEn}, ${query}) > 0.3`,
-              sql`similarity(${medications.nameAr}, ${query}) > 0.3`,
               ilike(medications.barcode || "", `%${query}%`)
             )
           )

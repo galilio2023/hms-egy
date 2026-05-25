@@ -65,10 +65,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Security Error: Unsupported or malicious file type detected" }, { status: 400 });
     }
 
-    // 3. DEVELOPMENT FALLBACK: Save to private storage directory (Security Hardening)
-    // Moving out of /public to prevent direct URL access to PHI.
+    // 3. STORAGE STRATEGY (Security & Persistence Hardening)
+    const isProduction = process.env.NODE_ENV === "production";
+    const useCloudStorage = process.env.STORAGE_PROVIDER === "r2" || process.env.STORAGE_PROVIDER === "s3";
+
+    if (isProduction && !useCloudStorage) {
+      // Critical Safety: Prevent data loss in production due to ephemeral serverless filesystems
+      console.error("[CRITICAL] Production upload attempted without cloud storage (R2/S3) configured.");
+      return NextResponse.json({ error: "Server Configuration Error: Persistent storage not available." }, { status: 500 });
+    }
+
     const fileId = crypto.randomUUID();
     const fileName = `hk-${fileId}.${isJpeg ? "jpg" : isPng ? "png" : "webp"}`;
+
+    if (useCloudStorage) {
+       // TODO: Implement direct stream to R2/S3 here
+       // For now, we return 501 until the storage lib is fully integrated
+       return NextResponse.json({ error: "Cloud storage integration pending implementation." }, { status: 501 });
+    }
+
+    // DEVELOPMENT FALLBACK: Save to private storage directory
+    // Moving out of /public to prevent direct URL access to PHI.
     const storageDir = path.join(process.cwd(), "storage", "housekeeping");
     
     if (!fs.existsSync(storageDir)) {
