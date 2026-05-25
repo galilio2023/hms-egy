@@ -521,10 +521,19 @@ export async function dispensePrescription(
       const sortedItemIds = [...new Set(itemIds)].sort();
       const sortedMedIds = [...new Set(medIds)].sort();
 
-      const [existingRxItems, existingMeds] = await Promise.all([
-        tx.select().from(prescriptionItems).where(inArray(prescriptionItems.id, sortedItemIds)).for("update"),
-        tx.select().from(medications).where(and(eq(medications.hospitalId, hospitalId), inArray(medications.id, sortedMedIds))).for("update")
-      ]);
+      // Lock parent/control tables first
+      const existingRxItems = await tx
+        .select()
+        .from(prescriptionItems)
+        .where(inArray(prescriptionItems.id, sortedItemIds))
+        .for("update");
+
+      // Lock inventory tables second
+      const existingMeds = await tx
+        .select()
+        .from(medications)
+        .where(and(eq(medications.hospitalId, hospitalId), inArray(medications.id, sortedMedIds)))
+        .for("update");
 
       // Track running stock levels in memory to handle duplicate medication entries correctly
       const runningStock: Record<string, number> = {};

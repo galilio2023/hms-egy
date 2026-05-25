@@ -351,8 +351,12 @@ export async function saveLabResults(data: SaveLabResultInput) {
           } else {
             // Qualitative Criticality Detection (e.g. "Positive", "Detected", "Reactive")
             const qualitativeLower = cleanValue.toLowerCase();
+            const negations = ["not", "non", "un", "no", "غير", "لا", "سلبي", "negative"];
+
+            const hasNegation = negations.some(neg => qualitativeLower.includes(neg));
             const criticalKeywords = ["positive", "reactive", "detected", "إيجابي", "نشط", "ايجابي"];
-            if (criticalKeywords.some(keyword => qualitativeLower.includes(keyword))) {
+
+            if (!hasNegation && criticalKeywords.some(keyword => qualitativeLower.includes(keyword))) {
               finalIsCritical = true;
             }
           }

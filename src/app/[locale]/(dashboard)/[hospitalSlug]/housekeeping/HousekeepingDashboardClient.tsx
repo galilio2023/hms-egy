@@ -341,6 +341,15 @@ export default function HousekeepingDashboardClient({
     });
   };
 
+  const base64ToBlob = (base64: string, contentType: string) => {
+    const byteCharacters = atob(base64.split(",")[1]);
+    const byteNumbers = new Uint8Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    return new Blob([byteNumbers], { type: contentType });
+  };
+
   const handleCompleteTask = async () => {
     if (!activeTaskId) return;
     if (photoRequired && !photoPreview) {
@@ -370,8 +379,7 @@ export default function HousekeepingDashboardClient({
         const { uploadUrl, publicUrl, isLocal } = await presignRes.json();
         
         // 2. Perform binary upload
-        const response = await fetch(photoPreview);
-        const blob = await response.blob();
+        const blob = base64ToBlob(photoPreview, contentType);
 
         if (isLocal) {
           // Standard multipart for local dev fallback
