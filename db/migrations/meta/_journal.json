@@ -127,6 +127,13 @@
       "when": 1779632336197,
       "tag": "0017_blue_newton_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1779740400000,
+      "tag": "0018_db_hardening",
+      "breakpoints": true
     }
   ]
 }
