@@ -4,6 +4,7 @@ import { patients } from "@db/schema/patients";
 import { hospitals, staff, operatingRooms, departments } from "@db/schema/core";
 import { surgicalCases } from "@db/schema/surgical";
 import { medicalRecords, vitalsFlowsheet, internalReferrals, medicalCertificates } from "@db/schema/clinical";
+import { nursingAssessments } from "@db/schema/nursing";
 import { and, eq, desc, aliasedTable, sql, inArray } from "drizzle-orm";
 import { getHospitalBySlug } from "@/lib/db/cache";
 import { notFound, redirect } from "next/navigation";
@@ -191,7 +192,24 @@ export default async function PatientProfilePage({
       .where(and(eq(medicalCertificates.patientId, id), eq(medicalCertificates.hospitalId, hospitalId)))
       .orderBy(desc(medicalCertificates.createdAt));
 
-    // 7. Fetch active departments for select options
+    // 7. Fetch nursing assessments
+    const assessmentStaff = aliasedTable(staff, "assessmentStaff");
+    const patientAssessments = await tx
+      .select({
+        id: nursingAssessments.id,
+        type: nursingAssessments.type,
+        data: nursingAssessments.data,
+        notes: nursingAssessments.notes,
+        createdAt: nursingAssessments.createdAt,
+        recordedByNameAr: assessmentStaff.nameAr,
+        recordedByNameEn: assessmentStaff.nameEn,
+      })
+      .from(nursingAssessments)
+      .leftJoin(assessmentStaff, eq(nursingAssessments.recordedBy, assessmentStaff.id))
+      .where(and(eq(nursingAssessments.patientId, id), eq(nursingAssessments.hospitalId, hospitalId)))
+      .orderBy(desc(nursingAssessments.createdAt));
+
+    // 8. Fetch active departments for select options
     const activeDepartments = await tx
       .select({
         id: departments.id,
@@ -202,7 +220,7 @@ export default async function PatientProfilePage({
       .where(and(eq(departments.hospitalId, hospitalId), eq(departments.isActive, true)))
       .orderBy(departments.nameAr);
 
-    // 8. Fetch active doctors/surgeons for select options
+    // 9. Fetch active doctors/surgeons for select options
     const activeDoctors = await tx
       .select({
         id: staff.id,
@@ -220,6 +238,24 @@ export default async function PatientProfilePage({
       )
       .orderBy(staff.nameAr);
 
+    // 10. Fetch active nurses for clinical logs
+    const activeNurses = await tx
+      .select({
+        id: staff.id,
+        nameAr: staff.nameAr,
+        nameEn: staff.nameEn,
+        role: staff.role,
+      })
+      .from(staff)
+      .where(
+        and(
+          eq(staff.hospitalId, hospitalId),
+          eq(staff.isActive, true),
+          eq(staff.role, "NURSE")
+        )
+      )
+      .orderBy(staff.nameAr);
+
     return { 
       patient, 
       patientSurgeries, 
@@ -227,8 +263,10 @@ export default async function PatientProfilePage({
       patientVitals,
       patientReferrals,
       patientCertificates,
+      patientAssessments,
       activeDepartments,
-      activeDoctors
+      activeDoctors,
+      activeNurses
     };
   });
 
@@ -324,6 +362,16 @@ export default async function PatientProfilePage({
     doctorNameEn: cert.doctorNameEn || undefined,
   }));
 
+  const mappedAssessments = data.patientAssessments.map((ass) => ({
+    id: ass.id,
+    type: ass.type,
+    data: ass.data as any,
+    notes: ass.notes || undefined,
+    createdAt: ass.createdAt,
+    recordedByNameAr: ass.recordedByNameAr || undefined,
+    recordedByNameEn: ass.recordedByNameEn || undefined,
+  }));
+
   return (
     <div className="min-h-screen bg-gray-50/10 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -344,10 +392,12 @@ export default async function PatientProfilePage({
           records={mappedRecords}
           vitals={mappedVitals}
           hospitalSlug={hospitalSlug} 
+          hospitalId={hospitalId}
           departments={data.activeDepartments}
           doctors={data.activeDoctors}
           referrals={mappedReferrals}
           certificates={mappedCertificates}
+          assessments={mappedAssessments}
         />
       </div>
     </div>
