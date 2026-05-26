@@ -8,11 +8,11 @@
 - [x] Harden qualitative critical detection to prevent false positives on negations (e.g. 'Not Detected')
 - [x] Optimize laboratory result saving by batching database updates to eliminate N+1 roundtrips
 - [x] Implement in-app physician notifications for life-threatening critical lab values
-- [ ] Implement ICD-10 search with Arabic support
-- [ ] Nursing assessment forms
+- [x] Implement ICD-10 search with Arabic support
+- [x] Nursing assessment forms
 
 ## [ ] Patient Management
 - [x] Validate Egyptian NID governorate logic (Soft warning)
 - [x] Implement NID vs DOB cross-matching validation
 - [x] Strictly bind National ID field to robust validateNationalId checksum helper
-- [ ] Patient registration wizard
+- [x] Patient registration wizard

@@ -42,6 +42,7 @@ import { Link } from "@/i18n/routing";
 
 import { createReferralAction, updateReferralStatusAction } from "@/lib/actions/referrals";
 import { createCertificateAction } from "@/lib/actions/certificates";
+import { NursingAssessmentForm } from "@/components/forms/NursingAssessmentForm";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -103,6 +104,7 @@ interface PatientProfileClientProps {
     heightCm?: number;
   }[];
   hospitalSlug: string;
+  hospitalId: string;
   departments?: {
     id: string;
     nameAr: string;
@@ -135,25 +137,35 @@ interface PatientProfileClientProps {
     diagnosis: string;
     startDate: string | Date;
     endDate: string | Date;
-    restDays: number;
     notes?: string | null;
     createdAt: string | Date;
     doctorNameAr?: string | null;
     doctorNameEn?: string | null;
-  }[];
-}
+    }[];
+    assessments?: {
+    id: string;
+    type: string;
+    data: any;
+    notes?: string;
+    createdAt: string | Date;
+    recordedByNameAr?: string;
+    recordedByNameEn?: string;
+    }[];
+    }
 
-export function PatientProfileClient({ 
-  patient, 
-  surgeries, 
-  records = [], 
-  vitals = [], 
-  hospitalSlug,
-  departments = [],
-  doctors = [],
-  referrals = [],
-  certificates = []
-}: PatientProfileClientProps) {
+    export function PatientProfileClient({ 
+    patient, 
+    surgeries, 
+    records = [], 
+    vitals = [], 
+    hospitalSlug,
+    hospitalId,
+    departments = [],
+    doctors = [],
+    referrals = [],
+    certificates = [],
+    assessments = []
+    }: PatientProfileClientProps) {
   const t = useTranslations("patients");
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -181,6 +193,9 @@ export function PatientProfileClient({
   const [isSubmittingCert, setIsSubmittingCert] = useState(false);
   const [selectedCertificateForPrint, setSelectedCertificateForPrint] = useState<any | null>(null);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+
+  // Nursing Assessment State
+  const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
 
   // Parse custom mock values or actual values
   // Use patient.id to compute allergies deterministically and purely (no Math.random in render)
@@ -919,22 +934,117 @@ export function PatientProfileClient({
         {/* Tab C: Admissions & Care (Mock admissions) */}
         {activeTab === "admissions" && (
           <div className="space-y-6 animate-in fade-in duration-300 text-start">
-            <div>
-              <h3 className="text-lg font-black text-foreground">Inpatient Admissions & Active Ward Beds</h3>
-              <p className="text-xs text-muted-foreground">Historical records of surgical ward admissions, critical care bed occupancy, and nursing observation logs.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/10 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                  <BriefcaseMedical className="w-5 h-5 text-emerald-600" />
+                  {isRtl ? "التنويم والرعاية التمريضية" : "Inpatient Admissions & Nursing Care"}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isRtl 
+                    ? "إدارة سجلات التنويم، توزيع الأسرة، وتقييمات الرعاية التمريضية المستمرة." 
+                    : "Manage ward admissions, bed assignments, and continuous nursing assessment logs."}
+                </p>
+              </div>
+              <Button 
+                onClick={() => setIsAssessmentDialogOpen(true)}
+                size="sm" 
+                className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <Plus className="w-4 h-4" />
+                {isRtl ? "تسجيل تقييم تمريضي" : "New Nursing Assessment"}
+              </Button>
             </div>
 
-            <Card className="border border-border/30 bg-background rounded-2xl shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
-                  <Activity className="w-12 h-12 text-muted-foreground/30 animate-pulse" />
-                  <div>
-                    <h4 className="text-sm font-bold text-foreground">No Active Admissions</h4>
-                    <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">This patient is currently being managed as an outpatient and is not admitted to any hospital bed wing.</p>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Active Admission Mock Card (Optional) */}
+              <Card className="border border-border/30 bg-background rounded-2xl shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
+                    <Activity className="w-12 h-12 text-muted-foreground/30 animate-pulse" />
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">{isRtl ? "لا توجد تنويمات نشطة" : "No Active Admissions"}</h4>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                        {isRtl 
+                          ? "هذا المريض يعالج حالياً كحالة خارجية وغير مسجل على أي سرير في أجنحة التنويم." 
+                          : "This patient is currently being managed as an outpatient and is not assigned to a clinical ward bed."}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Nursing Assessments History */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <FileCheck2 className="w-4 h-4" />
+                  {isRtl ? "سجل التقييمات التمريضية" : "Nursing Assessment Logs"}
+                </h4>
+                
+                {assessments.length === 0 ? (
+                  <div className="p-8 text-center border border-dashed border-border rounded-2xl">
+                    <p className="text-xs text-muted-foreground font-semibold">
+                      {isRtl ? "لا توجد تقييمات تمريضية مسجلة بعد." : "No nursing assessments recorded yet."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {assessments.map((ass) => {
+                      const recordedBy = isRtl ? ass.recordedByNameAr : ass.recordedByNameEn;
+                      const dateStr = new Date(ass.createdAt).toLocaleString(locale === "ar" ? "ar-EG" : "en-US", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+
+                      return (
+                        <Card key={ass.id} className="border border-border/20 bg-background/50 hover:shadow-md transition-all rounded-2xl overflow-hidden group">
+                          <CardContent className="p-5 space-y-3">
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-2">
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[10px] font-black uppercase">
+                                  {ass.type}
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground font-mono font-bold">{dateStr}</span>
+                              </div>
+                              <span className="text-[10px] font-bold text-foreground/70">
+                                {isRtl ? "بواسطة: " : "By: "} <span className="text-primary">{recordedBy || "Nurse"}</span>
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              {/* Summary of key data points if available */}
+                              {ass.data?.vitals?.bp && (
+                                <div className="text-[10px] font-semibold bg-muted/30 p-2 rounded-lg">
+                                  <span className="text-muted-foreground block">{isRtl ? "ضغط الدم" : "BP"}</span>
+                                  <span className="text-foreground">{ass.data.vitals.bp}</span>
+                                </div>
+                              )}
+                              {ass.data?.pain?.level !== undefined && (
+                                <div className="text-[10px] font-semibold bg-muted/30 p-2 rounded-lg">
+                                  <span className="text-muted-foreground block">{isRtl ? "الألم" : "Pain"}</span>
+                                  <span className={cn(
+                                    "font-black",
+                                    Number(ass.data.pain.level) > 7 ? "text-destructive" : "text-amber-600"
+                                  )}>{ass.data.pain.level}/10</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {ass.notes && (
+                              <div className="bg-muted/10 p-3 rounded-xl border border-border/5 text-xs font-medium text-foreground/80 italic">
+                                "{ass.notes}"
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1661,6 +1771,26 @@ export function PatientProfileClient({
               `}} />
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Nursing Assessment Dialog */}
+      <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card border border-border shadow-2xl rounded-2xl p-0">
+          <DialogHeader onClose={() => setIsAssessmentDialogOpen(false)} className="px-6 py-4 border-b border-border/10">
+            <DialogTitle>{isRtl ? "تقييم تمريضي جديد" : "New Nursing Assessment"}</DialogTitle>
+            <DialogDescription>
+              {isRtl ? "سجل العلامات السريرية، مستوى الألم، وملاحظات الرعاية التمريضية." : "Record clinical observations, pain levels, and nursing care plan details."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-6">
+            <NursingAssessmentForm 
+              patientId={patient.id}
+              hospitalId={hospitalId}
+              hospitalSlug={hospitalSlug}
+              onSuccess={() => setIsAssessmentDialogOpen(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
