@@ -58,7 +58,7 @@ export function ShiftManagement({
       if (result.success) {
         toast.success(isRtl ? "تم بدء المناوبة" : "Shift started");
       } else {
-        toast.error(result.error);
+        toast.error("error" in result ? String(result.error) : "Error starting shift");
       }
     } catch (err) {
       console.error(err);
@@ -82,7 +82,7 @@ export function ShiftManagement({
       if (result.success) {
         toast.success(isRtl ? "تم إنهاء المناوبة" : "Shift ended");
       } else {
-        toast.error(result.error);
+        toast.error("error" in result ? String(result.error) : "Error ending shift");
       }
     } catch (err) {
       console.error(err);

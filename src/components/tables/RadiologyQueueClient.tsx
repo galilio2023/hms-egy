@@ -200,7 +200,8 @@ export function RadiologyQueueClient({ orders: initialOrders, hospitalSlug }: Ra
         setIsReportModalOpen(false);
         router.refresh();
       } else {
-        toast.error(res.error || (isRtl ? "فشل تقديم التقرير." : "Failed to submit report."));
+        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل تقديم التقرير." : "Failed to submit report.");
+        toast.error(errorMessage);
       }
     });
   };

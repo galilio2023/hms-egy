@@ -83,7 +83,7 @@ export function NursingAssessmentForm({
         toast.success(locale === "ar" ? "تم تسجيل التقييم بنجاح" : "Assessment recorded successfully");
         router.refresh();
       } else {
-        toast.error(result.error);
+        toast.error("error" in result ? String(result.error) : "Failed to record assessment");
       }
     } catch (err) {
       console.error(err);

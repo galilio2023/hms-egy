@@ -66,6 +66,7 @@ interface PrescriptionItem {
 
 interface MedicationAdministration {
   id: string;
+  prescriptionItemId: string;
   scheduledAt: Date;
   administeredAt: Date | null;
   status: string;
@@ -123,7 +124,7 @@ export function MarClient({
         setIsModalOpen(false);
         setAdminNotes("");
       } else {
-        toast.error(result.error);
+        toast.error("error" in result ? String(result.error) : "Failed to record administration");
       }
     });
   };
@@ -199,9 +200,9 @@ export function MarClient({
         <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <Button 
             variant="ghost" 
-            size="icon" 
+            size="xs" 
             onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-            className="rounded-xl"
+            className="rounded-xl w-8 p-0"
           >
             {isRtl ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </Button>
@@ -210,9 +211,9 @@ export function MarClient({
           </div>
           <Button 
             variant="ghost" 
-            size="icon" 
+            size="xs" 
             onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-            className="rounded-xl"
+            className="rounded-xl w-8 p-0"
           >
             {isRtl ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </Button>
@@ -366,8 +367,11 @@ export function MarClient({
               </Button>
               <Button 
                 type="button" 
-                variant={adminStatus === "held" ? "warning" : "outline"}
-                className="flex-1 rounded-xl"
+                variant={adminStatus === "held" ? "default" : "outline"}
+                className={cn(
+                  "flex-1 rounded-xl",
+                  adminStatus === "held" && "bg-amber-600 hover:bg-amber-700 border-amber-700 text-white"
+                )}
                 onClick={() => setAdminStatus("held")}
               >
                 {isRtl ? "مؤجل طبياً" : "Held"}

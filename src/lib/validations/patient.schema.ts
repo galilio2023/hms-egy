@@ -1,17 +1,30 @@
 import { z } from "zod";
-import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId, getGovernorateCode } from "../utils/egypt";
+import { validateNationalId, EGYPTIAN_INSURANCE_PROVIDERS, parseNationalId, getGovernorateCode, latinizeNumerals } from "../utils/egypt";
 import { toZonedTime } from "date-fns-tz";
 
-const egyptianPhoneSchema = z
-  .string()
+/**
+ * Preprocessor to normalize Eastern Arabic/Persian numerals (٠-٩) to Western Arabic (0-9).
+ * Crucial for Egyptian localized keyboards.
+ */
+const latinizedString = z.preprocess(
+  (val) => (typeof val === "string" ? latinizeNumerals(val) : val),
+  z.string()
+);
+
+const egyptianPhoneSchema = latinizedString
   .transform((val) => val.replace(/\s+/g, "")) // sanitize whitespace
   .refine((val) => /^(?:\+20|0020)?0?1[0125]\d{8}$/.test(val), {
     message: "Invalid Egyptian mobile number",
   });
 
 export const patientSchema = z.object({
-  nationalId: z.string().optional().or(z.literal("")),
-  passportNumber: z.string().optional().or(z.literal("")),
+  nationalId: latinizedString
+    .optional()
+    .or(z.literal(""))
+    .refine((val) => !val || val === "" || validateNationalId(val), {
+      message: "Invalid Egyptian National ID checksum or format.",
+    }),
+  passportNumber: latinizedString.optional().or(z.literal("")),
   nameAr: z.string().min(3, "Name in Arabic must be at least 3 characters"),
   nameEn: z.string().min(3, "Name in English must be at least 3 characters"),
   dob: z.coerce.date(),
@@ -23,10 +36,12 @@ export const patientSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   address: z.string().min(5, "Address must be at least 5 characters"),
   bloodType: z.string().optional(),
+  allergies: z.array(z.string()).default([]),
+  chronicConditions: z.array(z.string()).default([]),
   insuranceProviderId: z.string().optional(),
-  insuranceNumber: z.string().optional(),
+  insuranceNumber: latinizedString.optional(),
   guardianName: z.string().optional(),
-  guardianNid: z.string().optional().refine((val) => {
+  guardianNid: latinizedString.optional().refine((val) => {
     if (!val || val === "") return true;
     // If it looks like an Egyptian National ID (14 digits), validate strictly
     if (/^\d{14}$/.test(val)) {
@@ -38,7 +53,8 @@ export const patientSchema = z.object({
     message: "Invalid Guardian Identity format: Must be a 14-digit National ID or a valid Passport Number.",
   }),
   guardianPhone: egyptianPhoneSchema.optional().or(z.literal("")),
-}).refine((data) => {
+})
+.refine((data) => {
   if (data.insuranceProviderId === "uhis") {
     const govCode = getGovernorateCode(data.governorate);
     const provider = EGYPTIAN_INSURANCE_PROVIDERS.find(p => p.id === "uhis");
@@ -106,6 +122,20 @@ export const patientSchema = z.object({
           message: "Date of birth does not match National ID",
           path: ["dob"],
         });
+      }
+
+      // Cross-check embedded ID governorate code (Clinical Note)
+      const inputGovCode = getGovernorateCode(data.governorate);
+      
+      // Safety: Only parse if NID exists and is full length (Already validated by validateNationalId)
+      if (data.nationalId && data.nationalId.length === 14) {
+        const isForeignBorn = data.nationalId.substring(7, 9) === "88";
+
+        if (!isForeignBorn && parsed.governorate && parsed.governorate.code !== inputGovCode) {
+          // NOTE: The NID encodes the governorate of BIRTH. Patients often reside elsewhere.
+          // We will no longer block registration based on this mismatch to improve UX,
+          // but it remains useful for clinical record matching and audit.
+        }
       }
     }
   }

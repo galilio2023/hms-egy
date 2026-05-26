@@ -12,6 +12,8 @@ export const labTests = pgTable("lab_tests", {
   loincCode: varchar("loinc_code", { length: 50 }),
   cptCode: varchar("cpt_code", { length: 50 }),
   normalRange: text("normal_range"),
+  criticalLow: decimal("critical_low", { precision: 10, scale: 3 }),
+  criticalHigh: decimal("critical_high", { precision: 10, scale: 3 }),
   unit: varchar("unit", { length: 50 }),
   price: decimal("price", { precision: 12, scale: 2 }).notNull(), // standard price in EGP
   isActive: boolean("is_active").default(true).notNull(),

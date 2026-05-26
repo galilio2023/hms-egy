@@ -23,7 +23,9 @@ import {
   AlertOctagon,
   Stethoscope,
   BriefcaseMedical,
+  FlaskConical,
   Plus,
+  Pill,
   Thermometer,
   Droplet,
   Weight,
@@ -156,7 +158,7 @@ export function PatientProfileClient({
   const locale = useLocale();
   const isRtl = locale === "ar";
   
-  const [activeTab, setActiveTab] = useState<"medical" | "admissions" | "surgical" | "financials" | "consents" | "referrals" | "certificates">("medical");
+  const [activeTab, setActiveTab] = useState<"medical" | "admissions" | "surgical" | "financials" | "consents" | "referrals" | "certificates" | "laboratory">("medical");
   const [expandedSurgeryId, setExpandedSurgeryId] = useState<string | null>(null);
 
   // Referrals State
@@ -248,7 +250,8 @@ export function PatientProfileClient({
         setReferralUrgency("routine");
         setReferralNotes("");
       } else {
-        toast.error(res.error || (isRtl ? "فشل إنشاء الإحالة." : "Failed to create referral."));
+        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل إنشاء الإحالة." : "Failed to create referral.");
+        toast.error(errorMessage);
       }
     } catch (err: any) {
       toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
@@ -263,7 +266,8 @@ export function PatientProfileClient({
       if (res.success) {
         toast.success(isRtl ? "تم تحديث حالة الإحالة بنجاح." : "Referral status updated successfully.");
       } else {
-        toast.error(res.error || (isRtl ? "فشل تحديث حالة الإحالة." : "Failed to update referral status."));
+        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل تحديث حالة الإحالة." : "Failed to update referral status.");
+        toast.error(errorMessage);
       }
     } catch (err: any) {
       toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
@@ -306,7 +310,8 @@ export function PatientProfileClient({
         setCertRestDays(0);
         setCertNotes("");
       } else {
-        toast.error(res.error || (isRtl ? "فشل إصدار الشهادة." : "Failed to issue medical certificate."));
+        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل إصدار الشهادة." : "Failed to issue medical certificate.");
+        toast.error(errorMessage);
       }
     } catch (err: any) {
       toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
@@ -318,6 +323,7 @@ export function PatientProfileClient({
   const tabs = [
     { id: "medical", label: isRtl ? "السجل الطبي" : "Medical Records", icon: Stethoscope },
     { id: "admissions", label: isRtl ? "التنويم والرعاية" : "Admissions & Care", icon: BriefcaseMedical },
+    { id: "laboratory", label: isRtl ? "المختبر" : "Laboratory", icon: FlaskConical },
     { id: "surgical", label: isRtl ? "السجل الجراحي" : "Surgical History", icon: Scissors, badge: surgeries.length },
     { id: "referrals", label: isRtl ? "الإحالات الداخلية" : "Internal Referrals", icon: BriefcaseMedical, badge: referrals.length },
     { id: "certificates", label: isRtl ? "الشهادات الطبية" : "Medical Certificates", icon: FileText, badge: certificates.length },
@@ -614,12 +620,26 @@ export function PatientProfileClient({
                     : "Review doctor SOAP encounter notes, diagnostics assessments, and recorded outpatient vitals flowsheet."}
                 </p>
               </div>
-              <Button asChild size="sm" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 bg-primary hover:bg-primary/95 text-primary-foreground">
-                <Link href={`/${hospitalSlug}/patients/${patient.id}/records/new`}>
-                  <Plus className="w-4 h-4" />
-                  {t("recordNewVisit")}
-                </Link>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="outline" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 border-indigo-500/30 text-indigo-600 hover:bg-indigo-50">
+                  <Link href={`/${hospitalSlug}/patients/${patient.id}/prescribe`}>
+                    <Pill className="w-4 h-4" />
+                    {isRtl ? "صرف دواء" : "Prescribe Meds"}
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 border-purple-500/30 text-purple-600 hover:bg-purple-50">
+                  <Link href={`/${hospitalSlug}/patients/${patient.id}/labs/new`}>
+                    <FlaskConical className="w-4 h-4" />
+                    {isRtl ? "طلب فحص" : "Order Labs"}
+                  </Link>
+                </Button>
+                <Button asChild size="sm" className="font-extrabold gap-1.5 h-10 shadow-xs self-start sm:self-auto shrink-0 bg-primary hover:bg-primary/95 text-primary-foreground">
+                  <Link href={`/${hospitalSlug}/patients/${patient.id}/records/new`}>
+                    <Plus className="w-4 h-4" />
+                    {t("recordNewVisit")}
+                  </Link>
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, uniqueIndex, integer, decimal , pgPolicy} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, uniqueIndex, integer, decimal , pgPolicy, check} from "drizzle-orm/pg-core";
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 import { admissions } from "./clinical";
@@ -25,6 +25,12 @@ export const medications = pgTable("medications", {
     hospitalMedEnIdx: uniqueIndex("med_hospital_name_en_idx").on(table.hospitalId, sql`lower(${table.nameEn})`).where(sql`name_en IS NOT NULL AND name_en != ''`),
     hospitalMedArIdx: uniqueIndex("med_hospital_name_ar_idx").on(table.hospitalId, table.nameAr).where(sql`name_ar IS NOT NULL AND name_ar != ''`),
     barcodeIdx: index("med_barcode_idx").on(table.barcode),
+    // Performance: Non-negative stock constraint
+    stockCountNonNegative: check("stock_count_non_negative", sql`stock_count >= 0`),
+    // Performance: GIN Trigram indexes for high-performance Arabic/English search
+    trgmEnIdx: index("idx_meds_trgm_en").using("gin", sql`${table.nameEn} gin_trgm_ops`),
+    trgmArIdx: index("idx_meds_trgm_ar").using("gin", sql`${table.nameAr} gin_trgm_ops`),
+    trgmGenericIdx: index("idx_meds_trgm_generic").using("gin", sql`${table.genericName} gin_trgm_ops`),
   };
 }).enableRLS();
 
@@ -56,6 +62,7 @@ export const prescriptionItems = pgTable("prescription_items", {
   frequency: text("frequency").notNull(), // e.g. "three times daily"
   durationDays: integer("duration_days").notNull(),
   instructions: text("instructions"),
+  prescribedQuantity: integer("prescribed_quantity"), // Structured total units for dispensing ceilings
   dispensedCount: integer("dispensed_count").default(0).notNull(),
   status: varchar("status", { length: 50 }).default("pending").notNull(), // pending, dispensed, partial, cancelled
 }, (table) => {
@@ -101,6 +108,14 @@ export const medicationInteractions = pgTable("medication_interactions", {
   return {
     exactDrugMatchIdx: index("ddi_exact_drugs_idx").on(table.drug1Name, table.drug2Name),
     genericDrugMatchIdx: index("ddi_generic_drugs_idx").on(table.drug1Generic, table.drug2Generic),
+    // Performance: Functional indexes for case-insensitive DDI lookups
+    lowerDrug1NameIdx: index("idx_ddi_lower_drug1_name").on(sql`lower(${table.drug1Name})`),
+    lowerDrug2NameIdx: index("idx_ddi_lower_drug2_name").on(sql`lower(${table.drug2Name})`),
+    lowerDrug1GenericIdx: index("idx_ddi_lower_drug1_generic").on(sql`lower(${table.drug1Generic})`),
+    lowerDrug2GenericIdx: index("idx_ddi_lower_drug2_generic").on(sql`lower(${table.drug2Generic})`),
+    // Performance: GIN Trigram indexes for fast fuzzy matching in real-time DDI checks
+    drug1GenericTrgmIdx: index("idx_ddi_trgm_d1_generic").using("gin", sql`${table.drug1Generic} gin_trgm_ops`),
+    drug2GenericTrgmIdx: index("idx_ddi_trgm_d2_generic").using("gin", sql`${table.drug2Generic} gin_trgm_ops`),
   };
 });
 

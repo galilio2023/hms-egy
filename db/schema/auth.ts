@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, boolean, integer, uuid, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, uuid, index, pgPolicy } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { hospitals, departments } from "./core";
 
 export const users = pgTable("user", {
@@ -17,10 +18,17 @@ export const users = pgTable("user", {
   updatedAt: timestamp("updated_at").notNull(),
 }, (table) => {
   return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { 
+      for: "all", 
+      to: "public", 
+      using: sql`(current_setting('app.bypass_rls', true) = 'true') 
+                 OR (hospital_id IS NULL AND NULLIF(current_setting('app.current_hospital_id', true), '') IS NULL)
+                 OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` 
+    }),
     hospitalIdIdx: index("user_hospital_idx").on(table.hospitalId),
     emailIdx: index("user_email_idx").on(table.email),
   };
-});
+}).enableRLS();
 
 export const sessions = pgTable("session", {
   id: text("id").primaryKey(),

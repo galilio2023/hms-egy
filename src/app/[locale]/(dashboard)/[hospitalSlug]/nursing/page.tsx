@@ -209,12 +209,12 @@ export default async function NursingPage({
     }
 
     // Group handover notes by patient ID
-    const handoverByPatient: Record<string, Record<string, unknown>[]> = {};
+    const handoverByPatient: Record<string, any[]> = {};
     for (const note of handoverNotesRes) {
       if (!handoverByPatient[note.patientId]) {
         handoverByPatient[note.patientId] = [];
       }
-      handoverByPatient[note.patientId].push(note as unknown as Record<string, unknown>);
+      handoverByPatient[note.patientId].push(note);
     }
 
     const activeShift = activeShiftRes as unknown as { 

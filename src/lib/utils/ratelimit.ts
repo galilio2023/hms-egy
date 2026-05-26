@@ -32,3 +32,4 @@ export function createLimiter(requests: number = 60, window: `${number} ${"s" | 
 // Pre-defined limiters
 export const searchLimiter = createLimiter(30, "1 m"); // 30 searches per minute per IP
 export const authLimiter = createLimiter(5, "1 m");   // 5 login attempts per minute per IP
+export const uploadLimiter = createLimiter(10, "1 m"); // 10 uploads per minute per IP

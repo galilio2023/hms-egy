@@ -4,7 +4,8 @@ import { withTenantContext } from "@/lib/db/tenant";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
-import { admissions, patients, beds, rooms } from "@db/schema/clinical";
+import { admissions, beds, rooms } from "@db/schema/clinical";
+import { patients } from "@db/schema/patients";
 import { prescriptions, prescriptionItems, medications, medicationAdministration } from "@db/schema/pharmacy";
 import { eq, and, desc } from "drizzle-orm";
 import { MarClient } from "./MarClient";
@@ -71,7 +72,7 @@ export default async function MarPage({
         durationDays: prescriptionItems.durationDays,
         instructions: prescriptionItems.instructions,
         status: prescriptionItems.status,
-        createdAt: prescriptionItems.createdAt,
+        createdAt: prescriptions.createdAt,
       })
       .from(prescriptionItems)
       .innerJoin(prescriptions, eq(prescriptionItems.prescriptionId, prescriptions.id))
