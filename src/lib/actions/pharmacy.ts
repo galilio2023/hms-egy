@@ -2,13 +2,13 @@
 
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
-import { medications, prescriptions, prescriptionItems } from "@db/schema/pharmacy";
+import { medications, prescriptions, prescriptionItems, stockTransactions } from "@db/schema/pharmacy";
 import { patients } from "@db/schema/patients";
 import { eq, and, or, ilike, sql, inArray, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { checkDrugInteractions } from "@/lib/pharmacy/ddi";
 import { revalidatePath } from "next/cache";
-import { stockTransactions, auditLogs } from "@db/schema/index";
+import { auditLogs } from "@db/schema/system";
 import { staff } from "@db/schema/core";
 
 interface PrescriptionItemInput {

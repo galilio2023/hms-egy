@@ -312,12 +312,14 @@ export default function HousekeepingDashboardClient({
   };
 
   const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
+      reader.onerror = (err) => reject(err);
       reader.onload = (event) => {
         const img = new Image();
         img.src = event.target?.result as string;
+        img.onerror = (err) => reject(err);
         img.onload = () => {
           const canvas = document.createElement("canvas");
           const MAX_WIDTH = 1024;

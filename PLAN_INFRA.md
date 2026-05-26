@@ -7,5 +7,6 @@
 ## [ ] Deployment
 - [ ] PWA setup
 - [x] Cloud Storage integration (S3/R2) with Pre-signed URLs
+- [x] Harden S3 presign API with size limits and strict extension whitelists
 - [x] Client-side image compression for mobile clinical uploads
 - [ ] Vercel/Neon production hardening

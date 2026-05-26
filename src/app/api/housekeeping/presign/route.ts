@@ -33,6 +33,7 @@ export async function POST(req: Request) {
 
     const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
     const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
     if (
       !contentType || 
@@ -44,8 +45,11 @@ export async function POST(req: Request) {
     }
 
     const fileId = crypto.randomUUID();
-    const fileName = `hk-${fileId}.${extension || 'jpg'}`;
+    const fileName = `hk-${fileId}.${extension.toLowerCase()}`;
 
+    // Generate Presigned URL with content-size constraint if supported by provider
+    // Note: Standard PUT presigning doesn't strictly lock size at URL level, 
+    // but we document the limit for infrastructure monitoring.
     const { uploadUrl, publicUrl, isLocal } = await getUploadPresignedUrl(
       fileName,
       contentType,

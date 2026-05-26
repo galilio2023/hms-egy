@@ -2,6 +2,7 @@
 
 ## [ ] Clinical Modules
 - [x] Fix Arabic/Persian numeral handling in lab results (Strict numeric parsing & Correct mapping)
+- [x] Implement robust O(1) numeral latinization to prevent character corruption (Persian 7, 8, 9)
 - [x] Improve Lab result numeric extraction to handle measurement units (e.g. g/dL)
 - [x] Fix floating-point precision in lab criticality checks (Integer-based comparison)
 - [x] Harden qualitative critical detection to prevent false positives on negations (e.g. 'Not Detected')
