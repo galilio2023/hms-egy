@@ -1,7 +1,5 @@
 import { ETADocument, ETASubmissionResponse, ETATokenResponse } from "./types";
 
-const ETA_CLIENT_ID = process.env.ETA_CLIENT_ID;
-const ETA_CLIENT_SECRET = process.env.ETA_CLIENT_SECRET;
 const ETA_ENVIRONMENT = process.env.ETA_ENVIRONMENT || "sandbox";
 
 const ID_URL = ETA_ENVIRONMENT === "production" 
@@ -12,47 +10,64 @@ const API_URL = ETA_ENVIRONMENT === "production"
   ? "https://api.invoicing.eta.gov.eg"
   : "https://api.preprod.invoicing.eta.gov.eg";
 
+export interface ETACredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
 export class ETAClient {
-  private accessToken: string | null = null;
-  private tokenExpiry: number = 0;
+  private tokenCache: Map<string, { token: string; expiry: number }> = new Map();
+  private pendingTokens: Map<string, Promise<string>> = new Map();
 
-  async getToken(): Promise<string> {
-    if (this.accessToken && Date.now() < this.tokenExpiry) {
-      return this.accessToken;
+  async getToken(creds: ETACredentials): Promise<string> {
+    const cacheKey = creds.clientId;
+    const cached = this.tokenCache.get(cacheKey);
+    
+    if (cached && Date.now() < cached.expiry) {
+      return cached.token;
     }
 
-    if (!ETA_CLIENT_ID || !ETA_CLIENT_SECRET) {
-      throw new Error("ETA credentials not configured");
+    // Handle race condition (Code Review #5A)
+    if (this.pendingTokens.has(cacheKey)) {
+      return this.pendingTokens.get(cacheKey)!;
     }
 
-    const response = await fetch(`${ID_URL}/connect/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: ETA_CLIENT_ID,
-        client_secret: ETA_CLIENT_SECRET,
-        scope: "InvoicingAPI",
-      }),
-    });
+    const tokenPromise = (async () => {
+      try {
+        const response = await fetch(`${ID_URL}/connect/token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            grant_type: "client_credentials",
+            client_id: creds.clientId,
+            client_secret: creds.clientSecret,
+            scope: "InvoicingAPI",
+          }),
+        });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Failed to get ETA token: ${response.statusText} - ${errorBody}`);
-    }
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`Failed to get ETA token: ${response.statusText} - ${errorBody}`);
+        }
 
-    const data: ETATokenResponse = await response.json();
-    this.accessToken = data.access_token;
-    // Set expiry 1 minute before actual expiry to be safe
-    this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+        const data: ETATokenResponse = await response.json();
+        const expiry = Date.now() + (data.expires_in - 60) * 1000;
+        
+        this.tokenCache.set(cacheKey, { token: data.access_token, expiry });
+        return data.access_token;
+      } finally {
+        this.pendingTokens.delete(cacheKey);
+      }
+    })();
 
-    return this.accessToken;
+    this.pendingTokens.set(cacheKey, tokenPromise);
+    return tokenPromise;
   }
 
-  async submitDocuments(documents: ETADocument[]): Promise<ETASubmissionResponse> {
-    const token = await this.getToken();
+  async submitDocuments(documents: ETADocument[], creds: ETACredentials): Promise<ETASubmissionResponse> {
+    const token = await this.getToken(creds);
 
     const response = await fetch(`${API_URL}/api/v1.0/documentsubmissions`, {
       method: "POST",
@@ -71,8 +86,8 @@ export class ETAClient {
     return response.json();
   }
 
-  async getDocument(uuid: string): Promise<any> {
-    const token = await this.getToken();
+  async getDocument(uuid: string, creds: ETACredentials): Promise<any> {
+    const token = await this.getToken(creds);
 
     const response = await fetch(`${API_URL}/api/v1.0/documents/${uuid}/details`, {
       method: "GET",
@@ -89,8 +104,8 @@ export class ETAClient {
     return response.json();
   }
 
-  async cancelDocument(uuid: string, reason: string): Promise<any> {
-    const token = await this.getToken();
+  async cancelDocument(uuid: string, reason: string, creds: ETACredentials): Promise<any> {
+    const token = await this.getToken(creds);
 
     const response = await fetch(`${API_URL}/api/v1.0/documents/state/${uuid}/state`, {
       method: "PUT",

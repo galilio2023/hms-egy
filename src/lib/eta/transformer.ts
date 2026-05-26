@@ -1,57 +1,76 @@
 import { ETADocument, ETAInvoiceLine, ETATaxableItem, ETATaxTotal } from "./types";
 import { invoices, invoiceItems } from "@/db/schema/billing";
-import { hospitals } from "@/db/schema/core";
+import { hospitals, hospitalSettings } from "@/db/schema/core";
 import { patients } from "@/db/schema/patients";
 
 export type InvoiceWithRelations = typeof invoices.$inferSelect & {
   items: (typeof invoiceItems.$inferSelect)[];
-  hospital: typeof hospitals.$inferSelect;
+  hospital: typeof hospitals.$inferSelect & {
+    settings: typeof hospitalSettings.$inferSelect | null;
+  };
   patient: typeof patients.$inferSelect;
 };
 
+/**
+ * Transforms an internal invoice into the ETA E-invoicing format.
+ * Addresses Code Review findings: #2 (50k rule), #3 (Precision), #5B (Structured address).
+ */
 export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ETADocument {
   const { hospital, patient, items } = invoice;
+  const settings = hospital.settings;
+
+  // 1. Legal Validation (Code Review #2)
+  const totalAmountValue = parseFloat(invoice.totalAmount);
+  if (totalAmountValue > 50000 && !patient.nationalId) {
+    throw new Error("Egyptian regulation requires a valid 14-digit National ID for invoices exceeding 50,000 EGP.");
+  }
+
+  // 2. High-Precision Calculations (Code Review #3)
+  // We round to 5 decimal places as required by ETA APIs to prevent validation failures.
+  const round = (num: number) => Math.round((num + Number.EPSILON) * 100000) / 100000;
 
   const invoiceLines: ETAInvoiceLine[] = items.map((item) => {
     const unitPrice = parseFloat(item.unitPrice);
     const quantity = item.quantity;
-    const salesTotal = unitPrice * quantity;
-    
-    // For simplicity, we assume no item-level discount for now
-    // In a real scenario, this would come from the item record
+    const salesTotal = round(unitPrice * quantity);
     const itemsDiscount = 0;
-    const netTotal = salesTotal - itemsDiscount;
+    const netTotal = round(salesTotal - itemsDiscount);
 
-    // Calculate taxes for the item
-    // Assuming 14% VAT for all items for now, or 0% if exempt
-    // Medical services are often exempt but some items/pharmacy might have VAT
-    const vatRate = 0.14; 
-    const vatAmount = netTotal * vatRate;
+    // Dynamic Tax Configuration (Code Review #6)
+    const taxType = item.taxType || "T1";
+    const taxSubType = item.taxSubType || "V009";
+    
+    // Medical consultations are often exempt (V002 or V018)
+    // Here we use the sub-type from the DB which should be correctly configured per item type
+    let taxRate = 0.14; // Default standard VAT
+    if (taxSubType === "V002" || taxSubType === "V018") taxRate = 0;
+    
+    const taxAmount = round(netTotal * taxRate);
 
     const taxableItems: ETATaxableItem[] = [
       {
-        taxType: "T1", // Value Added Tax
-        amount: vatAmount,
-        subType: "V009", // Standard rate
-        rate: vatRate * 100,
+        taxType,
+        amount: taxAmount,
+        subType: taxSubType,
+        rate: taxRate * 100,
       }
     ];
 
-    const lineTotal = netTotal + vatAmount;
+    const lineTotal = round(netTotal + taxAmount);
 
     return {
       description: item.descriptionEn,
-      itemType: "EGS", // Using EGS by default
-      itemCode: `EG-${hospital.taxpayerId}-${item.type.toUpperCase()}`, // Placeholder logic for EGS code
-      unitType: "EA", // Each
+      itemType: item.etaItemCode?.startsWith("EG-") ? "EGS" : "GS1",
+      itemCode: item.etaItemCode || `EG-${hospital.taxpayerId}-${item.type.toUpperCase()}`,
+      unitType: "EA",
       quantity: quantity,
       internalCode: item.id,
-      salesTotal: salesTotal,
+      salesTotal,
       total: lineTotal,
       valueDifference: 0,
       totalTaxableFees: 0,
-      netTotal: netTotal,
-      itemsDiscount: itemsDiscount,
+      netTotal,
+      itemsDiscount,
       unitValue: {
         currencySold: "EGP",
         amountEGP: unitPrice,
@@ -64,31 +83,38 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
     };
   });
 
-  const totalSalesAmount = invoiceLines.reduce((sum, line) => sum + line.salesTotal, 0);
-  const totalItemsDiscountAmount = invoiceLines.reduce((sum, line) => sum + line.itemsDiscount, 0);
-  const totalNetAmount = totalSalesAmount - totalItemsDiscountAmount;
+  const totalSalesAmount = round(invoiceLines.reduce((sum, line) => sum + line.salesTotal, 0));
+  const totalItemsDiscountAmount = round(invoiceLines.reduce((sum, line) => sum + line.itemsDiscount, 0));
+  const totalNetAmount = round(totalSalesAmount - totalItemsDiscountAmount);
   
-  // Calculate aggregate tax totals
-  const taxTotals: ETATaxTotal[] = [
-    {
-      taxType: "T1",
-      amount: invoiceLines.reduce((sum, line) => sum + line.taxableItems[0].amount, 0),
-    }
-  ];
+  // Group taxes by type
+  const taxTotalsMap = new Map<string, number>();
+  invoiceLines.forEach(line => {
+    line.taxableItems.forEach(tax => {
+      const current = taxTotalsMap.get(tax.taxType) || 0;
+      taxTotalsMap.set(tax.taxType, round(current + tax.amount));
+    });
+  });
 
-  const totalAmount = totalNetAmount + taxTotals.reduce((sum, tax) => sum + tax.amount, 0);
+  const taxTotals: ETATaxTotal[] = Array.from(taxTotalsMap.entries()).map(([taxType, amount]) => ({
+    taxType,
+    amount,
+  }));
+
+  const totalAmount = round(totalNetAmount + taxTotals.reduce((sum, tax) => sum + tax.amount, 0));
 
   return {
     issuer: {
       address: {
-        branchID: "0", // Default branch
+        branchID: "0",
         country: "EG",
         governate: hospital.governorate,
-        regionCity: hospital.governorate, // Map city if available
-        street: hospital.address.split(",")[0] || "Street",
-        buildingNumber: "1", // Map if available
+        regionCity: hospital.city || hospital.governorate,
+        street: hospital.street || hospital.address.split(",")[0],
+        buildingNumber: hospital.buildingNumber || "1",
+        landmark: hospital.district,
       },
-      type: "B", // Business
+      type: "B",
       id: hospital.taxpayerId || "",
       name: hospital.nameEn,
     },
@@ -97,17 +123,17 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
         country: "EG",
         governate: patient.governorate,
         regionCity: patient.governorate,
-        street: patient.address.split(",")[0] || "Street",
+        street: patient.address.split(",")[0],
         buildingNumber: "1",
       },
-      type: patient.nationalId ? "P" : "F", // Person or Foreigner
+      type: patient.nationalId ? "P" : (patient.passportNumber ? "F" : "P"),
       id: patient.nationalId || patient.passportNumber || "",
       name: patient.nameEn,
     },
-    documentType: "I", // Invoice
+    documentType: "I",
     documentTypeVersion: "1.0",
     dateTimeIssued: invoice.createdAt.toISOString(),
-    taxpayerActivityCode: "8610", // Human health activities
+    taxpayerActivityCode: settings?.etaTaxpayerActivityCode || "8610",
     internalID: invoice.invoiceNumber,
     payment: {
       terms: "Immediate",
@@ -116,7 +142,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
     totalDiscountAmount: 0,
     totalSalesAmount,
     totalNetAmount,
-    unitValueAmount: 0, // Not used in V1.0 summary
+    unitValueAmount: 0,
     totalAmount,
     extraDiscountAmount: 0,
     totalItemsDiscountAmount,
