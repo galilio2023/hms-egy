@@ -37,8 +37,20 @@ if (process.env.NODE_ENV === "production") {
 
 /**
  * Main database instance with transaction support.
+ * This instance is subject to Row-Level Security (RLS) policies.
  */
 export const db = drizzle(pool, { schema });
+
+/**
+ * Privileged database instance for authentication and system-level tasks.
+ * Uses a separate connection pool (if SYSTEM_DATABASE_URL is provided) or the main pool.
+ * NOTE: Queries using this client should be handled with extreme care as they may bypass RLS.
+ */
+const systemPool = process.env.SYSTEM_DATABASE_URL 
+  ? new Pool({ connectionString: process.env.SYSTEM_DATABASE_URL })
+  : pool;
+
+export const systemDb = drizzle(systemPool, { schema });
 
 /**
  * Scopes a query to a specific hospital.

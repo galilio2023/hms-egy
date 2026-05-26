@@ -124,13 +124,39 @@ export async function getFile(fileName: string, folder: string = "general"): Pro
     return Buffer.from(bytes);
   }
 
-  // Local Fallback
+  // Local fallback
   const filePath = path.join(process.cwd(), "storage", folder, fileName);
   if (!fs.existsSync(filePath)) {
     throw new Error("File not found on local storage");
   }
 
   return fs.readFileSync(filePath);
+}
+
+/**
+ * Generates a pre-signed URL for direct cloud-to-browser download.
+ */
+export async function getDownloadPresignedUrl(
+  fileName: string,
+  folder: string = "general",
+  expiresIn: number = 3600
+): Promise<{ url: string; isLocal: boolean }> {
+  if (s3Client && BUCKET_NAME) {
+    const key = `${folder}/${fileName}`;
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+    });
+
+    const url = await getSignedUrl(s3Client, command, { expiresIn });
+    return { url, isLocal: false };
+  }
+
+  // Local fallback: Return the proxy path
+  return {
+    url: `/api/housekeeping/image/${fileName}`,
+    isLocal: true,
+  };
 }
 
 function getContentType(fileName: string): string {

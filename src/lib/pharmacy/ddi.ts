@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { medicationInteractions, drugAllergyCrossReferences } from "@db/schema/pharmacy";
+import { medications as medicationsTable, medicationInteractions, drugAllergyCrossReferences } from "@db/schema/pharmacy";
 import { eq, and, or, ilike, sql, inArray } from "drizzle-orm";
 
 export interface Interaction {
@@ -94,38 +94,44 @@ export async function checkDrugInteractions(
       });
     });
 
-    // 2. Fuzzy Path: Only for unresolved identifiers to prevent polypharmacy query blow-up
+    // 2. Fuzzy Path: Resolve unresolved identifiers to canonical generics first
+    // This prevents polypharmacy query blow-up by avoiding combinatorial trigram ORs
     const unresolvedIds = lowerIdentifiers.filter(id => !resolvedIds.has(id));
 
     if (unresolvedIds.length >= 1) {
-      // High-performance Trigram Optimization: Use % operator for guaranteed GIN index utilization.
-      // Set the threshold for the current transaction only (true flag).
-      await tx.execute(sql`SELECT set_config('pg_trgm.similarity_threshold', '0.4', true)`);
-
-      const fuzzyMatches = await tx
-        .select()
-        .from(medicationInteractions)
+      // 2a. Resolve identifiers to canonical catalog generic names
+      const resolvedGenericsFromCatalog = await tx
+        .select({ genericName: medicationsTable.genericName })
+        .from(medicationsTable)
         .where(
           or(
             ...unresolvedIds.map(id => 
               or(
-                sql`${medicationInteractions.drug1Generic} % ${id}`,
-                sql`${medicationInteractions.drug2Generic} % ${id}`
+                sql`${medicationsTable.nameEn} % ${id}`,
+                sql`${medicationsTable.nameAr} % ${id}`,
+                sql`${medicationsTable.genericName} % ${id}`
               )
             )
           )
-        );
+        )
+        .limit(20);
 
-      fuzzyMatches.forEach((match: any) => {
-        const d1 = match.drug1Generic?.toLowerCase() || match.drug1Name.toLowerCase();
-        const d2 = match.drug2Generic?.toLowerCase() || match.drug2Name.toLowerCase();
-        
-        // Ensure BOTH drugs are in our prescribed list (one might be fuzzy, other might be exact)
-        const isDrug1Present = lowerIdentifiers.some(id => d1.includes(id) || id.includes(d1));
-        const isDrug2Present = lowerIdentifiers.some(id => d2.includes(id) || id.includes(d2));
+      const resolvedGenerics = [...new Set(resolvedGenericsFromCatalog.map((m: any) => m.genericName.toLowerCase()))];
+      const allResolvedGenerics = [...new Set([...Array.from(resolvedIds), ...resolvedGenerics])];
 
-        if (isDrug1Present && isDrug2Present) {
-          // Avoid duplicate interactions already found in fast path
+      if (allResolvedGenerics.length >= 2) {
+        // 2b. Exact match on interactions table using canonical generics
+        const fuzzyDdiMatches = await tx
+          .select()
+          .from(medicationInteractions)
+          .where(
+            and(
+              inArray(sql`lower(${medicationInteractions.drug1Generic})`, allResolvedGenerics),
+              inArray(sql`lower(${medicationInteractions.drug2Generic})`, allResolvedGenerics)
+            )
+          );
+
+        fuzzyDdiMatches.forEach((match: any) => {
           const isDuplicate = interactions.some(i => 
             (i.drug1 === match.drug1Name && i.drug2 === match.drug2Name) ||
             (i.drug1 === match.drug2Name && i.drug2 === match.drug1Name)
@@ -142,8 +148,8 @@ export async function checkDrugInteractions(
               effectEn: match.clinicalEffectEn || undefined,
             });
           }
-        }
-      });
+        });
+      }
     }
   }
 

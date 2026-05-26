@@ -2,7 +2,7 @@ import { headers, cookies } from "next/headers";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "../db";
+import { db, systemDb } from "../db";
 import * as schema from "../../../db/schema";
 import { type User } from "@/types/auth-api.types";
 
@@ -16,7 +16,7 @@ export interface Session {
  * Better Auth Server Instance configured for HMS Egypt's multi-tenant PG schema.
  */
 export const authInstance = betterAuth({
-  database: drizzleAdapter(db, {
+  database: drizzleAdapter(systemDb, {
     provider: "pg",
     schema: {
       user: schema.users,

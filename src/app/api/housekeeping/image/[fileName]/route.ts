@@ -4,7 +4,7 @@ import path from "path";
 import { housekeepingTasks } from "@db/schema/housekeeping";
 import { eq, and } from "drizzle-orm";
 import { withTenantContext } from "@/lib/db/tenant";
-import { getFile } from "@/lib/storage";
+import { getFile, getDownloadPresignedUrl } from "@/lib/storage";
 
 /**
  * Authenticated Image Proxy for Housekeeping Photos.
@@ -60,7 +60,14 @@ export async function GET(
   }
 
   try {
-    // 3. Retrieve image from configured storage provider (Local or S3/R2)
+    // 3. Retrieve image URL (Direct Pre-signed URL or Local Proxy)
+    const { url, isLocal } = await getDownloadPresignedUrl(fileName, "housekeeping", 300); // 5 min expiration
+
+    if (!isLocal) {
+      return NextResponse.redirect(url, { status: 302 });
+    }
+
+    // Local Fallback: Stream from disk
     const buffer = await getFile(fileName, "housekeeping");
     const ext = path.extname(fileName).toLowerCase();
     const contentType = ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : ext === ".png" ? "image/png" : "image/webp";
