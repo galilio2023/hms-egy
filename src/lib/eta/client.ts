@@ -1,4 +1,5 @@
 import { ETADocument, ETASubmissionResponse, ETATokenResponse } from "./types";
+import redis from "@/lib/utils/redis";
 
 const ETA_ENVIRONMENT = process.env.ETA_ENVIRONMENT || "sandbox";
 
@@ -19,17 +20,42 @@ export class ETAClient {
   private tokenCache: Map<string, { token: string; expiry: number }> = new Map();
   private pendingTokens: Map<string, Promise<string>> = new Map();
 
+  /**
+   * Fetches an access token from ETA, utilizing a distributed Redis cache
+   * for serverless compatibility (Code Review #2).
+   */
   async getToken(creds: ETACredentials): Promise<string> {
-    const cacheKey = creds.clientId;
-    const cached = this.tokenCache.get(cacheKey);
+    const cacheKey = `eta_token:${creds.clientId}`;
     
-    if (cached && Date.now() < cached.expiry) {
-      return cached.token;
+    // 1. Check local in-memory cache first
+    const localCached = this.tokenCache.get(creds.clientId);
+    if (localCached && Date.now() < localCached.expiry) {
+      return localCached.token;
     }
 
-    // Handle race condition (Code Review #5A)
-    if (this.pendingTokens.has(cacheKey)) {
-      return this.pendingTokens.get(cacheKey)!;
+    // 2. Check distributed Redis cache (Code Review #2)
+    if (redis) {
+      try {
+        const remoteToken = await redis.get<string>(cacheKey);
+        if (remoteToken) {
+          // Update local cache for next time
+          const ttl = await redis.ttl(cacheKey);
+          if (ttl > 60) {
+            this.tokenCache.set(creds.clientId, { 
+              token: remoteToken, 
+              expiry: Date.now() + (ttl - 30) * 1000 
+            });
+            return remoteToken;
+          }
+        }
+      } catch (err) {
+        console.error("Redis token fetch failed:", err);
+      }
+    }
+
+    // 3. Handle race condition (Code Review #5A)
+    if (this.pendingTokens.has(creds.clientId)) {
+      return this.pendingTokens.get(creds.clientId)!;
     }
 
     const tokenPromise = (async () => {
@@ -55,14 +81,24 @@ export class ETAClient {
         const data: ETATokenResponse = await response.json();
         const expiry = Date.now() + (data.expires_in - 60) * 1000;
         
-        this.tokenCache.set(cacheKey, { token: data.access_token, expiry });
+        // Update caches
+        this.tokenCache.set(creds.clientId, { token: data.access_token, expiry });
+        
+        if (redis) {
+          try {
+            await redis.set(cacheKey, data.access_token, { ex: data.expires_in - 30 });
+          } catch (err) {
+            console.error("Redis token save failed:", err);
+          }
+        }
+
         return data.access_token;
       } finally {
-        this.pendingTokens.delete(cacheKey);
+        this.pendingTokens.delete(creds.clientId);
       }
     })();
 
-    this.pendingTokens.set(cacheKey, tokenPromise);
+    this.pendingTokens.set(creds.clientId, tokenPromise);
     return tokenPromise;
   }
 

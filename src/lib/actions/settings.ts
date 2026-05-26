@@ -5,7 +5,7 @@ import { hospitals, hospitalSettings } from "@db/schema/core";
 import { eq } from "drizzle-orm";
 import { hospitalSettingsSchema, type HospitalSettingsType } from "@/lib/validations/hospital.schema";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { authInstance } from "@/lib/auth";
 import { encryptField } from "@/lib/utils/security";
 import { validateHospitalModules } from "@/lib/utils/plans";
 import { type PlanTier } from "@/types/plans.types";
@@ -16,7 +16,7 @@ export async function updateHospitalSettings(
   data: HospitalSettingsType
 ) {
   // Authorization check
-  const session = await auth();
+  const session = await authInstance.api.getSession();
   if (!session) {
     return {
       success: false,
@@ -26,8 +26,7 @@ export async function updateHospitalSettings(
 
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
   const isAdmin = session.user.role === "ADMIN";
-  const isDevBypass = process.env.NODE_ENV === "development" && session.user.hospitalId === "default-hospital-id";
-  const matchesHospital = session.user.hospitalId === hospitalId || isDevBypass;
+  const matchesHospital = session.user.hospitalId === hospitalId;
 
   if (!isSuperAdmin && (!isAdmin || !matchesHospital)) {
     return {
@@ -52,6 +51,10 @@ export async function updateHospitalSettings(
       nameEn,
       contactPhone,
       address,
+      buildingNumber,
+      street,
+      district,
+      city,
       governorate,
       isSurgicalEnabled,
       isTelemedicineEnabled,
@@ -64,19 +67,18 @@ export async function updateHospitalSettings(
       paymobHmacSecret,
       orCleaningDuration,
       autoHousekeeping,
+      etaClientId,
+      etaClientSecret,
+      etaTaxpayerActivityCode,
     } = validated.data;
 
     // Fetch active planTier and existing settings from database
-    const [dbHospital] = await db
-      .select({
-        planTier: hospitals.planTier,
-        paymobApiKey: hospitalSettings.paymobApiKey,
-        paymobHmacSecret: hospitalSettings.paymobHmacSecret,
-      })
-      .from(hospitals)
-      .leftJoin(hospitalSettings, eq(hospitals.id, hospitalSettings.hospitalId))
-      .where(eq(hospitals.id, hospitalId))
-      .limit(1);
+    const dbHospital = await db.query.hospitals.findFirst({
+      where: eq(hospitals.id, hospitalId),
+      with: {
+        settings: true,
+      }
+    });
 
     if (!dbHospital) {
       return {
@@ -100,24 +102,20 @@ export async function updateHospitalSettings(
       };
     }
 
-    // Determine final values for sensitive Paymob secrets to prevent overwriting or exposure
-    let finalPaymobApiKey: string | null = null;
-    if (paymobApiKey === "••••••••") {
-      finalPaymobApiKey = dbHospital?.paymobApiKey ?? null;
-    } else if (paymobApiKey) {
-      finalPaymobApiKey = encryptField(paymobApiKey);
-    }
+    // Encryption & Masking Logic for sensitive secrets (Code Review #1.2)
+    const handleSecret = (newVal: string | null | undefined, existingVal: string | null) => {
+      if (newVal === "••••••••") return existingVal; // Keep existing
+      if (!newVal) return null; // Clear field
+      return encryptField(newVal); // Encrypt new value
+    };
 
-    let finalPaymobHmacSecret: string | null = null;
-    if (paymobHmacSecret === "••••••••") {
-      finalPaymobHmacSecret = dbHospital?.paymobHmacSecret ?? null;
-    } else if (paymobHmacSecret) {
-      finalPaymobHmacSecret = encryptField(paymobHmacSecret);
-    }
+    const finalPaymobApiKey = handleSecret(paymobApiKey, dbHospital.settings?.paymobApiKey);
+    const finalPaymobHmacSecret = handleSecret(paymobHmacSecret, dbHospital.settings?.paymobHmacSecret);
+    const finalEtaClientSecret = handleSecret(etaClientSecret, dbHospital.settings?.etaClientSecret);
 
     // 2. Execute transactional atomic update
     await db.transaction(async (tx) => {
-      // Update basic hospital details
+      // Update basic hospital details (including structured address)
       await tx
         .update(hospitals)
         .set({
@@ -125,19 +123,16 @@ export async function updateHospitalSettings(
           nameEn,
           contactPhone,
           address,
+          buildingNumber: buildingNumber || null,
+          street: street || null,
+          district: district || null,
+          city: city || null,
           governorate,
           updatedAt: new Date(),
         })
         .where(eq(hospitals.id, hospitalId));
 
-      // Check if settings record exists (to prevent silent failures for new tenants)
-      const existingSettings = await tx
-        .select({ id: hospitalSettings.id })
-        .from(hospitalSettings)
-        .where(eq(hospitalSettings.hospitalId, hospitalId))
-        .limit(1);
-
-      if (existingSettings.length === 0) {
+      if (!dbHospital.settings) {
         // Insert new settings row if it does not exist
         await tx.insert(hospitalSettings).values({
           hospitalId,
@@ -152,6 +147,9 @@ export async function updateHospitalSettings(
           paymobHmacSecret: finalPaymobHmacSecret,
           orCleaningDuration,
           autoHousekeeping,
+          etaClientId: etaClientId || null,
+          etaClientSecret: finalEtaClientSecret,
+          etaTaxpayerActivityCode: etaTaxpayerActivityCode || "8610",
           updatedAt: new Date(),
         });
       } else {
@@ -170,6 +168,9 @@ export async function updateHospitalSettings(
             paymobHmacSecret: finalPaymobHmacSecret,
             orCleaningDuration,
             autoHousekeeping,
+            etaClientId: etaClientId || null,
+            etaClientSecret: finalEtaClientSecret,
+            etaTaxpayerActivityCode: etaTaxpayerActivityCode || "8610",
             updatedAt: new Date(),
           })
           .where(eq(hospitalSettings.hospitalId, hospitalId));
