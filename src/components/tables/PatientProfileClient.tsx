@@ -141,8 +141,8 @@ interface PatientProfileClientProps {
     createdAt: string | Date;
     doctorNameAr?: string | null;
     doctorNameEn?: string | null;
-    }[];
-    assessments?: {
+  }[];
+  assessments?: {
     id: string;
     type: string;
     data: any;
@@ -150,22 +150,22 @@ interface PatientProfileClientProps {
     createdAt: string | Date;
     recordedByNameAr?: string;
     recordedByNameEn?: string;
-    }[];
-    }
+  }[];
+}
 
-    export function PatientProfileClient({ 
-    patient, 
-    surgeries, 
-    records = [], 
-    vitals = [], 
-    hospitalSlug,
-    hospitalId,
-    departments = [],
-    doctors = [],
-    referrals = [],
-    certificates = [],
-    assessments = []
-    }: PatientProfileClientProps) {
+export function PatientProfileClient({ 
+  patient, 
+  surgeries, 
+  records = [], 
+  vitals = [], 
+  hospitalSlug,
+  hospitalId,
+  departments = [],
+  doctors = [],
+  referrals = [],
+  certificates = [],
+  assessments = []
+}: PatientProfileClientProps) {
   const t = useTranslations("patients");
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -990,7 +990,9 @@ interface PatientProfileClientProps {
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {assessments.map((ass) => {
-                      const recordedBy = isRtl ? ass.recordedByNameAr : ass.recordedByNameEn;
+                      const recordedBy = isRtl 
+                        ? (ass.recordedByNameAr || ass.recordedByNameEn) 
+                        : (ass.recordedByNameEn || ass.recordedByNameAr);
                       const dateStr = new Date(ass.createdAt).toLocaleString(locale === "ar" ? "ar-EG" : "en-US", {
                         day: "numeric",
                         month: "short",

@@ -233,7 +233,25 @@ export default async function PatientProfilePage({
         and(
           eq(staff.hospitalId, hospitalId),
           eq(staff.isActive, true),
-          sql`${staff.role} IN ('DOCTOR', 'SURGEON', 'ANESTHESIOLOGIST', 'NURSE')`
+          sql`${staff.role} IN ('DOCTOR', 'SURGEON', 'ANESTHESIOLOGIST')`
+        )
+      )
+      .orderBy(staff.nameAr);
+
+    // 10. Fetch active nurses for clinical logs
+    const activeNurses = await tx
+      .select({
+        id: staff.id,
+        nameAr: staff.nameAr,
+        nameEn: staff.nameEn,
+        role: staff.role,
+      })
+      .from(staff)
+      .where(
+        and(
+          eq(staff.hospitalId, hospitalId),
+          eq(staff.isActive, true),
+          eq(staff.role, "NURSE")
         )
       )
       .orderBy(staff.nameAr);
@@ -247,7 +265,8 @@ export default async function PatientProfilePage({
       patientCertificates,
       patientAssessments,
       activeDepartments,
-      activeDoctors
+      activeDoctors,
+      activeNurses
     };
   });
 
