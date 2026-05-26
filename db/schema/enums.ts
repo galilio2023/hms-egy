@@ -66,6 +66,7 @@ export const genderEnum = pgEnum("gender", ["male", "female"]);
 export const roleEnum = pgEnum("role", [
   "SUPER_ADMIN",
   "ADMIN",
+  "ACCOUNTANT",
   "DOCTOR",
   "SURGEON",
   "ANESTHESIOLOGIST",

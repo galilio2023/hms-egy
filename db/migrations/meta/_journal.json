@@ -134,6 +134,27 @@
       "when": 1779740400000,
       "tag": "0018_db_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1779803133765,
+      "tag": "0019_add_eta_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1779803278356,
+      "tag": "0020_add_hospital_tax_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1779803507156,
+      "tag": "0021_add_accountant_role",
+      "breakpoints": true
     }
   ]
 }

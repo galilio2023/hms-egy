@@ -12,6 +12,8 @@ export const hospitals = pgTable("hospitals", {
   address: text("address").notNull(),
   governorate: text("governorate").notNull(),
   type: hospitalTypeEnum("type").notNull(),
+  taxpayerId: varchar("taxpayer_id", { length: 20 }), // Egyptian Taxpayer ID (9 digits)
+  registrationId: varchar("registration_id", { length: 50 }), // Commercial registration number
   logoUrl: text("logo_url"),
   planTier: varchar("plan_tier", { length: 50 }).default("starter").notNull(),
   isActive: boolean("is_active").default(true),

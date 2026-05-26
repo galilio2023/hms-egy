@@ -30,6 +30,7 @@ export type Permission =
   | "billing:view"
   | "billing:create"
   | "billing:payment"
+  | "billing:eta"
   | "surgical:view"
   | "surgical:create"
   | "surgical:edit"
@@ -45,6 +46,7 @@ export type Permission =
 export type Role =
   | "SUPER_ADMIN"
   | "ADMIN"
+  | "ACCOUNTANT"
   | "DOCTOR"
   | "SURGEON"
   | "ANESTHESIOLOGIST"
@@ -83,11 +85,16 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "prescriptions:view", "prescriptions:create", "prescriptions:dispense",
     "lab_orders:view", "lab_orders:create", "lab_orders:update_results",
     "radiology:view", "radiology:create", "radiology:update_results",
-    "billing:view", "billing:create", "billing:payment",
+    "billing:view", "billing:create", "billing:payment", "billing:eta",
     "surgical:view", "surgical:create", "surgical:edit", "surgical:checklist", "surgical:anesthesia",
     "housekeeping:view", "housekeeping:update",
     "settings:view", "settings:edit",
     "ai_features:use"
+  ],
+
+  ACCOUNTANT: [
+    "billing:view", "billing:create", "billing:payment", "billing:eta",
+    "patients:view"
   ],
   
   DOCTOR: [
@@ -147,7 +154,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   RECEPTIONIST: [
     "patients:view", "patients:create", "patients:edit",
     "appointments:view", "appointments:create", "appointments:edit", "appointments:cancel",
-    "billing:view", "billing:create", "billing:payment"
+    "billing:view", "billing:create", "billing:payment", "billing:eta"
   ],
   
   HOUSEKEEPING: [

@@ -18,6 +18,13 @@ export const invoices = pgTable("invoices", {
   dueDate: timestamp("due_date").notNull(),
   notes: text("notes"),
   isArchived: boolean("is_archived").default(false).notNull(),
+  // ETA E-invoicing fields
+  etaUuid: varchar("eta_uuid", { length: 100 }),
+  etaStatus: varchar("eta_status", { length: 50 }), // submitted, valid, invalid, cancelled
+  etaSubmissionId: varchar("eta_submission_id", { length: 100 }),
+  etaLongId: varchar("eta_long_id", { length: 255 }),
+  etaInternalId: varchar("eta_internal_id", { length: 100 }),
+  etaErrorMessage: text("eta_error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
