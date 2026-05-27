@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useMemo } from "react";
-import { useMotionValue, useSpring, useInView } from "framer-motion";
+import { useMotionValue, useSpring, useInView, motion, useTransform } from "framer-motion";
 import { useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,8 @@ export function NumberTicker({
     });
   }, [locale, useEasternArabic]);
 
+  const rounded = useTransform(springValue, (latest) => formatter.format(Math.round(latest)));
+
   useEffect(() => {
     if (isInView) {
       const timer = setTimeout(() => {
@@ -44,22 +46,13 @@ export function NumberTicker({
     }
   }, [motionValue, value, isInView, delay]);
 
-  useEffect(() => {
-    return springValue.on("change", (latest) => {
-      if (ref.current) {
-        ref.current.textContent = formatter.format(Math.round(latest));
-      }
-    });
-  }, [springValue, formatter]);
-
   return (
     <span className={cn("tabular-nums inline-block", className)}>
-      <span
-        ref={ref}
+      <motion.span
         aria-hidden="true"
       >
-        0
-      </span>
+        {rounded}
+      </motion.span>
       <span className="sr-only" aria-live="polite">
         {value}
       </span>

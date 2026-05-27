@@ -132,6 +132,14 @@ Do not include any markdown formatting or additional text outside the JSON objec
     
     // Safety check: if there are multiple top-level braces, find the last closing one for the first opening one
     let jsonString = jsonMatch[0];
+    
+    // Strip markdown formatting if present (Review #2)
+    if (jsonString.startsWith("```json")) {
+      jsonString = jsonString.replace(/^```json/, "").replace(/```$/, "").trim();
+    } else if (jsonString.startsWith("```")) {
+      jsonString = jsonString.replace(/^```/, "").replace(/```$/, "").trim();
+    }
+
     let firstBrace = jsonString.indexOf('{');
     let lastBrace = jsonString.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace !== -1) {

@@ -113,9 +113,11 @@ self.addEventListener("fetch", (event) => {
             return networkResponse;
           }
           const responseCopy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseCopy);
-          });
+          event.waitUntil(
+            caches.open(CACHE_NAME).then((cache) => {
+              return cache.put(request, responseCopy);
+            })
+          );
           return networkResponse;
         });
       })
