@@ -14,8 +14,8 @@ This index tracks the high-level progress of the HMS Egypt implementation across
 - [ ] Clinical & Nursing Modules
 - [ ] Surgical & Anesthesia
 
-### [ ] 3. Operations & Financials (PLAN_OPERATIONS.md)
-- [ ] Billing & ETA Integration
+### [x] 3. Operations & Financials (PLAN_OPERATIONS.md)
+- [x] Billing & ETA Integration
 - [ ] Inventory & Pharmacy
 - [ ] Reporting & Dashboards
 

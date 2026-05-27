@@ -311,6 +311,10 @@ export const radiologyReportsRelations = relations(radiologyReports, ({ one }) =
 
 // invoices Relations
 export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  hospital: one(hospitals, {
+    fields: [invoices.hospitalId],
+    references: [hospitals.id],
+  }),
   patient: one(patients, {
     fields: [invoices.patientId],
     references: [patients.id],

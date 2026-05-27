@@ -10,8 +10,14 @@ export const hospitals = pgTable("hospitals", {
   contactEmail: text("contact_email").notNull(),
   contactPhone: text("contact_phone").notNull(),
   address: text("address").notNull(),
+  buildingNumber: varchar("building_number", { length: 20 }),
+  street: varchar("street", { length: 200 }),
+  district: varchar("district", { length: 100 }),
+  city: varchar("city", { length: 100 }),
   governorate: text("governorate").notNull(),
   type: hospitalTypeEnum("type").notNull(),
+  taxpayerId: varchar("taxpayer_id", { length: 20 }), // Egyptian Taxpayer ID (9 digits)
+  registrationId: varchar("registration_id", { length: 50 }), // Commercial registration number
   logoUrl: text("logo_url"),
   planTier: varchar("plan_tier", { length: 50 }).default("starter").notNull(),
   isActive: boolean("is_active").default(true),
@@ -48,6 +54,11 @@ export const hospitalSettings = pgTable("hospital_settings", {
   // Surgical & Housekeeping settings
   orCleaningDuration: integer("or_cleaning_duration").default(30).notNull(),
   autoHousekeeping: boolean("auto_housekeeping").default(true).notNull(),
+
+  // ETA Credentials (Stored per tenant as recommended by Code Review #1)
+  etaClientId: text("eta_client_id"),
+  etaClientSecret: text("eta_client_secret"), // To be encrypted at rest
+  etaTaxpayerActivityCode: varchar("eta_taxpayer_activity_code", { length: 20 }).default("8610"), // ISIC code for Human Health
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

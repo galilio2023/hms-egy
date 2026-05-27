@@ -19,39 +19,63 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const migrationFilePath = path.join(__dirname, '..', 'db', 'migrations', '0010_fix_vitals_index.sql');
-if (!fs.existsSync(migrationFilePath)) {
-  console.error("Migration file 0010_fix_vitals_index.sql not found at:", migrationFilePath);
-  process.exit(1);
-}
-
-const migrationSql = fs.readFileSync(migrationFilePath, 'utf8');
-
-// Drizzle migrations split statements with "--> statement-breakpoint"
-const statements = migrationSql
-  .split('--> statement-breakpoint')
-  .map(s => s.trim())
-  .filter(s => s.length > 0);
-
-console.log(`Found ${statements.length} migration statements to apply.`);
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
 async function run() {
+  const migrationsDir = path.join(__dirname, '..', 'db', 'migrations');
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
+
   try {
-    console.log("Connected to Neon Database. Applying statements...");
-    
-    for (let i = 0; i < statements.length; i++) {
-      const stmt = statements[i];
-      console.log(`[Statement ${i + 1}/${statements.length}] Executing...`);
-      console.log(`SQL: ${stmt.substring(0, 100).replace(/\n/g, ' ')}...`);
-      await client.query(stmt);
+    const files = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    console.log(`Found ${files.length} total migration files.`);
+
+    const targetFile = process.argv[2];
+    const filesToRun = targetFile ? [targetFile] : files.slice(-3);
+
+    for (const file of filesToRun) {
+      const migrationFilePath = path.join(migrationsDir, file);
+      console.log(`\n--- Applying Migration: ${file} ---`);
+      
+      const migrationSql = fs.readFileSync(migrationFilePath, 'utf8');
+      const statements = migrationSql
+        .split('--> statement-breakpoint')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      console.log(`Found ${statements.length} statements.`);
+
+      for (let i = 0; i < statements.length; i++) {
+        const stmt = statements[i];
+        try {
+          console.log(`[Statement ${i + 1}/${statements.length}] Executing...`);
+          await client.query(stmt);
+        } catch (err) {
+          // 42701: column already exists
+          // 42704: undefined_object (index, policy, etc)
+          // 42710: duplicate_object (index, constraint, etc)
+          // 42P07: duplicate_table/relation (index name exists)
+          const isSkipable = 
+            err.code === '42701' || 
+            (stmt.toUpperCase().startsWith('DROP') && err.code === '42704') || 
+            (stmt.toUpperCase().startsWith('ALTER POLICY') && err.code === '42704') ||
+            err.code === '42710' || 
+            err.code === '42P07';
+
+          if (isSkipable) {
+            console.warn(`[Warning] ${err.message}. Skipping.`);
+          } else {
+            throw err;
+          }
+        }
+      }
+      console.log(`✅ Successfully applied ${file}`);
     }
-    
-    console.log("✅ Migration successfully applied!");
+
+    console.log("\n✨ All selected migrations successfully applied!");
   } catch (error) {
-    console.error("❌ Migration failed!");
+    console.error("\n❌ Migration failed!");
     console.error(error);
     process.exit(1);
   } finally {

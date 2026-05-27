@@ -18,6 +18,13 @@ export const invoices = pgTable("invoices", {
   dueDate: timestamp("due_date").notNull(),
   notes: text("notes"),
   isArchived: boolean("is_archived").default(false).notNull(),
+  // ETA E-invoicing fields
+  etaUuid: varchar("eta_uuid", { length: 100 }),
+  etaStatus: varchar("eta_status", { length: 50 }), // submitted, valid, invalid, cancelled
+  etaSubmissionId: varchar("eta_submission_id", { length: 100 }),
+  etaLongId: varchar("eta_long_id", { length: 255 }),
+  etaInternalId: varchar("eta_internal_id", { length: 100 }),
+  etaErrorMessage: text("eta_error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
@@ -39,6 +46,10 @@ export const invoiceItems = pgTable("invoice_items", {
   unitPrice: decimal("unit_price", { precision: 12, scale: 2 }).notNull(),
   totalPrice: decimal("total_price", { precision: 12, scale: 2 }).notNull(),
   type: varchar("type", { length: 50 }).notNull(), // consultation, lab, radiology, pharmacy, surgical_room, accommodation
+  // ETA Compliance fields
+  etaItemCode: varchar("eta_item_code", { length: 100 }), // GS1 or EGS code
+  taxType: varchar("tax_type", { length: 10 }).default("T1"), // T1 (VAT), T4 (Withholding), etc.
+  taxSubType: varchar("tax_sub_type", { length: 10 }).default("V009"), // V009 (Standard 14%), V002 (Export), etc.
 }, (table) => {
   return {
     tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),

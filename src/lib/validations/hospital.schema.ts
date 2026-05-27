@@ -46,6 +46,10 @@ export const hospitalSettingsSchema = z.object({
     message: "Invalid Egyptian phone number (mobile, landline, or hotline)",
   }),
   address: z.string().min(10, "Address must be at least 10 characters"),
+  buildingNumber: z.string().max(20).optional(),
+  street: z.string().max(200).optional(),
+  district: z.string().max(100).optional(),
+  city: z.string().max(100).optional(),
   governorate: z.string().refine((val) => getGovernorateCode(val) !== null, {
     message: "Invalid Egyptian governorate",
   }),
@@ -66,6 +70,11 @@ export const hospitalSettingsSchema = z.object({
   // Surgical & Housekeeping
   orCleaningDuration: z.number().int().min(5).max(180),
   autoHousekeeping: z.boolean().default(true),
+
+  // ETA Credentials
+  etaClientId: nullableCoercedString,
+  etaClientSecret: nullableCoercedString,
+  etaTaxpayerActivityCode: z.string().max(20).default("8610"),
 });
 
 export type HospitalSettingsType = z.infer<typeof hospitalSettingsSchema>;

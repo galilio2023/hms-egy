@@ -10,4 +10,4 @@
 - [x] Prevent cross-table deadlocks by enforcing deterministic sequential locking order in dispensing
 - [x] Add composite index to housekeeping_tasks for high-performance KPI reporting
 - [x] Stock adjustment audit logs
-- [ ] Implement ETA E-invoicing integration
+- [x] Implement ETA E-invoicing integration (Client, Transformer, and Submission Actions)
