@@ -20,7 +20,8 @@ import {
   Loader2,
   Save,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { searchMedications, runDdiCheck, createPrescription } from "@/lib/actions/pharmacy";
@@ -443,11 +444,29 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                     )}
 
                     {/* AI Enrichment Indicator */}
-                    {ddiResult.requiresAiEnrichment && (
+                    {ddiResult.requiresAiEnrichment && !ddiResult.aiAnalysisAr && !ddiResult.aiAnalysisEn && (
                       <div className="bg-primary/10 p-3 rounded-xl flex items-center gap-3">
                         <Loader2 className="h-4 w-4 text-primary animate-pulse" />
                         <div className="text-[11px] font-medium text-primary-foreground/80">
                           {t("aiEnrichmentWarning")}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Claude AI Clinical Reasoning Output */}
+                    {(ddiResult.aiAnalysisAr || ddiResult.aiAnalysisEn) && (
+                      <div className="mt-4 p-4.5 bg-slate-950/40 border border-slate-900 rounded-2xl space-y-2.5 relative overflow-hidden text-start">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_90%_10%,#0d948810_0%,transparent_50%)] pointer-events-none" />
+                        <div className="relative flex items-center gap-2 text-xs font-bold text-accent">
+                          <Sparkles className="h-4 w-4 text-accent animate-pulse" />
+                          <span>
+                            {ddiResult.isAiOptimized 
+                              ? (isRtl ? "التحليل السريري الذكي (Claude AI)" : "Clinical Safety Intelligence (Claude AI)")
+                              : (isRtl ? "التحليل السريري المدمج (قاعدة البيانات)" : "Clinical Safety Analysis (Local Database)")}
+                          </span>
+                        </div>
+                        <div className="text-xs leading-relaxed text-slate-300 font-cairo whitespace-pre-line border-t border-slate-900/60 pt-2.5">
+                          {isRtl ? ddiResult.aiAnalysisAr : ddiResult.aiAnalysisEn}
                         </div>
                       </div>
                     )}

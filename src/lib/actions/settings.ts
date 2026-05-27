@@ -103,7 +103,7 @@ export async function updateHospitalSettings(
     }
 
     // Encryption & Masking Logic for sensitive secrets (Code Review #1.2)
-    const handleSecret = (newVal: string | null | undefined, existingVal: string | null) => {
+    const handleSecret = (newVal: string | null | undefined, existingVal: string | null | undefined) => {
       if (newVal === "••••••••") return existingVal; // Keep existing
       if (!newVal) return null; // Clear field
       return encryptField(newVal); // Encrypt new value

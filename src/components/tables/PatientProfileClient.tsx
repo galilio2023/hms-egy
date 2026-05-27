@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { differenceInCalendarDays, parseISO } from "date-fns";
 import { useTranslations, useLocale } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1333,7 +1334,20 @@ export function PatientProfileClient({
                               {typeLabel}
                             </Badge>
                             <Badge variant="outline" className="text-[10px] font-extrabold border-emerald-500/20 text-emerald-600 bg-emerald-500/5">
-                              {cert.restDays} {isRtl ? "أيام راحة" : "Rest Days"}
+                              {(() => {
+                                const start = cert.startDate ? (typeof cert.startDate === 'string' ? parseISO(cert.startDate) : cert.startDate) : null;
+                                const end = cert.endDate ? (typeof cert.endDate === 'string' ? parseISO(cert.endDate) : cert.endDate) : null;
+                                
+                                if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                                  // Shift to safe mid-day before calculation to bypass DST/midnight boundaries (Review #10)
+                                  const s = new Date(start);
+                                  const e = new Date(end);
+                                  s.setHours(12, 0, 0, 0);
+                                  e.setHours(12, 0, 0, 0);
+                                  return Math.max(1, differenceInCalendarDays(e, s) + 1);
+                                }
+                                return 1;
+                              })()} {isRtl ? "أيام راحة" : "Rest Days"}
                             </Badge>
                           </div>
 

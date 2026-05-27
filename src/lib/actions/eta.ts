@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { invoices } from "@/db/schema/billing";
+import { invoices } from "@db/schema/billing";
 import { eq, and } from "drizzle-orm";
 import { etaClient } from "@/lib/eta/client";
 import { transformInvoiceToETADocument } from "@/lib/eta/transformer";
@@ -20,8 +20,14 @@ export async function submitInvoiceToETA(invoiceId: string) {
     return { success: false, error: "Unauthorized" };
   }
 
+  const user = session.user as import("@/types/auth-api.types").User;
+  const hospitalId = user.hospitalId;
+  if (!hospitalId) {
+    return { success: false, error: "Unauthorized: Missing active tenant context." };
+  }
+
   // 1. Enforce Role/Permission Authorization (Code Review Phase 2 #1)
-  if (!hasPermission(session.user as any, "billing:eta")) {
+  if (!hasPermission(user, "billing:eta", { hospitalId })) {
     return { success: false, error: "Forbidden: You do not have permission to submit to ETA." };
   }
 
@@ -29,7 +35,7 @@ export async function submitInvoiceToETA(invoiceId: string) {
     const invoice = await db.query.invoices.findFirst({
       where: and(
         eq(invoices.id, invoiceId),
-        eq(invoices.hospitalId, session.user.hospitalId)
+        eq(invoices.hospitalId, hospitalId)
       ),
       with: {
         hospital: {
@@ -118,7 +124,13 @@ export async function checkETAStatus(invoiceId: string) {
     return { success: false, error: "Unauthorized" };
   }
 
-  if (!hasPermission(session.user as any, "billing:eta")) {
+  const user = session.user as import("@/types/auth-api.types").User;
+  const hospitalId = user.hospitalId;
+  if (!hospitalId) {
+    return { success: false, error: "Unauthorized: Missing active tenant context." };
+  }
+
+  if (!hasPermission(user, "billing:eta", { hospitalId })) {
     return { success: false, error: "Forbidden" };
   }
 
@@ -126,7 +138,7 @@ export async function checkETAStatus(invoiceId: string) {
     const invoice = await db.query.invoices.findFirst({
       where: and(
         eq(invoices.id, invoiceId),
-        eq(invoices.hospitalId, session.user.hospitalId)
+        eq(invoices.hospitalId, hospitalId)
       ),
       with: {
         hospital: {

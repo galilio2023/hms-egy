@@ -1,7 +1,7 @@
 import { ETADocument, ETAInvoiceLine, ETATaxableItem, ETATaxTotal } from "./types";
-import { invoices, invoiceItems } from "@/db/schema/billing";
-import { hospitals, hospitalSettings } from "@/db/schema/core";
-import { patients } from "@/db/schema/patients";
+import { invoices, invoiceItems } from "@db/schema/billing";
+import { hospitals, hospitalSettings } from "@db/schema/core";
+import { patients } from "@db/schema/patients";
 import Big from "big.js";
 
 export type InvoiceWithRelations = typeof invoices.$inferSelect & {
@@ -116,7 +116,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
         regionCity: hospital.city || hospital.governorate,
         street: hospital.street || hospital.address,
         buildingNumber: hospital.buildingNumber || "1",
-        landmark: hospital.district,
+        landmark: hospital.district || "Cairo",
       },
       type: "B",
       id: hospital.taxpayerId || "",

@@ -7,6 +7,7 @@ import { WorkstationProvider } from "@/context/WorkstationContext";
 import WorkstationLock from "@/components/layout/WorkstationLock";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Toaster } from "sonner";
+import { ServiceWorkerRegister } from "@/components/layout/sw-register";
 import "../globals.css";
 
 const cairo = Cairo({
@@ -48,6 +49,7 @@ export default async function LocaleLayout({
         >
           <NextIntlClientProvider messages={messages}>
             <WorkstationProvider>
+              <ServiceWorkerRegister />
               {children}
               <WorkstationLock />
               <Toaster 

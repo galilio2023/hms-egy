@@ -7,6 +7,7 @@ import { patients } from "@db/schema/patients";
 import { eq, and, or, ilike, sql, inArray, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { checkDrugInteractions } from "@/lib/pharmacy/ddi";
+import { getClaudeClinicalAnalysis } from "@/lib/ai/claude";
 import { revalidatePath } from "next/cache";
 import { auditLogs } from "@db/schema/system";
 import { staff } from "@db/schema/core";
@@ -67,6 +68,29 @@ export async function runDdiCheck(patientId: string, itemInputs: PrescriptionIte
         patient.chronicConditions || [],
         tx
       );
+
+      if (results.requiresAiEnrichment) {
+        const aiAnalysis = await getClaudeClinicalAnalysis({
+          medications: medDetails.map(m => ({ name: m.name, genericName: m.genericName })),
+          patientAllergies: patient.allergies || [],
+          chronicConditions: patient.chronicConditions || [],
+        });
+
+        if (aiAnalysis.success && !aiAnalysis.fallbackActive) {
+          results.aiAnalysisAr = aiAnalysis.reasoningAr;
+          results.aiAnalysisEn = aiAnalysis.reasoningEn;
+          results.isAiOptimized = true;
+          results.isApproved = aiAnalysis.isApproved && results.isApproved;
+          if (aiAnalysis.riskLevel === 'high') {
+            results.overallRiskLevel = 'high';
+          }
+        } else {
+          // Graceful degradation: do not auto-reject the prescription (Review #1)
+          results.isAiBypassed = true;
+          results.aiAnalysisEn = "### ⚠️ Safety Warning\nAdvanced AI clinical safety checks are temporarily offline. This prescription has been cleared using local database rules ONLY. Manual clinical verification is required.";
+          results.aiAnalysisAr = "### ⚠️ تنبيه سلامة\nفحص الأمان السريري المتقدم عبر الذكاء الاصطناعي غير متصل حالياً. تم التحقق من هذه الوصفة باستخدام قواعد البيانات المحلية فقط. المراجعة السريرية اليدوية مطلوبة.";
+        }
+      }
 
       return { success: true, data: results };
     });

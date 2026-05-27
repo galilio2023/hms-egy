@@ -25,6 +25,10 @@ export interface DdiResult {
   overallRiskLevel: 'low' | 'medium' | 'high';
   isApproved: boolean;
   requiresAiEnrichment: boolean;
+  aiAnalysisAr?: string;
+  aiAnalysisEn?: string;
+  isAiOptimized?: boolean;
+  isAiBypassed?: boolean;
 }
 
 /**
@@ -201,11 +205,46 @@ export async function checkDrugInteractions(
     chronicConditions.length > 3 ||
     (overallRiskLevel === 'high' && !hasContraindication);
 
+  // Precompute local fallback clinical reasoning if AI is not used
+  let aiAnalysisAr = "";
+  let aiAnalysisEn = "";
+
+  if (interactions.length > 0 || allergyAlerts.length > 0) {
+    aiAnalysisEn = "LOCAL SAFETY CHECK RESULTS:\n\n";
+    aiAnalysisAr = "نتائج فحص السلامة المحلي:\n\n";
+
+    if (interactions.length > 0) {
+      aiAnalysisEn += "DRUG-DRUG INTERACTIONS:\n";
+      aiAnalysisAr += "التدخلات الدوائية المكتشفة:\n";
+      
+      interactions.forEach(i => {
+        aiAnalysisEn += `- ${i.drug1} + ${i.drug2} [${i.severity.toUpperCase()}]: ${i.mechanismEn || i.effectEn || "No details available."}\n`;
+        aiAnalysisAr += `- ${i.drug1} + ${i.drug2} [${i.severity === 'contraindicated' ? 'موانع استعمال مطلق' : i.severity === 'severe' ? 'شديد' : i.severity === 'moderate' ? 'متوسط' : 'خفيف'}]: ${i.mechanismAr || i.effectAr || "تفاصيل التداخل غير متوفرة محلياً."}\n`;
+      });
+    }
+
+    if (allergyAlerts.length > 0) {
+      aiAnalysisEn += "\nALLERGY ALERTS:\n";
+      aiAnalysisAr += "\nتحذيرات الحساسية:\n";
+      
+      allergyAlerts.forEach(a => {
+        aiAnalysisEn += `- ${a.medication}: Cross-reactivity with allergen ${a.allergen} (Severity: ${a.severity})\n`;
+        aiAnalysisAr += `- ${a.medication}: تفاعل حساسية متقاطع مع ${a.allergen} (الشدة: ${a.severity})\n`;
+      });
+    }
+  } else {
+    aiAnalysisEn = "No known interactions or allergies detected in the local safety database.";
+    aiAnalysisAr = "لم يتم الكشف عن تداخلات دوائية أو تحذيرات حساسية معروفة في قاعدة البيانات المحلية.";
+  }
+
   return {
     interactions,
     allergyAlerts,
     overallRiskLevel,
     isApproved: !hasContraindication, // Hard stop on contraindicated
     requiresAiEnrichment,
+    aiAnalysisAr,
+    aiAnalysisEn,
+    isAiOptimized: false,
   };
 }
