@@ -31,11 +31,15 @@ export function BorderBeam({
           background: `radial-gradient(circle, ${colorFrom} 0%, ${colorTo} 40%, transparent 100%)`,
           top: 0,
           left: 0,
-          transform: "translate(-50%, -50%)",
         }}
         animate={{
-          left: ["0%", "100%", "100%", "0%", "0%"],
-          top: ["0%", "0%", "100%", "100%", "0%"],
+          transform: [
+            "translate(-50%, -50%) translate(0%, 0%)",
+            "translate(-50%, -50%) translate(100%, 0%)",
+            "translate(-50%, -50%) translate(100%, 100%)",
+            "translate(-50%, -50%) translate(0%, 100%)",
+            "translate(-50%, -50%) translate(0%, 0%)"
+          ]
         }}
         transition={{
           duration,

@@ -28,6 +28,7 @@ export interface DdiResult {
   aiAnalysisAr?: string;
   aiAnalysisEn?: string;
   isAiOptimized?: boolean;
+  isAiBypassed?: boolean;
 }
 
 /**
