@@ -85,8 +85,10 @@ export async function runDdiCheck(patientId: string, itemInputs: PrescriptionIte
             results.overallRiskLevel = 'high';
           }
         } else {
-          // Flag for awareness in UI that advanced AI check was bypassed
+          // Graceful degradation: do not auto-reject the prescription (Review #1)
           results.isAiBypassed = true;
+          results.aiAnalysisEn = "### ⚠️ Safety Warning\nAdvanced AI clinical safety checks are temporarily offline. This prescription has been cleared using local database rules ONLY. Manual clinical verification is required.";
+          results.aiAnalysisAr = "### ⚠️ تنبيه سلامة\nفحص الأمان السريري المتقدم عبر الذكاء الاصطناعي غير متصل حالياً. تم التحقق من هذه الوصفة باستخدام قواعد البيانات المحلية فقط. المراجعة السريرية اليدوية مطلوبة.";
         }
       }
 

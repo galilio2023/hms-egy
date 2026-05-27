@@ -103,11 +103,19 @@ Do not include any markdown formatting or additional text outside the JSON objec
     const data = await response.json();
     const rawText = data.content?.[0]?.text || "";
 
-    // Robust JSON extraction to handle conversational noise or markdown blocks
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    // Robust JSON extraction to handle conversational noise, markdown blocks, or nested braces
+    let jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Claude did not return a valid JSON object");
     
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Safety check: if there are multiple top-level braces, find the last closing one for the first opening one
+    let jsonString = jsonMatch[0];
+    let firstBrace = jsonString.indexOf('{');
+    let lastBrace = jsonString.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+    }
+    
+    const parsed = JSON.parse(jsonString);
     const validated = ClaudeResponseSchema.parse(parsed);
 
     return {

@@ -78,9 +78,11 @@ self.addEventListener("fetch", (event) => {
           return cachedResponse || fetch(request).then((networkResponse) => {
             if (networkResponse.status === 200) {
               const responseCopy = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseCopy);
-              });
+              event.waitUntil(
+                caches.open(CACHE_NAME).then((cache) => {
+                  return cache.put(request, responseCopy);
+                })
+              );
             }
             return networkResponse;
           });
@@ -96,9 +98,11 @@ self.addEventListener("fetch", (event) => {
           fetch(request).then((networkResponse) => {
             if (networkResponse.status === 200) {
               const responseCopy = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseCopy);
-              });
+              event.waitUntil(
+                caches.open(CACHE_NAME).then((cache) => {
+                  return cache.put(request, responseCopy);
+                })
+              );
             }
           }).catch(() => {}); // ignore background refresh errors
           
