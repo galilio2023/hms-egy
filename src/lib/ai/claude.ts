@@ -2,6 +2,8 @@
 
 import { Interaction, AllergyAlert } from "@/lib/pharmacy/ddi";
 import { z } from "zod";
+import redis from "@/lib/utils/redis";
+import { createHash } from "crypto";
 
 const ClaudeResponseSchema = z.object({
   reasoningAr: z.string().default(""),
@@ -33,6 +35,29 @@ export async function getClaudeClinicalAnalysis(
   payload: ClaudeDdiPayload
 ): Promise<ClaudeAnalysisResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  const { medications, patientAllergies, chronicConditions } = payload;
+
+  // 1. Deterministic Caching Layer (Performance Review #4)
+  // Prevents repeated high-latency AI calls for standard medication protocols
+  const cacheKey = medications.length > 0 ? createHash("sha256")
+    .update(JSON.stringify({
+      meds: medications.map(m => m.name + (m.genericName || "")).sort(),
+      allergies: [...patientAllergies].sort(),
+      conditions: [...chronicConditions].sort()
+    }))
+    .digest("hex") : null;
+
+  if (redis && cacheKey) {
+    try {
+      const cached = await redis.get<ClaudeAnalysisResult>(`ai-ddi-cache:${cacheKey}`);
+      if (cached) {
+        return { ...cached, fallbackActive: false };
+      }
+    } catch (err) {
+      console.warn("Redis cache read failed, falling back to live AI call:", err);
+    }
+  }
 
   // fail-closed medical safety logic
   if (!apiKey) {
@@ -118,7 +143,7 @@ Do not include any markdown formatting or additional text outside the JSON objec
     const parsed = JSON.parse(jsonString);
     const validated = ClaudeResponseSchema.parse(parsed);
 
-    return {
+    const result: ClaudeAnalysisResult = {
       success: true,
       reasoningAr: validated.reasoningAr,
       reasoningEn: validated.reasoningEn,
@@ -126,6 +151,15 @@ Do not include any markdown formatting or additional text outside the JSON objec
       riskLevel: validated.riskLevel,
       fallbackActive: false,
     };
+
+    // Cache the successful result in Redis for 24 hours
+    if (redis && cacheKey) {
+      redis.set(`ai-ddi-cache:${cacheKey}`, result, { ex: 60 * 60 * 24 }).catch(err => {
+        console.warn("Failed to cache AI result in Redis:", err);
+      });
+    }
+
+    return result;
   } catch (error) {
     clearTimeout(timeoutId);
     console.error("Failed to query Claude for clinical DDI:", error);

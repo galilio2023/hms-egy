@@ -49,8 +49,7 @@ self.addEventListener("fetch", (event) => {
     (url.pathname.includes("_next/static/") && !url.pathname.includes("_next/data/")) || 
     url.pathname.startsWith("/fonts/") ||
     url.pathname.startsWith("/images/") ||
-    url.pathname.endsWith(".png") ||
-    url.pathname.endsWith(".svg") ||
+    url.pathname.startsWith("/static/") ||
     url.pathname.endsWith(".ico") ||
     (url.pathname.startsWith("/locales/") || url.pathname === "/manifest.json");
 

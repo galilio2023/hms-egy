@@ -50,7 +50,7 @@ export function NumberTicker({
   }, [springValue, locale, useEasternArabic]);
 
   return (
-    <span className={className}>
+    <span className={cn("tabular-nums inline-block", className)}>
       <span
         ref={ref}
         aria-hidden="true"
