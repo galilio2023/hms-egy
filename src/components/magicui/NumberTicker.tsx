@@ -36,13 +36,14 @@ export function NumberTicker({
   }, [motionValue, value, isInView, delay]);
 
   useEffect(() => {
+    const numeralSystem = useEasternArabic ? "arab" : "latn";
+    const formatter = new Intl.NumberFormat(`${locale === "ar" ? "ar-EG" : "en-US"}-u-nu-${numeralSystem}`, {
+      useGrouping: true,
+      maximumFractionDigits: 0,
+    });
+
     return springValue.on("change", (latest) => {
       if (ref.current) {
-        const numeralSystem = useEasternArabic ? "arab" : "latn";
-        const formatter = new Intl.NumberFormat(`${locale === "ar" ? "ar-EG" : "en-US"}-u-nu-${numeralSystem}`, {
-          useGrouping: true,
-          maximumFractionDigits: 0,
-        });
         ref.current.textContent = formatter.format(Math.round(latest));
       }
     });

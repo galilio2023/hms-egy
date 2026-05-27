@@ -68,7 +68,7 @@ export function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProps) {
             className="fixed inset-0" 
             onClick={() => setIsOpen(false)} 
           />
-          <div className="fixed top-[15%] start-[50%] -translate-x-1/2 w-full max-w-2xl px-4">
+          <div className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
             <motion.div
               initial={{ scale: 0.95, y: -15, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}

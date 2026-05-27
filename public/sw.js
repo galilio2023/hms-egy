@@ -52,7 +52,7 @@ self.addEventListener("fetch", (event) => {
     url.pathname.endsWith(".png") ||
     url.pathname.endsWith(".svg") ||
     url.pathname.endsWith(".ico") ||
-    (url.pathname.endsWith(".json") && !url.pathname.startsWith("/api/"));
+    (url.pathname.startsWith("/locales/") || url.pathname === "/manifest.json");
 
   if (!isStaticAsset && request.mode !== "navigate") {
     return;

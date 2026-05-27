@@ -86,7 +86,7 @@ Do not include any markdown formatting or additional text outside the JSON objec
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
+        model: "claude-3-5-haiku-20241022",
         max_tokens: 1500,
         messages: [
           { role: "user", content: prompt }
@@ -121,12 +121,11 @@ Do not include any markdown formatting or additional text outside the JSON objec
   } catch (error) {
     clearTimeout(timeoutId);
     console.error("Failed to query Claude for clinical DDI:", error);
-    // Explicitly fail to indicate AI analysis didn't run, 
-    // letting local DB run as the source of truth without silent AI override
+    // Unify to fail-closed for clinical safety (Review #1)
     return {
       success: false,
-      isApproved: true, 
-      riskLevel: 'medium',
+      isApproved: false, 
+      riskLevel: 'high',
       fallbackActive: true,
     };
   }
