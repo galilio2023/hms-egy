@@ -1,0 +1,19 @@
+{
+  "name": "HMS Egypt - Enterprise Hospital Management",
+  "short_name": "HMS Egypt",
+  "description": "Enterprise Hospital Management System designed for high clinical efficiency and MOH compliance in Egypt.",
+  "start_url": "/ar/login",
+  "display": "standalone",
+  "background_color": "#050811",
+  "theme_color": "#0d9488",
+  "orientation": "any",
+  "dir": "auto",
+  "categories": ["medical", "business"],
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
