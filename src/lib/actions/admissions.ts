@@ -5,6 +5,7 @@ import { withTenantContext } from "@/lib/db/tenant";
 import { beds, admissions, dischargeSummaries, vitalsFlowsheet, rooms } from "@db/schema/clinical";
 import { housekeepingTasks } from "@db/schema/housekeeping";
 import { staff } from "@db/schema/core";
+import { patients } from "@db/schema/patients";
 import { eq, and, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -13,6 +14,8 @@ import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { validateVitals } from "./clinical";
 import { normalizeDecimal } from "@/lib/utils/egypt";
+import { calculateMEWS } from "@/lib/clinical/mews";
+import { sendResilientClinicalAlert } from "@/lib/sms/client";
 
 interface AdmitPatientPayload {
   patientId: string;
@@ -293,7 +296,7 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
       ? normalizeDecimal(payload.weightKg)?.toFixed(1) || null
       : null;
 
-    return await withTenantContext(hospitalId, async (tx) => {
+    const result = await withTenantContext(hospitalId, async (tx) => {
       const currentStaff = await tx
         .select()
         .from(staff)
@@ -325,6 +328,82 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
 
       return { success: true, vitalId: record.id };
     });
+
+    if (result.success && result.vitalId) {
+      // 1. Calculate MEWS dynamically
+      const mews = calculateMEWS({
+        systolicBp: payload.bloodPressureSystolic,
+        heartRate: payload.heartRate,
+        respiratoryRate: payload.respiratoryRate,
+        temperature: cleanTemperature,
+      });
+
+      // 2. Proactively trigger out-of-band alerts outside transaction if high risk
+      if (mews.score >= 5) {
+        (async () => {
+          try {
+            // A. Fetch Patient details
+            const [patient] = await db
+              .select()
+              .from(patients)
+              .where(and(eq(patients.id, payload.patientId), eq(patients.hospitalId, hospitalId)))
+              .limit(1);
+
+            if (!patient) return;
+
+            // B. Fetch attending doctor details from active admissions
+            const [activeAdmission] = await db
+              .select({
+                doctorNameAr: staff.nameAr,
+                doctorNameEn: staff.nameEn,
+                doctorPhone: staff.phone,
+              })
+              .from(admissions)
+              .innerJoin(staff, eq(admissions.admittingDoctorId, staff.id))
+              .where(
+                and(
+                  eq(admissions.patientId, payload.patientId),
+                  eq(admissions.status, "active"),
+                  eq(admissions.hospitalId, hospitalId)
+                )
+              )
+              .limit(1);
+
+            // C. Alert Attending Physician (Doctor) via WhatsApp / SMS
+            if (activeAdmission && activeAdmission.doctorPhone) {
+              await sendResilientClinicalAlert({
+                hospitalId,
+                patientId: payload.patientId,
+                phoneNumber: activeAdmission.doctorPhone,
+                messageAr: `[تنبيه طارئ MEWS] المريض: ${patient.nameAr} في حالة حرجة. معدل MEWS: ${mews.score}. يرجى الفحص الفوري للعلامات الحيوية.`,
+                messageEn: `[CRITICAL MEWS ALERT] Patient: ${patient.nameEn} has triggered a critical score of ${mews.score}. Immediate clinical review is required.`,
+                reminderType: "critical_mews_alert",
+                entityType: "clinical_alert",
+                entityId: result.vitalId!,
+              });
+            }
+
+            // D. Alert Patient's Emergency Contact
+            if (patient.emergencyContactPhone) {
+              await sendResilientClinicalAlert({
+                hospitalId,
+                patientId: payload.patientId,
+                phoneNumber: patient.emergencyContactPhone,
+                messageAr: `[تحديث طبي] تم تسجيل تغير في المؤشرات الحيوية للمريض ${patient.nameAr}. الفريق الطبي يتابع الحالة فوراً لضمان استقرارها.`,
+                messageEn: `[Medical Update] A vital signs alert was logged for patient ${patient.nameEn}. The clinical team is attending to the patient immediately.`,
+                reminderType: "critical_mews_alert",
+                entityType: "clinical_alert",
+                entityId: result.vitalId!,
+              });
+            }
+          } catch (alertErr) {
+            console.error("[CRITICAL ALERT GATEWAY] Failed to dispatch out-of-band alerts:", alertErr);
+          }
+        })();
+      }
+    }
+
+    return result;
   } catch (error: any) {
     return {
       success: false,

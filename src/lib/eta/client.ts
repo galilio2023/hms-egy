@@ -1,4 +1,4 @@
-import { ETADocument, ETASubmissionResponse, ETATokenResponse } from "./types";
+import { ETADocument, ETASubmissionResponse, ETATokenResponse, ETAReceipt } from "./types";
 import redis from "@/lib/utils/redis";
 
 const ETA_ENVIRONMENT = process.env.ETA_ENVIRONMENT || "sandbox";
@@ -158,6 +158,26 @@ export class ETAClient {
     if (!response.ok) {
       const errorBody = await response.text();
       throw new Error(`Failed to cancel document in ETA: ${response.statusText} - ${errorBody}`);
+    }
+
+    return response.json();
+  }
+
+  async submitReceipts(receipts: ETAReceipt[], creds: ETACredentials): Promise<ETASubmissionResponse> {
+    const token = await this.getToken(creds);
+
+    const response = await fetch(`${API_URL}/api/v1.0/receiptssubmissions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ receipts }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Failed to submit B2C receipts to ETA: ${response.statusText} - ${errorBody}`);
     }
 
     return response.json();
