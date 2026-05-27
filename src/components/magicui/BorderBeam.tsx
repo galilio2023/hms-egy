@@ -22,14 +22,6 @@ export function BorderBeam({
 }: BorderBeamProps) {
   return (
     <div className={cn("absolute inset-0 pointer-events-none rounded-[inherit] overflow-hidden", className)}>
-      <style jsx>{`
-        @keyframes border-beam {
-          0%, 100% { transform: translate(-50%, -50%) translate(0%, 0%); }
-          25% { transform: translate(-50%, -50%) translate(100%, 0%); }
-          50% { transform: translate(-50%, -50%) translate(100%, 100%); }
-          75% { transform: translate(-50%, -50%) translate(0%, 100%); }
-        }
-      `}</style>
       {/* Light glow sliding along the border edges */}
       <div
         className="absolute rounded-full opacity-35 blur-[12px]"
