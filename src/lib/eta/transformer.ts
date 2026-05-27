@@ -116,7 +116,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
         regionCity: hospital.city || hospital.governorate,
         street: hospital.street || hospital.address,
         buildingNumber: hospital.buildingNumber || "1",
-        landmark: hospital.district || undefined,
+        landmark: hospital.district || "",
       },
       type: "B",
       id: hospital.taxpayerId || "",

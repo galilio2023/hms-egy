@@ -35,21 +35,26 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// 3. Fetch event: Cache-First for static assets, Network-First for navigation
+// 3. Fetch event: Whitelist-based caching for static assets
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+  const url = new URL(request.url);
 
   // Only handle GET requests
   if (request.method !== "GET") return;
 
-  // Let Next.js API actions and better-auth bypass service worker
-  const url = new URL(request.url);
-  if (
-    url.pathname.startsWith("/api") || 
-    url.pathname.includes("better-auth") ||
-    url.pathname.includes("/dashboard") ||
-    url.pathname.includes("/patients")
-  ) {
+  // IMPLEMENT DEFENSIVE WHITELIST: Only cache known static sub-resources
+  // This prevents accidental PHI leaks from dynamic clinical pages or API routes
+  const isStaticAsset = 
+    url.pathname.includes("_next/static/") || 
+    url.pathname.startsWith("/fonts/") ||
+    url.pathname.startsWith("/images/") ||
+    url.pathname.endsWith(".png") ||
+    url.pathname.endsWith(".svg") ||
+    url.pathname.endsWith(".ico") ||
+    url.pathname.endsWith(".json");
+
+  if (!isStaticAsset && request.mode !== "navigate") {
     return;
   }
 
@@ -65,12 +70,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Handle static sub-resources (JS, CSS, Images, Fonts)
-  if (
-    request.destination === "style" ||
-    request.destination === "script" ||
-    request.destination === "image" ||
-    request.destination === "font"
-  ) {
+  if (isStaticAsset) {
     // Optimization: Cache statically hashed Next.js assets with Pure Cache-First
     if (url.pathname.includes("_next/static/")) {
       event.respondWith(
@@ -95,8 +95,9 @@ self.addEventListener("fetch", (event) => {
           // Fetch updated version in the background to keep cache fresh
           fetch(request).then((networkResponse) => {
             if (networkResponse.status === 200) {
+              const responseCopy = networkResponse.clone();
               caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, networkResponse);
+                cache.put(request, responseCopy);
               });
             }
           }).catch(() => {}); // ignore background refresh errors

@@ -1338,7 +1338,7 @@ export function PatientProfileClient({
                                 const start = cert.startDate ? new Date(cert.startDate) : null;
                                 const end = cert.endDate ? new Date(cert.endDate) : null;
                                 return (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime()))
-                                  ? Math.max(1, differenceInCalendarDays(end, start))
+                                  ? Math.max(1, differenceInCalendarDays(end, start) + 1)
                                   : 1;
                               })()} {isRtl ? "أيام راحة" : "Rest Days"}
                             </Badge>
