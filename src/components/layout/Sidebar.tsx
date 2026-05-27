@@ -396,7 +396,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
           {!isCollapsed && <span>{t("logout")}</span>}
         </button>
       </div>
-      </motion.aside>
+      </aside>
     </>
   );
 }

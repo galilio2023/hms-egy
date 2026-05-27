@@ -44,7 +44,12 @@ self.addEventListener("fetch", (event) => {
 
   // Let Next.js API actions and better-auth bypass service worker
   const url = new URL(request.url);
-  if (url.pathname.startsWith("/api") || url.pathname.includes("better-auth")) {
+  if (
+    url.pathname.startsWith("/api") || 
+    url.pathname.includes("better-auth") ||
+    url.pathname.includes("/dashboard") ||
+    url.pathname.includes("/patients")
+  ) {
     return;
   }
 

@@ -26,12 +26,12 @@ export async function getClaudeClinicalAnalysis(
 ): Promise<ClaudeAnalysisResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  // Graceful Local Fallback check
+  // fail-closed medical safety logic
   if (!apiKey) {
     return {
-      success: true,
-      isApproved: true,
-      riskLevel: 'low',
+      success: false,
+      isApproved: false,
+      riskLevel: 'high',
       fallbackActive: true,
     };
   }
@@ -110,5 +110,7 @@ Do not include any markdown formatting or additional text outside the JSON objec
       riskLevel: 'low',
       fallbackActive: true,
     };
+  }
+}
   }
 }
