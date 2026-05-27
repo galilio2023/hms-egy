@@ -69,8 +69,6 @@ export async function getClaudeClinicalAnalysis(
     };
   }
 
-  const { medications, patientAllergies, chronicConditions } = payload;
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second strict SLA
 

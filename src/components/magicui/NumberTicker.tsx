@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useMotionValue, useSpring, useInView } from "framer-motion";
 import { useLocale } from "next-intl";
+import { cn } from "@/lib/utils";
 
 interface NumberTickerProps {
   value: number;
@@ -26,6 +27,14 @@ export function NumberTicker({
     stiffness: 120,
   });
 
+  const formatter = useMemo(() => {
+    const numeralSystem = useEasternArabic ? "arab" : "latn";
+    return new Intl.NumberFormat(`${locale === "ar" ? "ar-EG" : "en-US"}-u-nu-${numeralSystem}`, {
+      useGrouping: true,
+      maximumFractionDigits: 0,
+    });
+  }, [locale, useEasternArabic]);
+
   useEffect(() => {
     if (isInView) {
       const timer = setTimeout(() => {
@@ -36,18 +45,12 @@ export function NumberTicker({
   }, [motionValue, value, isInView, delay]);
 
   useEffect(() => {
-    const numeralSystem = useEasternArabic ? "arab" : "latn";
-    const formatter = new Intl.NumberFormat(`${locale === "ar" ? "ar-EG" : "en-US"}-u-nu-${numeralSystem}`, {
-      useGrouping: true,
-      maximumFractionDigits: 0,
-    });
-
     return springValue.on("change", (latest) => {
       if (ref.current) {
         ref.current.textContent = formatter.format(Math.round(latest));
       }
     });
-  }, [springValue, locale, useEasternArabic]);
+  }, [springValue, formatter]);
 
   return (
     <span className={cn("tabular-nums inline-block", className)}>
