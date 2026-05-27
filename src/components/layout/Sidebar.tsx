@@ -31,6 +31,8 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { SparklesText } from "@/components/magicui/SparklesText";
 
 interface SidebarItem {
   key: string;
@@ -230,11 +232,18 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
         />
       )}
       
-      <aside 
+      <motion.aside 
+        animate={{
+          width: isCollapsed ? 80 : 256,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 220,
+          damping: 26,
+        }}
         className={cn(
-          "h-screen flex flex-col bg-slate-950 text-slate-200 border-slate-900/50 transition-all duration-300 ease-in-out shadow-2xl z-50",
+          "h-screen flex flex-col bg-slate-950 text-slate-200 border-slate-900/50 shadow-2xl z-50",
           "fixed lg:relative top-0 bottom-0",
-          isCollapsed ? "lg:w-20 w-64" : "w-64",
           "border-e",
           !isMobileOpen && (isRtl ? "translate-x-full lg:translate-x-0" : "-translate-x-full lg:translate-x-0"),
           isMobileOpen && "translate-x-0"
@@ -247,9 +256,10 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
             <HeartPulse className="h-6 w-6" />
           </div>
           {!isCollapsed && (
-            <span className="font-bold text-lg tracking-wide whitespace-nowrap bg-gradient-to-r from-white via-slate-100 to-accent bg-clip-text text-transparent">
-              HMS EGYPT
-            </span>
+            <SparklesText
+              text="HMS EGYPT"
+              className="font-bold text-lg tracking-wide whitespace-nowrap bg-gradient-to-r from-white via-slate-100 to-accent bg-clip-text text-transparent"
+            />
           )}
         </div>
         <button 
@@ -393,7 +403,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
           {!isCollapsed && <span>{t("logout")}</span>}
         </button>
       </div>
-      </aside>
+      </motion.aside>
     </>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm, UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { toast } from "sonner";
+import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -44,7 +45,8 @@ interface Props {
   patientId: string;
   admissionId?: string;
   hospitalSlug: string;
-  locale: string;
+  locale?: string;
+  onSuccess?: () => void;
 }
 
 export function NursingAssessmentForm({
@@ -52,11 +54,14 @@ export function NursingAssessmentForm({
   patientId,
   admissionId,
   hospitalSlug,
-  locale,
+  locale: propLocale,
+  onSuccess,
 }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assessmentType, setAssessmentType] = useState<AssessmentType>("initial");
   const router = useRouter();
+  const nextIntlLocale = useLocale();
+  const locale = propLocale || nextIntlLocale;
 
   const form = useForm<AssessmentFormValues>({
     defaultValues: {
@@ -82,6 +87,7 @@ export function NursingAssessmentForm({
       if (result.success) {
         toast.success(locale === "ar" ? "تم تسجيل التقييم بنجاح" : "Assessment recorded successfully");
         router.refresh();
+        onSuccess?.();
       } else {
         toast.error("error" in result ? String(result.error) : "Failed to record assessment");
       }

@@ -5,7 +5,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSession } from "@/lib/auth/client";
 import { useTheme } from "next-themes";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { Sun, Moon, Search, Clock, ShieldCheck, Hospital, ChevronDown, User, Activity, Menu } from "lucide-react";
+import { Sun, Moon, Search, Clock, ShieldCheck, Hospital, ChevronDown, User, Activity, Menu, Bell } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface TopBarProps {
@@ -22,6 +23,7 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
   const [mounted, setMounted] = useState(false);
   const [cairoTime, setCairoTime] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const user = session?.user;
   const userRole = (user as any)?.role || "DOCTOR";
@@ -132,6 +134,92 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
         {/* Language Switcher */}
         <div className="hover:shadow-sm rounded-xl">
           <LanguageSwitcher />
+        </div>
+
+        {/* Custom Notification Bell */}
+        <div className="relative">
+          <motion.button
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="p-2 hover:bg-muted/80 rounded-xl border border-border text-muted-foreground hover:text-foreground relative transition-all duration-200 hover:shadow-sm"
+          >
+            <motion.div
+              animate={isNotificationOpen ? { rotate: [0, -10, 10, -10, 10, 0] } : {}}
+              transition={{ type: "spring", stiffness: 300, damping: 10 }}
+            >
+              <Bell className="h-4.5 w-4.5" />
+            </motion.div>
+            
+            {/* Animated Ripple Pulse dot for critical STAT warning */}
+            <span className="absolute top-1.5 end-1.5 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+            </span>
+          </motion.button>
+
+          {/* Notification Popover Dropdown */}
+          <AnimatePresence>
+            {isNotificationOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setIsNotificationOpen(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="absolute top-12 w-80 bg-card border border-border rounded-2xl shadow-2xl py-3 z-20 end-0 origin-top-end glass-card"
+                  dir={isRtl ? "rtl" : "ltr"}
+                >
+                  <div className="px-4 pb-2 border-b border-border/40 flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground">
+                      {isRtl ? "التنبيهات العاجلة" : "STAT Notifications"}
+                    </span>
+                    <span className="text-[10px] bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">
+                      {isRtl ? "هام جداً" : "Critical"}
+                    </span>
+                  </div>
+
+                  <div className="px-2 py-1.5 max-h-64 overflow-y-auto space-y-1.5 custom-scrollbar">
+                    {/* STAT Critical Alert */}
+                    <div className="p-2.5 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 rounded-xl transition-colors duration-150 text-start">
+                      <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-[10px]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+                        <span>{isRtl ? "تنبيه معملي عاجل (STAT)" : "STAT LAB ALERT"}</span>
+                      </div>
+                      <p className="text-xs font-bold text-foreground mt-1 font-cairo">
+                        {isRtl 
+                          ? "المريض: علي أحمد - البوتاسيوم 6.2 mmol/L (مرتفع جداً)" 
+                          : "Patient: Ali Ahmed - Potassium 6.2 mmol/L (Critical High)"}
+                      </p>
+                      <span className="text-[9px] text-muted-foreground mt-1 block">
+                        {isRtl ? "منذ دقيقتين · معمل الطوارئ" : "2m ago · Emergency Lab"}
+                      </span>
+                    </div>
+
+                    {/* Nursing Handoff Alert */}
+                    <div className="p-2.5 hover:bg-muted/50 rounded-xl transition-colors duration-150 text-start border border-transparent">
+                      <div className="flex items-center gap-2 text-accent font-bold text-[10px]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                        <span>{isRtl ? "تسليم الوردية" : "NURSING HANDOFF"}</span>
+                      </div>
+                      <p className="text-xs font-medium text-foreground mt-1 font-cairo">
+                        {isRtl 
+                          ? "تحديث سجل تسليم الوردية لغرفة 304 متاح للمراجعة" 
+                          : "Shift handover log for Room 304 is ready for review."}
+                      </p>
+                      <span className="text-[9px] text-muted-foreground mt-1 block">
+                        {isRtl ? "منذ 15 دقيقة · الجناح الثالث" : "15m ago · Ward 3"}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Separator line */}

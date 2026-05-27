@@ -1333,7 +1333,7 @@ export function PatientProfileClient({
                               {typeLabel}
                             </Badge>
                             <Badge variant="outline" className="text-[10px] font-extrabold border-emerald-500/20 text-emerald-600 bg-emerald-500/5">
-                              {cert.restDays} {isRtl ? "أيام راحة" : "Rest Days"}
+                              {Math.max(1, Math.ceil((new Date(cert.endDate).getTime() - new Date(cert.startDate).getTime()) / (1000 * 60 * 60 * 24)))} {isRtl ? "أيام راحة" : "Rest Days"}
                             </Badge>
                           </div>
 

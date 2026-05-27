@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth/client";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -53,19 +54,31 @@ export function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProps) {
     setIsOpen(false);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm animate-fade-in">
-      <div 
-        className="fixed inset-0" 
-        onClick={() => setIsOpen(false)} 
-      />
-      <div className="fixed top-[15%] start-[50%] -translate-x-[1/2] w-full max-w-2xl px-4">
-        <Command 
-          className="w-full bg-card text-card-foreground border border-border shadow-2xl rounded-2xl overflow-hidden glass-card transition-all duration-300 text-start"
-          dir={isRtl ? "rtl" : "ltr"}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
         >
+          <div 
+            className="fixed inset-0" 
+            onClick={() => setIsOpen(false)} 
+          />
+          <div className="fixed top-[15%] start-[50%] -translate-x-[1/2] w-full max-w-2xl px-4">
+            <motion.div
+              initial={{ scale: 0.95, y: -15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: -15, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+            >
+              <Command 
+                className="w-full bg-card text-card-foreground border border-border shadow-2xl rounded-2xl overflow-hidden glass-card text-start"
+                dir={isRtl ? "rtl" : "ltr"}
+              >
           <div className="flex items-center px-4 border-b border-border/40 py-1">
             <Search className="h-5 w-5 text-muted-foreground shrink-0" />
             <Command.Input 
@@ -175,8 +188,11 @@ export function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProps) {
               {isRtl ? "توقيت القاهرة المعتمد" : "Cairo Standard Time"}
             </span>
           </div>
-        </Command>
-      </div>
-    </div>
+              </Command>
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

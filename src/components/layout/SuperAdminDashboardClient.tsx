@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { BorderBeam } from "@/components/magicui/BorderBeam";
+import { NumberTicker } from "@/components/magicui/NumberTicker";
 
 interface HospitalWithSettings {
   id: string;
@@ -185,11 +187,12 @@ export default function SuperAdminDashboardClient({
         {/* KPI 1: Total Hospitals */}
         <div className="relative group overflow-hidden bg-card p-6 rounded-2xl border border-border/60 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none opacity-50" />
+          <BorderBeam colorFrom="#3b82f6" colorTo="#60a5fa" duration={6} />
           <div className="relative flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("totalHospitals")}</p>
               <h3 className="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-2 tracking-tight">
-                {formatNumber(totalCount)}
+                <NumberTicker value={totalCount} />
               </h3>
               <p className="text-xs text-muted-foreground/90 mt-1 font-medium">
                 {locale === "ar" ? `${formatNumber(activeCount)} مستشفى نشطة` : `${activeCount} Active Tenants`}
@@ -223,11 +226,12 @@ export default function SuperAdminDashboardClient({
         {/* KPI 2: Active Subscriptions */}
         <div className="relative group overflow-hidden bg-card p-6 rounded-2xl border border-border/60 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none opacity-50" />
+          <BorderBeam colorFrom="#10b981" colorTo="#34d399" duration={6} />
           <div className="relative flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("activeSubscriptions")}</p>
               <h3 className="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2 tracking-tight">
-                {formatNumber(activeCount)}
+                <NumberTicker value={activeCount} />
               </h3>
               <p className="text-xs text-muted-foreground/90 mt-1 font-medium">
                 {locale === "ar" ? "اشتراكات المستشفيات النشطة" : "Active paid tenant plans"}
@@ -257,11 +261,12 @@ export default function SuperAdminDashboardClient({
         {/* KPI 3: Global Monthly Recurring Revenue */}
         <div className="relative group overflow-hidden bg-card p-6 rounded-2xl border border-border/60 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 md:col-span-1">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none opacity-50" />
+          <BorderBeam colorFrom="#f59e0b" colorTo="#fbbf24" duration={6} />
           <div className="relative flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("globalMRR")}</p>
-              <h3 className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-2 tracking-tight">
-                {formatNumber(calculatedMRR)} <span className="text-sm font-medium">{locale === "ar" ? "ج.م / شهر" : "EGP / Mo"}</span>
+              <h3 className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-2 tracking-tight animate-pulse-slow">
+                <NumberTicker value={calculatedMRR} /> <span className="text-sm font-medium">{locale === "ar" ? "ج.م / شهر" : "EGP / Mo"}</span>
               </h3>
               <p className="text-[10px] md:text-xs text-muted-foreground/90 mt-1.5 font-medium leading-relaxed bg-amber-500/10 p-1.5 rounded border border-amber-500/20">
                 {locale === "ar" ? mrrWordsAr : mrrWordsEn}
