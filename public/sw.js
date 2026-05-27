@@ -70,32 +70,18 @@ self.addEventListener("fetch", (event) => {
 
   // Handle static sub-resources (JS, CSS, Images, Fonts)
   if (isStaticAsset) {
-    // 1. Pure Cache-First for static fonts and images to reduce background network thrashing (Review #10)
-    if (url.pathname.startsWith("/fonts/") || url.pathname.startsWith("/images/")) {
-      event.respondWith(
-        caches.match(request).then((cachedResponse) => {
-          return cachedResponse || fetch(request).then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              const responseCopy = networkResponse.clone();
-              event.waitUntil(
-                caches.open(CACHE_NAME).then((cache) => {
-                  return cache.put(request, responseCopy);
-                })
-              );
-            }
-            return networkResponse;
-          });
-        })
-      );
-      return;
-    }
+    const isPureCacheFirst = 
+      url.pathname.startsWith("/fonts/") || 
+      url.pathname.startsWith("/images/") || 
+      url.pathname.includes("_next/static/");
 
-    // 2. Optimization: Cache statically hashed Next.js assets with Pure Cache-First
-    if (url.pathname.includes("_next/static/")) {
+    if (isPureCacheFirst) {
       event.respondWith(
         caches.match(request).then((cachedResponse) => {
           return cachedResponse || fetch(request).then((networkResponse) => {
-            if (networkResponse.status === 200) {
+            // Allow 200 (Success) or 0 (Opaque from CDN) for static assets
+            const isCachable = networkResponse.status === 200 || (networkResponse.status === 0 && (request.destination === "font" || request.destination === "image"));
+            if (isCachable) {
               const responseCopy = networkResponse.clone();
               event.waitUntil(
                 caches.open(CACHE_NAME).then((cache) => {
