@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { useMotionValue, useSpring, useInView, motion, useTransform } from "framer-motion";
 import { useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export function NumberTicker({
   useEasternArabic = false 
 }: NumberTickerProps & { useEasternArabic?: boolean }) {
   const locale = useLocale();
+  const [isMounted, setIsMounted] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, margin: "0px 0px -50px 0px" });
 
@@ -38,6 +39,10 @@ export function NumberTicker({
   const rounded = useTransform(springValue, (latest) => formatter.format(Math.round(latest)));
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (isInView) {
       const timer = setTimeout(() => {
         motionValue.set(value);
@@ -45,6 +50,10 @@ export function NumberTicker({
       return () => clearTimeout(timer);
     }
   }, [motionValue, value, isInView, delay]);
+
+  if (!isMounted) {
+    return <span className={cn("tabular-nums inline-block", className)}>{value}</span>;
+  }
 
   return (
     <span className={cn("tabular-nums inline-block", className)}>

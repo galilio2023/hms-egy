@@ -70,7 +70,7 @@ export async function getClaudeClinicalAnalysis(
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second strict SLA
+  const timeoutId = setTimeout(() => controller.abort(), 6000); // 6-second realistic SLA for Egyptian WAN (Review #10)
 
   const prompt = `You are a clinical pharmacologist and medical AI. Perform a rigorous, multi-dimensional drug safety analysis.
 
@@ -149,6 +149,7 @@ Analyze the provided clinical context and execute the 'provide_clinical_analysis
     };
 
     // Cache the successful result in Redis for 24 hours
+    // NOTE: using @upstash/redis object signature. If switching to ioredis, use ('EX', 86400)
     if (redis && cacheKey) {
       redis.set(`ai-ddi-cache:${cacheKey}`, result, { ex: 60 * 60 * 24 }).catch(err => {
         console.warn("Failed to cache AI result in Redis:", err);

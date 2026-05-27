@@ -1337,9 +1337,16 @@ export function PatientProfileClient({
                               {(() => {
                                 const start = cert.startDate ? (typeof cert.startDate === 'string' ? parseISO(cert.startDate) : cert.startDate) : null;
                                 const end = cert.endDate ? (typeof cert.endDate === 'string' ? parseISO(cert.endDate) : cert.endDate) : null;
-                                return (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime()))
-                                  ? Math.max(1, differenceInCalendarDays(end, start) + 1)
-                                  : 1;
+                                
+                                if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                                  // Shift to safe mid-day before calculation to bypass DST/midnight boundaries (Review #10)
+                                  const s = new Date(start);
+                                  const e = new Date(end);
+                                  s.setHours(12, 0, 0, 0);
+                                  e.setHours(12, 0, 0, 0);
+                                  return Math.max(1, differenceInCalendarDays(e, s) + 1);
+                                }
+                                return 1;
                               })()} {isRtl ? "أيام راحة" : "Rest Days"}
                             </Badge>
                           </div>
