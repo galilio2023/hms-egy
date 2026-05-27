@@ -465,7 +465,7 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
                               : (isRtl ? "التحليل السريري المدمج (قاعدة البيانات)" : "Clinical Safety Analysis (Local Database)")}
                           </span>
                         </div>
-                        <div className="text-xs leading-relaxed text-slate-300 font-cairo prose prose-invert max-w-none prose-xs whitespace-pre-line border-t border-slate-900/60 pt-2.5">
+                        <div className="text-xs leading-relaxed text-slate-300 font-cairo whitespace-pre-line border-t border-slate-900/60 pt-2.5">
                           {isRtl ? ddiResult.aiAnalysisAr : ddiResult.aiAnalysisEn}
                         </div>
                       </div>

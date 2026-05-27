@@ -22,8 +22,16 @@ export function BorderBeam({
 }: BorderBeamProps) {
   return (
     <div className={cn("absolute inset-0 pointer-events-none rounded-[inherit] overflow-hidden", className)}>
+      <style jsx>{`
+        @keyframes border-beam {
+          0%, 100% { transform: translate(-50%, -50%) translate(0%, 0%); }
+          25% { transform: translate(-50%, -50%) translate(100%, 0%); }
+          50% { transform: translate(-50%, -50%) translate(100%, 100%); }
+          75% { transform: translate(-50%, -50%) translate(0%, 100%); }
+        }
+      `}</style>
       {/* Light glow sliding along the border edges */}
-      <motion.div
+      <div
         className="absolute rounded-full opacity-35 blur-[12px]"
         style={{
           width: size,
@@ -31,20 +39,7 @@ export function BorderBeam({
           background: `radial-gradient(circle, ${colorFrom} 0%, ${colorTo} 40%, transparent 100%)`,
           top: 0,
           left: 0,
-        }}
-        animate={{
-          transform: [
-            "translate(-50%, -50%) translate(0%, 0%)",
-            "translate(-50%, -50%) translate(100%, 0%)",
-            "translate(-50%, -50%) translate(100%, 100%)",
-            "translate(-50%, -50%) translate(0%, 100%)",
-            "translate(-50%, -50%) translate(0%, 0%)"
-          ]
-        }}
-        transition={{
-          duration,
-          repeat: Infinity,
-          ease: "linear",
+          animation: `border-beam ${duration}s linear infinite`,
         }}
       />
       {/* Inner thin border contour */}
