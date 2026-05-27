@@ -70,21 +70,14 @@ export async function runDdiCheck(patientId: string, itemInputs: PrescriptionIte
       );
 
       if (results.requiresAiEnrichment) {
-        const aiAnalysis = await getClaudeClinicalAnalysis({
+        // Trigger Claude AI clinical enrichment asynchronously (non-blocking)
+        getClaudeClinicalAnalysis({
           medications: medDetails.map(m => ({ name: m.name, genericName: m.genericName })),
           patientAllergies: patient.allergies || [],
           chronicConditions: patient.chronicConditions || [],
-        });
-
-        if (aiAnalysis.success && !aiAnalysis.fallbackActive) {
-          results.aiAnalysisAr = aiAnalysis.reasoningAr;
-          results.aiAnalysisEn = aiAnalysis.reasoningEn;
-          results.isAiOptimized = true;
-          results.isApproved = aiAnalysis.isApproved && results.isApproved;
-          if (aiAnalysis.riskLevel === 'high') {
-            results.overallRiskLevel = 'high';
-          }
-        }
+        }).catch(err => console.error("Background AI enrichment failed:", err));
+        
+        // Return deterministic check results immediately
       }
 
       return { success: true, data: results };

@@ -63,7 +63,7 @@ self.addEventListener("fetch", (event) => {
         .catch(() => {
           // If network is completely offline, search cache or serve standard offline page
           return caches.match(request).then((cachedResponse) => {
-            return cachedResponse || caches.match(OFFLINE_URL) as Promise<Response>;
+            return cachedResponse || caches.match(OFFLINE_URL);
           });
         })
     );

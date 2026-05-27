@@ -52,13 +52,18 @@ CRITICAL RULES:
 1. Identify all Drug-Drug Interactions (DDIs) among the prescribed medications, including severity (mild, moderate, severe, contraindicated) and pharmacological mechanisms.
 2. Check for Drug-Allergy cross-reactivity based on the patient's allergies.
 3. Check for Drug-Disease contraindications based on the patient's chronic conditions.
-4. Output your detailed clinical analysis in TWO distinct sections:
-   - "ARABIC ANALYSIS" (Written in clear, professional medical Arabic for Egyptian physicians)
-   - "ENGLISH ANALYSIS" (Written in clear, professional medical English)
+4. Output your detailed clinical analysis.
 5. Keep descriptions concise, structured, and clinically actionable. Highlight life-threatening or contraindicated items immediately.
 6. Provide a final safety decision: IS_APPROVED (boolean: false if there are absolute contraindications) and RISK_LEVEL (low, medium, high).
 
-Provide your response in raw text matching these two main sections.`;
+Provide your response strictly as a JSON object matching this schema:
+{
+  "reasoningAr": "Detailed Arabic analysis",
+  "reasoningEn": "Detailed English analysis",
+  "isApproved": boolean,
+  "riskLevel": "low" | "medium" | "high"
+}
+Do not include any markdown formatting or additional text outside the JSON object.`;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -84,40 +89,16 @@ Provide your response in raw text matching these two main sections.`;
     const data = await response.json();
     const rawText = data.content?.[0]?.text || "";
 
-    // Parse the Arabic and English sections
-    const arIndex = rawText.indexOf("ARABIC ANALYSIS");
-    const enIndex = rawText.indexOf("ENGLISH ANALYSIS");
-
-    let reasoningAr = "";
-    let reasoningEn = "";
-
-    if (arIndex !== -1 && enIndex !== -1) {
-      if (arIndex < enIndex) {
-        reasoningAr = rawText.substring(arIndex + 15, enIndex).trim();
-        reasoningEn = rawText.substring(enIndex + 16).trim();
-      } else {
-        reasoningEn = rawText.substring(enIndex + 16, arIndex).trim();
-        reasoningAr = rawText.substring(arIndex + 15).trim();
-      }
-    } else {
-      // Fallback splitting if labels are slightly off
-      reasoningEn = rawText;
-      reasoningAr = rawText;
-    }
-
-    // Determine safety approval
-    const lowercaseText = rawText.toLowerCase();
-    const isApproved = !lowercaseText.includes("contraindicated") && !lowercaseText.includes("is_approved: false");
-    const riskLevel = (lowercaseText.includes("severe") || lowercaseText.includes("contraindicated")) 
-      ? 'high' 
-      : lowercaseText.includes("moderate") ? 'medium' : 'low';
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Claude did not return a valid JSON object");
+    const parsed = JSON.parse(jsonMatch[0]);
 
     return {
       success: true,
-      reasoningAr,
-      reasoningEn,
-      isApproved,
-      riskLevel,
+      reasoningAr: parsed.reasoningAr || "",
+      reasoningEn: parsed.reasoningEn || "",
+      isApproved: parsed.isApproved ?? true,
+      riskLevel: parsed.riskLevel || "low",
       fallbackActive: false,
     };
   } catch (error) {

@@ -20,13 +20,14 @@ export async function submitInvoiceToETA(invoiceId: string) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const hospitalId = (session.user as any).hospitalId as string | undefined;
+  const user = session.user as import("@/types/auth-api.types").User;
+  const hospitalId = user.hospitalId;
   if (!hospitalId) {
     return { success: false, error: "Unauthorized: Missing active tenant context." };
   }
 
   // 1. Enforce Role/Permission Authorization (Code Review Phase 2 #1)
-  if (!hasPermission(session.user as any, "billing:eta")) {
+  if (!hasPermission(user, "billing:eta", { hospitalId })) {
     return { success: false, error: "Forbidden: You do not have permission to submit to ETA." };
   }
 
