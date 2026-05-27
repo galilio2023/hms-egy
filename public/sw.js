@@ -53,24 +53,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Handle navigation requests (pages) - Network-First, with Offline Fallback
+  // Handle navigation requests (pages) - Network-Only, with Offline Fallback
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache the successfully fetched page shell for later offline reads
-          const responseCopy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseCopy);
-          });
-          return response;
-        })
-        .catch(() => {
-          // If network is completely offline, search cache or serve standard offline page
-          return caches.match(request).then((cachedResponse) => {
-            return cachedResponse || caches.match(OFFLINE_URL);
-          });
-        })
+      fetch(request).catch(() => {
+        // Return cached offline shell instead of caching dynamic sensitive pages
+        return caches.match(OFFLINE_URL);
+      })
     );
     return;
   }

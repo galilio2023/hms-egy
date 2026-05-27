@@ -64,8 +64,7 @@ export default function LoginPage() {
 
   return (
     <div className={cn(
-      "relative min-h-screen bg-[#050811] text-slate-100 overflow-hidden flex w-screen selection:bg-teal-500/30",
-      isRtl ? "flex-row-reverse" : "flex-row"
+      "relative min-h-screen bg-[#050811] text-slate-100 overflow-hidden flex w-screen selection:bg-teal-500/30"
     )}>
       
       {/* ── LEFT PANEL: LUXURY AUTHENTICATION FORM ────────────────── */}

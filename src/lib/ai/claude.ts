@@ -103,14 +103,13 @@ Do not include any markdown formatting or additional text outside the JSON objec
     };
   } catch (error) {
     console.error("Failed to query Claude for clinical DDI:", error);
-    // Graceful local fallback upon API error
+    // Explicitly fail to indicate AI analysis didn't run, 
+    // letting local DB run as the source of truth without silent AI override
     return {
-      success: true,
-      isApproved: true,
-      riskLevel: 'low',
+      success: false,
+      isApproved: true, 
+      riskLevel: 'medium',
       fallbackActive: true,
     };
-  }
-}
   }
 }

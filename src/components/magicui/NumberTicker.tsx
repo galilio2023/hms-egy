@@ -33,7 +33,7 @@ export function NumberTicker({ value, className, delay = 0 }: NumberTickerProps)
   useEffect(() => {
     return springValue.on("change", (latest) => {
       if (ref.current) {
-        const formatter = new Intl.NumberFormat(locale === "ar" ? "ar-EG" : "en-US", {
+        const formatter = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-US", {
           useGrouping: true,
           maximumFractionDigits: 0,
         });

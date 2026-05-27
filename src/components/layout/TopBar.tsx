@@ -185,6 +185,7 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
 
                   <div className="px-2 py-1.5 max-h-64 overflow-y-auto space-y-1.5 custom-scrollbar">
                     {/* STAT Critical Alert */}
+                    {/* TODO: Integrate with real-time laboratory telemetry API */}
                     <div className="p-2.5 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 rounded-xl transition-colors duration-150 text-start">
                       <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-[10px]">
                         <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
