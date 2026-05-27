@@ -38,6 +38,9 @@ export async function getClaudeClinicalAnalysis(
 
   const { medications, patientAllergies, chronicConditions } = payload;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second strict SLA
+
   const prompt = `You are a clinical pharmacologist and medical AI. Perform a rigorous, multi-dimensional drug safety analysis.
 
 CLINICAL CONTEXT:
@@ -73,6 +76,7 @@ Do not include any markdown formatting or additional text outside the JSON objec
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model: "claude-3-5-sonnet-20241022",
         max_tokens: 1500,
@@ -82,6 +86,8 @@ Do not include any markdown formatting or additional text outside the JSON objec
       }),
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error(`Anthropic API responded with status ${response.status}`);
     }
@@ -89,6 +95,7 @@ Do not include any markdown formatting or additional text outside the JSON objec
     const data = await response.json();
     const rawText = data.content?.[0]?.text || "";
 
+    // Robust JSON extraction to handle conversational noise or markdown blocks
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Claude did not return a valid JSON object");
     const parsed = JSON.parse(jsonMatch[0]);
@@ -102,6 +109,7 @@ Do not include any markdown formatting or additional text outside the JSON objec
       fallbackActive: false,
     };
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error("Failed to query Claude for clinical DDI:", error);
     // Explicitly fail to indicate AI analysis didn't run, 
     // letting local DB run as the source of truth without silent AI override

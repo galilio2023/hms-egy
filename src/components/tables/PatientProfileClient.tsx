@@ -1334,7 +1334,13 @@ export function PatientProfileClient({
                               {typeLabel}
                             </Badge>
                             <Badge variant="outline" className="text-[10px] font-extrabold border-emerald-500/20 text-emerald-600 bg-emerald-500/5">
-                              {Math.max(1, differenceInCalendarDays(new Date(cert.endDate), new Date(cert.startDate)))} {isRtl ? "أيام راحة" : "Rest Days"}
+                              {(() => {
+                                const start = cert.startDate ? new Date(cert.startDate) : null;
+                                const end = cert.endDate ? new Date(cert.endDate) : null;
+                                return (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime()))
+                                  ? Math.max(1, differenceInCalendarDays(end, start))
+                                  : 1;
+                              })()} {isRtl ? "أيام راحة" : "Rest Days"}
                             </Badge>
                           </div>
 

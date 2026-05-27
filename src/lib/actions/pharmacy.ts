@@ -84,6 +84,9 @@ export async function runDdiCheck(patientId: string, itemInputs: PrescriptionIte
           if (aiAnalysis.riskLevel === 'high') {
             results.overallRiskLevel = 'high';
           }
+        } else {
+          // Flag for awareness in UI that advanced AI check was bypassed
+          results.isAiBypassed = true;
         }
       }
 

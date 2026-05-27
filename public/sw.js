@@ -64,13 +64,31 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Handle static sub-resources (JS, CSS, Images, Fonts) - Cache-First, fallback to network
+  // Handle static sub-resources (JS, CSS, Images, Fonts)
   if (
     request.destination === "style" ||
     request.destination === "script" ||
     request.destination === "image" ||
     request.destination === "font"
   ) {
+    // Optimization: Cache statically hashed Next.js assets with Pure Cache-First
+    if (url.pathname.includes("_next/static/")) {
+      event.respondWith(
+        caches.match(request).then((cachedResponse) => {
+          return cachedResponse || fetch(request).then((networkResponse) => {
+            if (networkResponse.status === 200) {
+              const responseCopy = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(request, responseCopy);
+              });
+            }
+            return networkResponse;
+          });
+        })
+      );
+      return;
+    }
+
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
