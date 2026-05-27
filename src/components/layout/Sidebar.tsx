@@ -232,14 +232,19 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
         />
       )}
       
-      <aside 
+      <motion.aside 
+        initial={false}
+        animate={{ 
+          width: isCollapsed ? 80 : 256,
+        }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={cn(
-          "h-screen flex flex-col bg-slate-950 text-slate-200 border-slate-900/50 shadow-2xl z-50 transition-[width] duration-300 ease-in-out",
-          isCollapsed ? "w-[80px]" : "w-[256px]",
+          "h-screen flex flex-col bg-slate-950 text-slate-200 border-slate-900/50 shadow-2xl z-50",
           "fixed lg:relative top-0 bottom-0",
           "border-e",
           !isMobileOpen && (isRtl ? "translate-x-full lg:translate-x-0" : "-translate-x-full lg:translate-x-0"),
-          isMobileOpen && "translate-x-0"
+          isMobileOpen && "translate-x-0",
+          "will-change-[width]"
         )}
       >
       {/* Sidebar Header Brand block */}

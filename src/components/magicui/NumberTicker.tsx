@@ -10,7 +10,12 @@ interface NumberTickerProps {
   delay?: number;
 }
 
-export function NumberTicker({ value, className, delay = 0 }: NumberTickerProps) {
+export function NumberTicker({ 
+  value, 
+  className, 
+  delay = 0,
+  useEasternArabic = false 
+}: NumberTickerProps & { useEasternArabic?: boolean }) {
   const locale = useLocale();
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, margin: "0px 0px -50px 0px" });
@@ -33,21 +38,27 @@ export function NumberTicker({ value, className, delay = 0 }: NumberTickerProps)
   useEffect(() => {
     return springValue.on("change", (latest) => {
       if (ref.current) {
-        const formatter = new Intl.NumberFormat(locale === "ar" ? "ar-EG-u-nu-latn" : "en-US", {
+        const numeralSystem = useEasternArabic ? "arab" : "latn";
+        const formatter = new Intl.NumberFormat(`${locale === "ar" ? "ar-EG" : "en-US"}-u-nu-${numeralSystem}`, {
           useGrouping: true,
           maximumFractionDigits: 0,
         });
         ref.current.textContent = formatter.format(Math.round(latest));
       }
     });
-  }, [springValue, locale]);
+  }, [springValue, locale, useEasternArabic]);
 
   return (
-    <span
-      ref={ref}
-      className={className}
-    >
-      0
+    <span className={className}>
+      <span
+        ref={ref}
+        aria-hidden="true"
+      >
+        0
+      </span>
+      <span className="sr-only" aria-live="polite">
+        {value}
+      </span>
     </span>
   );
 }

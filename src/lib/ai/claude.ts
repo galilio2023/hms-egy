@@ -1,6 +1,14 @@
 "use server";
 
 import { Interaction, AllergyAlert } from "@/lib/pharmacy/ddi";
+import { z } from "zod";
+
+const ClaudeResponseSchema = z.object({
+  reasoningAr: z.string().default(""),
+  reasoningEn: z.string().default(""),
+  isApproved: z.boolean().default(true),
+  riskLevel: z.enum(["low", "medium", "high"]).default("low"),
+});
 
 interface ClaudeDdiPayload {
   medications: { name: string; genericName?: string }[];
@@ -98,14 +106,16 @@ Do not include any markdown formatting or additional text outside the JSON objec
     // Robust JSON extraction to handle conversational noise or markdown blocks
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Claude did not return a valid JSON object");
+    
     const parsed = JSON.parse(jsonMatch[0]);
+    const validated = ClaudeResponseSchema.parse(parsed);
 
     return {
       success: true,
-      reasoningAr: parsed.reasoningAr || "",
-      reasoningEn: parsed.reasoningEn || "",
-      isApproved: parsed.isApproved ?? true,
-      riskLevel: parsed.riskLevel || "low",
+      reasoningAr: validated.reasoningAr,
+      reasoningEn: validated.reasoningEn,
+      isApproved: validated.isApproved,
+      riskLevel: validated.riskLevel,
       fallbackActive: false,
     };
   } catch (error) {

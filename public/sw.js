@@ -46,13 +46,13 @@ self.addEventListener("fetch", (event) => {
   // IMPLEMENT DEFENSIVE WHITELIST: Only cache known static sub-resources
   // This prevents accidental PHI leaks from dynamic clinical pages or API routes
   const isStaticAsset = 
-    url.pathname.includes("_next/static/") || 
+    (url.pathname.includes("_next/static/") && !url.pathname.includes("_next/data/")) || 
     url.pathname.startsWith("/fonts/") ||
     url.pathname.startsWith("/images/") ||
     url.pathname.endsWith(".png") ||
     url.pathname.endsWith(".svg") ||
     url.pathname.endsWith(".ico") ||
-    url.pathname.endsWith(".json");
+    (url.pathname.endsWith(".json") && !url.pathname.startsWith("/api/"));
 
   if (!isStaticAsset && request.mode !== "navigate") {
     return;

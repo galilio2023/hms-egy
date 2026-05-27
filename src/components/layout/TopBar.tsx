@@ -186,20 +186,22 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
                   <div className="px-2 py-1.5 max-h-64 overflow-y-auto space-y-1.5 custom-scrollbar">
                     {/* STAT Critical Alert */}
                     {/* TODO: Integrate with real-time laboratory telemetry API */}
-                    <div className="p-2.5 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 rounded-xl transition-colors duration-150 text-start">
-                      <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-[10px]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
-                        <span>{isRtl ? "تنبيه معملي عاجل (STAT)" : "STAT LAB ALERT"}</span>
+                    {process.env.NODE_ENV !== 'production' && (
+                      <div className="p-2.5 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 rounded-xl transition-colors duration-150 text-start">
+                        <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-[10px]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+                          <span>{isRtl ? "تنبيه معملي عاجل (STAT)" : "STAT LAB ALERT"}</span>
+                        </div>
+                        <p className="text-xs font-bold text-foreground mt-1 font-cairo">
+                          {isRtl 
+                            ? "المريض: علي أحمد - البوتاسيوم 6.2 mmol/L (مرتفع جداً)" 
+                            : "Patient: Ali Ahmed - Potassium 6.2 mmol/L (Critical High)"}
+                        </p>
+                        <span className="text-[9px] text-muted-foreground mt-1 block">
+                          {isRtl ? "منذ دقيقتين · معمل الطوارئ" : "2m ago · Emergency Lab"}
+                        </span>
                       </div>
-                      <p className="text-xs font-bold text-foreground mt-1 font-cairo">
-                        {isRtl 
-                          ? "المريض: علي أحمد - البوتاسيوم 6.2 mmol/L (مرتفع جداً)" 
-                          : "Patient: Ali Ahmed - Potassium 6.2 mmol/L (Critical High)"}
-                      </p>
-                      <span className="text-[9px] text-muted-foreground mt-1 block">
-                        {isRtl ? "منذ دقيقتين · معمل الطوارئ" : "2m ago · Emergency Lab"}
-                      </span>
-                    </div>
+                    )}
 
                     {/* Nursing Handoff Alert */}
                     <div className="p-2.5 hover:bg-muted/50 rounded-xl transition-colors duration-150 text-start border border-transparent">
