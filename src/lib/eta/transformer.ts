@@ -26,8 +26,9 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
   const isCitizen = !patient.passportNumber;
 
   if (totalAmountValue.gt(50000)) {
-    if (isCitizen && (!patient.nationalId || patient.nationalId.length !== 14)) {
-      throw new Error("Egyptian regulations require a valid 14-digit National ID for citizen invoices exceeding 50,000 EGP.");
+    const isValidNationalID = /^[23]\d{13}$/.test(patient.nationalId || "");
+    if (isCitizen && !isValidNationalID) {
+      throw new Error("Egyptian regulations require a valid 14-digit National ID (starting with 2 or 3) for citizen invoices exceeding 50,000 EGP.");
     }
     if (!isCitizen && !patient.passportNumber) {
       throw new Error("Foreign patients require a valid passport number for invoices exceeding 50,000 EGP.");
@@ -172,8 +173,9 @@ export function transformInvoiceToETAReceipt(
   const isCitizen = !patient.passportNumber;
 
   if (totalAmountValue.gt(50000)) {
-    if (isCitizen && (!patient.nationalId || patient.nationalId.length !== 14)) {
-      throw new Error("Egyptian regulations require a valid 14-digit National ID for citizen receipts exceeding 50,000 EGP.");
+    const isValidNationalID = /^[23]\d{13}$/.test(patient.nationalId || "");
+    if (isCitizen && !isValidNationalID) {
+      throw new Error("Egyptian regulations require a valid 14-digit National ID (starting with 2 or 3) for citizen receipts exceeding 50,000 EGP.");
     }
     if (!isCitizen && !patient.passportNumber) {
       throw new Error("Foreign patients require a valid passport number for receipts exceeding 50,000 EGP.");

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useTransition, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
@@ -29,6 +29,15 @@ import { searchPatientsAction } from "@/lib/actions/patients";
 import { createAppointment, addToWaitingList, getDoctorAvailability } from "@/lib/actions/appointments";
 import { isEgyptianPublicHoliday } from "@/lib/utils/egypt";
 
+interface Patient {
+  id: string;
+  patientNumber: string;
+  nameAr?: string;
+  nameEn?: string;
+  contactPhone?: string;
+  nationalId?: string;
+}
+
 interface BookingWizardClientProps {
   departments: { id: string; nameAr: string; nameEn: string }[];
   doctors: { id: string; nameAr: string; nameEn: string }[];
@@ -52,8 +61,8 @@ export function BookingWizardClient({
 
   // Step 1: Patient matching states
   const [patientSearch, setPatientSearch] = useState("");
-  const [patientSearchResults, setPatientSearchResults] = useState<any[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+  const [patientSearchResults, setPatientSearchResults] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   // Step 2: Clinic & Doctor selections
   const [selectedDept, setSelectedDept] = useState("");
@@ -73,25 +82,35 @@ export function BookingWizardClient({
 
   // Trigger patient lookup with 300ms debounce
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (patientSearch.trim().length >= 2) {
-        startTransition(async () => {
-          const res = await searchPatientsAction(patientSearch);
-          if (res.success && "data" in res) {
-            setPatientSearchResults(res.data || []);
-          }
-        });
-      } else {
+    if (patientSearch.trim().length < 2) {
+      const timer = setTimeout(() => {
         setPatientSearchResults([]);
-      }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    const timeoutId = setTimeout(() => {
+      startTransition(async () => {
+        const res = await searchPatientsAction(patientSearch);
+        if (res.success && "data" in res) {
+          setPatientSearchResults((res.data as Patient[]) || []);
+        }
+      });
     }, 300);
     
     return () => clearTimeout(timeoutId);
   }, [patientSearch]);
 
+  // Helper to filter slots based on Cairo weekend rules
+  const slotAvailableWithWeekendRule = useCallback((slot: { time: string; available: boolean }) => {
+    // Note: Weekend hard-blocking is removed to support Egyptian clinic context (Saturday operations)
+    return slot.available;
+  }, []);
+
   // Trigger slot availability lookup when doctor or date changes
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
+      let isMounted = true;
       // 1. Cairo Timezone weekend check (Friday = 5, Saturday = 6)
       // Standardize to UTC midnight before resolving to Cairo to avoid local browser timezone skew
       const [year, month, dayNum] = selectedDate.split("-").map(Number);
@@ -100,54 +119,77 @@ export function BookingWizardClient({
       
       const day = cairoZoned.getDay();
       const isWeekend = day === 5 || day === 6;
-      setIsWeekendWarning(isWeekend);
-      setQueueToWaitingList(false);
+
+      const timer = setTimeout(() => {
+        if (isMounted) {
+          setIsWeekendWarning(isWeekend);
+          setQueueToWaitingList(false);
+        }
+      }, 0);
 
       // 2. Cairo Timezone holiday check
       const holidayInfo = isEgyptianPublicHoliday(dateToCheck);
       if (holidayInfo?.isHoliday) {
-        setIsHolidayWarning(true);
-        setHolidayName((locale === "ar" ? holidayInfo.nameAr : holidayInfo.nameEn) || "");
-        setAvailableSlots([]);
-        setQueueToWaitingList(false);
-        setLoadingSlots(false);
-        return;
+        setTimeout(() => {
+          if (isMounted) {
+            setIsHolidayWarning(true);
+            setHolidayName((locale === "ar" ? holidayInfo.nameAr : holidayInfo.nameEn) || "");
+            setAvailableSlots([]);
+            setQueueToWaitingList(false);
+            setLoadingSlots(false);
+          }
+        }, 0);
+        return () => {
+          isMounted = false;
+          clearTimeout(timer);
+        };
       } else {
-        setIsHolidayWarning(false);
-        setHolidayName("");
+        setTimeout(() => {
+          if (isMounted) {
+            setIsHolidayWarning(false);
+            setHolidayName("");
+          }
+        }, 0);
       }
 
-      setLoadingSlots(true);
-      setSelectedSlot("");
+      const fetchTimer = setTimeout(() => {
+        if (isMounted) {
+          setLoadingSlots(true);
+          setSelectedSlot("");
+        }
+      }, 0);
       getDoctorAvailability(selectedDoctor, selectedDate).then((res) => {
-        if (res.success && "slots" in res) {
-          setAvailableSlots(res.slots);
-          // If zero slots are available, auto-offer waiting list queueing
-          const hasAnyAvailable = res.slots.some((s) => slotAvailableWithWeekendRule(s, isWeekend));
-          if (!hasAnyAvailable) {
+        if (isMounted) {
+          if (res.success && "slots" in res) {
+            setAvailableSlots(res.slots);
+            // If zero slots are available, auto-offer waiting list queueing
+            const hasAnyAvailable = res.slots.some((s) => slotAvailableWithWeekendRule(s));
+            if (!hasAnyAvailable) {
+              setQueueToWaitingList(true);
+            }
+          } else {
+            setAvailableSlots([]);
             setQueueToWaitingList(true);
           }
-        } else {
-          setAvailableSlots([]);
-          setQueueToWaitingList(true);
+          setLoadingSlots(false);
         }
-        setLoadingSlots(false);
       });
+      return () => { 
+        isMounted = false; 
+        clearTimeout(timer);
+        clearTimeout(fetchTimer);
+      };
     } else {
-      setAvailableSlots([]);
+      setTimeout(() => {
+        setAvailableSlots([]);
+      }, 0);
     }
-  }, [selectedDoctor, selectedDate]);
-
-  // Helper to filter slots based on Cairo weekend rules
-  const slotAvailableWithWeekendRule = (slot: { time: string; available: boolean }, isWeekend: boolean) => {
-    // Note: Weekend hard-blocking is removed to support Egyptian clinic context (Saturday operations)
-    return slot.available;
-  };
+  }, [selectedDoctor, selectedDate, locale, slotAvailableWithWeekendRule]);
 
   // Co-pay financial estimator in EGP
   const getCopayEstimate = () => {
     let fee = 400; // Base consult checkup fee
-    let fileFee = 100; // Digital clinical file creation fee
+    const fileFee = 100; // Digital clinical file creation fee
 
     if (visitType === "follow_up") {
       fee = 150; // Follow-ups are discounted
@@ -403,7 +445,7 @@ export function BookingWizardClient({
               <select
                 dir={isRtl ? "rtl" : "ltr"}
                 value={visitType}
-                onChange={(e) => setVisitType(e.target.value as any)}
+                onChange={(e) => setVisitType(e.target.value as "checkup" | "follow_up" | "procedure" | "telemedicine")}
                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="checkup">{t("checkup")}</option>
@@ -541,7 +583,7 @@ export function BookingWizardClient({
               ) : (
                 <div className="grid grid-cols-4 gap-2 border border-border/20 p-2.5 rounded-xl bg-muted/10 max-h-[160px] overflow-y-auto">
                   {availableSlots.map((slot) => {
-                    const isAvailable = slotAvailableWithWeekendRule(slot, isWeekendWarning);
+                    const isAvailable = slotAvailableWithWeekendRule(slot);
                     return (
                       <Button
                         key={slot.time}
@@ -578,13 +620,15 @@ export function BookingWizardClient({
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-muted-foreground block mb-0.5">{t("patient")}</span>
-                  <span className="font-black text-foreground text-sm">
-                    {isRtl ? selectedPatient.nameAr : selectedPatient.nameEn}
-                  </span>
-                  <span className="text-[10px] text-accent font-mono block font-bold mt-0.5">#{selectedPatient.patientNumber}</span>
-                </div>
+                {selectedPatient && (
+                  <div>
+                    <span className="text-muted-foreground block mb-0.5">{t("patient")}</span>
+                    <span className="font-black text-foreground text-sm">
+                      {isRtl ? selectedPatient.nameAr : selectedPatient.nameEn}
+                    </span>
+                    <span className="text-[10px] text-accent font-mono block font-bold mt-0.5">#{selectedPatient.patientNumber}</span>
+                  </div>
+                )}
 
                 <div>
                   <span className="text-muted-foreground block mb-0.5">{t("doctor")}</span>
@@ -616,7 +660,7 @@ export function BookingWizardClient({
               {notes && (
                 <div className="p-3 bg-muted/40 rounded-xl border border-border/10 text-xs">
                   <span className="text-muted-foreground block mb-1">{t("notes")}</span>
-                  <p className="font-semibold text-foreground/85 italic">"{notes}"</p>
+                  <p className="font-semibold text-foreground/85 italic">&quot;{notes}&quot;</p>
                 </div>
               )}
             </CardContent>

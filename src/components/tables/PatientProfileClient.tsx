@@ -36,7 +36,8 @@ import {
   Send,
   Loader2,
   Check,
-  AlertCircle
+  AlertCircle,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/routing";
@@ -48,6 +49,34 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, Di
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+
+interface Assessment {
+  id: string;
+  type: string;
+  data: {
+    vitals?: { bp?: string };
+    pain?: { level?: number | string };
+    [key: string]: unknown;
+  };
+  notes?: string;
+  createdAt: string | Date;
+  recordedByNameAr?: string;
+  recordedByNameEn?: string;
+}
+
+interface Certificate {
+  id: string;
+  serialNumber: string;
+  certificateType: string;
+  diagnosis: string;
+  startDate: string | Date;
+  endDate: string | Date;
+  restDays?: number;
+  notes?: string | null;
+  createdAt: string | Date;
+  doctorNameAr?: string | null;
+  doctorNameEn?: string | null;
+}
 
 interface PatientProfileClientProps {
   patient: {
@@ -131,27 +160,8 @@ interface PatientProfileClientProps {
     targetDoctorNameAr?: string | null;
     targetDoctorNameEn?: string | null;
   }[];
-  certificates?: {
-    id: string;
-    serialNumber: string;
-    certificateType: string;
-    diagnosis: string;
-    startDate: string | Date;
-    endDate: string | Date;
-    notes?: string | null;
-    createdAt: string | Date;
-    doctorNameAr?: string | null;
-    doctorNameEn?: string | null;
-  }[];
-  assessments?: {
-    id: string;
-    type: string;
-    data: any;
-    notes?: string;
-    createdAt: string | Date;
-    recordedByNameAr?: string;
-    recordedByNameEn?: string;
-  }[];
+  certificates?: Certificate[];
+  assessments?: Assessment[];
 }
 
 export function PatientProfileClient({ 
@@ -192,7 +202,7 @@ export function PatientProfileClient({
   const [certRestDays, setCertRestDays] = useState(0);
   const [certNotes, setCertNotes] = useState("");
   const [isSubmittingCert, setIsSubmittingCert] = useState(false);
-  const [selectedCertificateForPrint, setSelectedCertificateForPrint] = useState<any | null>(null);
+  const [selectedCertificateForPrint, setSelectedCertificateForPrint] = useState<Certificate | null>(null);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
 
   // Nursing Assessment State
@@ -266,11 +276,12 @@ export function PatientProfileClient({
         setReferralUrgency("routine");
         setReferralNotes("");
       } else {
-        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل إنشاء الإحالة." : "Failed to create referral.");
+        const errorMessage = res && "error" in res ? (res as { error?: string }).error : (isRtl ? "فشل إنشاء الإحالة." : "Failed to create referral.");
         toast.error(errorMessage);
       }
-    } catch (err: any) {
-      toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
     } finally {
       setIsSubmittingReferral(false);
     }
@@ -282,11 +293,12 @@ export function PatientProfileClient({
       if (res.success) {
         toast.success(isRtl ? "تم تحديث حالة الإحالة بنجاح." : "Referral status updated successfully.");
       } else {
-        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل تحديث حالة الإحالة." : "Failed to update referral status.");
+        const errorMessage = res && "error" in res ? (res as { error?: string }).error : (isRtl ? "فشل تحديث حالة الإحالة." : "Failed to update referral status.");
         toast.error(errorMessage);
       }
-    } catch (err: any) {
-      toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
     }
   };
 
@@ -326,11 +338,12 @@ export function PatientProfileClient({
         setCertRestDays(0);
         setCertNotes("");
       } else {
-        const errorMessage = "error" in res ? res.error : (isRtl ? "فشل إصدار الشهادة." : "Failed to issue medical certificate.");
+        const errorMessage = res && "error" in res ? (res as { error?: string }).error : (isRtl ? "فشل إصدار الشهادة." : "Failed to issue medical certificate.");
         toast.error(errorMessage);
       }
-    } catch (err: any) {
-      toast.error(err?.message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message || (isRtl ? "حدث خطأ غير متوقع." : "An unexpected error occurred."));
     } finally {
       setIsSubmittingCert(false);
     }
@@ -1037,7 +1050,7 @@ export function PatientProfileClient({
 
                             {ass.notes && (
                               <div className="bg-muted/10 p-3 rounded-xl border border-border/5 text-xs font-medium text-foreground/80 italic">
-                                "{ass.notes}"
+                                &quot;{ass.notes}&quot;
                               </div>
                             )}
                           </CardContent>
@@ -1433,7 +1446,7 @@ export function PatientProfileClient({
                 <label className="text-xs font-bold text-foreground/80 block">{isRtl ? "درجة الاستعجال *" : "Urgency Level *"}</label>
                 <select 
                   value={referralUrgency} 
-                  onChange={(e) => setReferralUrgency(e.target.value as any)}
+                  onChange={(e) => setReferralUrgency(e.target.value as "routine" | "urgent" | "emergency")}
                   className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
                   required
                 >
@@ -1512,7 +1525,7 @@ export function PatientProfileClient({
                 <label className="text-xs font-bold text-foreground/80 block">{isRtl ? "نوع الشهادة *" : "Certificate Type *"}</label>
                 <select 
                   value={certificateType} 
-                  onChange={(e) => setCertificateType(e.target.value as any)}
+                  onChange={(e) => setCertificateType(e.target.value as "sick_leave" | "fitness" | "companion")}
                   className="flex h-11 w-full rounded-xl border border-border bg-background ps-4 pe-10 py-2 text-sm text-foreground appearance-none transition-all duration-200 focus-visible:outline-hidden focus-visible:border-accent/80 focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer font-bold"
                   required
                 >

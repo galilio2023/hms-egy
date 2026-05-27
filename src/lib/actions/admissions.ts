@@ -129,10 +129,11 @@ export async function admitPatient(payload: AdmitPatientPayload) {
 
       return { success: true, admissionId: newAdmission.id };
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: error instanceof AppError ? error.message : "Failed to admit patient: " + (error.message || error),
+      error: error instanceof AppError ? error.message : "Failed to admit patient: " + message,
     };
   }
 }
@@ -243,10 +244,11 @@ export async function dischargePatient(payload: DischargePatientPayload) {
 
       return { success: true };
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: error instanceof AppError ? error.message : "Failed to discharge patient: " + (error.message || error),
+      error: error instanceof AppError ? error.message : "Failed to discharge patient: " + message,
     };
   }
 }
@@ -404,10 +406,11 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
     }
 
     return result;
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: "Failed to record inpatient vitals: " + (error.message || error),
+      error: "Failed to record inpatient vitals: " + message,
     };
   }
 }

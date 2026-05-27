@@ -11,6 +11,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { formatPatientNumber, normalizeArabic } from "@/lib/utils/egypt";
 import { revalidatePath } from "next/cache";
+import { type User } from "@/types/auth-api.types";
 
 /**
  * Registers a new patient within the current tenant isolation context.
@@ -23,7 +24,7 @@ export async function registerPatient(data: PatientSchema) {
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
-  const isAuthorized = hasPermission(session.user as any, "patients:create", {
+  const isAuthorized = hasPermission(session.user as unknown as User, "patients:create", {
     hospitalId: session.activeHospitalId || session.user.hospitalId,
   });
 
@@ -168,12 +169,13 @@ export async function registerPatient(data: PatientSchema) {
 
       return { success: true, patientId: newPatient.id, patientNumber };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[PATIENTS_ACTION] registerPatient failed:", error);
     if (error instanceof AppError) {
       return { success: false, error: error.message };
     }
-    return { success: false, error: "حدث خطأ غير متوقع أثناء تسجيل المريض. يرجى المحاولة لاحقاً." };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: "حدث خطأ غير متوقع أثناء تسجيل المريض. يرجى المحاولة لاحقاً: " + message };
   }
 }
 
@@ -186,7 +188,7 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
-  const isAuthorized = hasPermission(session.user as any, "patients:edit", {
+  const isAuthorized = hasPermission(session.user as unknown as User, "patients:edit", {
     hospitalId: session.activeHospitalId || session.user.hospitalId,
   });
 
@@ -257,12 +259,13 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
 
       return { success: true };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[PATIENTS_ACTION] updatePatient failed:", error);
     if (error instanceof AppError) {
       return { success: false, error: error.message };
     }
-    return { success: false, error: "حدث خطأ أثناء تحديث بيانات المريض. يرجى المحاولة لاحقاً." };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: "حدث خطأ أثناء تحديث بيانات المريض. يرجى المحاولة لاحقاً: " + message };
   }
 }
 

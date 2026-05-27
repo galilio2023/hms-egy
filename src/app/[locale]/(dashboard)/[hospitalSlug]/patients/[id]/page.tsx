@@ -365,7 +365,7 @@ export default async function PatientProfilePage({
   const mappedAssessments = data.patientAssessments.map((ass) => ({
     id: ass.id,
     type: ass.type,
-    data: ass.data as any,
+    data: ass.data as Record<string, unknown>,
     notes: ass.notes || undefined,
     createdAt: ass.createdAt,
     recordedByNameAr: ass.recordedByNameAr || undefined,

@@ -129,7 +129,7 @@ export interface ETASubmissionResponse {
     error: {
       code: string;
       message: string;
-      details?: any;
+      details?: unknown;
     };
   }>;
 }

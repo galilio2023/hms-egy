@@ -11,7 +11,7 @@ export interface SyncOperation {
   tableName: string; // e.g. "patients", "vitals_flowsheet"
   action: "INSERT" | "UPDATE" | "DELETE";
   entityId: string; // Target record UUID
-  payload: any; // Raw JSON changes
+  payload: Record<string, unknown>; // Raw JSON changes
   timestamp: number; // Client/Node write timestamp (ms)
 }
 
@@ -31,6 +31,7 @@ export class LocalSyncEngine {
     // Client-side automatic telemetry hook
     if (typeof window !== "undefined") {
       this.isOnline = navigator.onLine;
+      this.loadFromPersistentCache();
       window.addEventListener("online", () => this.setOnlineStatus(true));
       window.addEventListener("offline", () => this.setOnlineStatus(false));
     }
@@ -160,13 +161,13 @@ export class LocalSyncEngine {
             result.syncedCount++;
             // Remove from outbox
             this.inMemoryOutbox = this.inMemoryOutbox.filter(item => item.id !== op.id);
-            this.saveToPersistentCache();
           }
-        } catch (opErr: any) {
-          result.failures.push({ opId: op.id, reason: opErr.message || String(opErr) });
+        } catch (opErr) {
+          result.failures.push({ opId: op.id, reason: (opErr instanceof Error ? opErr.message : String(opErr)) });
           console.error(`[EDGE SYNC] Operation ${op.id} failed:`, opErr);
         }
       }
+      this.saveToPersistentCache();
     } finally {
       this.isSyncing = false;
       console.log(`[EDGE SYNC] Synchronization complete. Synced: ${result.syncedCount}, Failures: ${result.failures.length}`);

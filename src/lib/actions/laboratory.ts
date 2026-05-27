@@ -392,7 +392,7 @@ export async function saveLabResults(data: SaveLabResultInput) {
               titleEn: "🚨 Critical Lab Result Alert",
               messageAr: `تم تسجيل قيمة حرجة لنتائج مختبر المريض. القيمة: ${item.resultValue}`,
               messageEn: `A critical lab value has been recorded for your patient. Value: ${item.resultValue}`,
-              type: "error" as any,
+              type: "error",
               isRead: false,
             });
           }
@@ -448,7 +448,8 @@ export async function saveLabResults(data: SaveLabResultInput) {
     return result;
   } catch (error) {
     console.error("[LAB_ACTION] saveLabResults error:", error);
-    return { success: false, error: "Failed to save results" };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: "Failed to save results: " + message };
   }
 }
 

@@ -122,11 +122,12 @@ export async function sendResilientClinicalAlert(payload: OutboundMessagePayload
   let formattedPhone = "";
   try {
     formattedPhone = normalizeEgyptianPhoneNumber(phoneNumber);
-  } catch (err: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
       channel: "sms",
-      errorMessage: err.message || "Invalid phone number.",
+      errorMessage: message || "Invalid phone number.",
     };
   }
 
@@ -181,8 +182,9 @@ async function sendSmsWithFailover(phone: string, text: string): Promise<SendRes
     try {
       const cequensResult = await sendCequensSms(phone, text);
       if (cequensResult.success) return cequensResult;
-    } catch (error: any) {
-      console.warn(`[SMS ROUTING] Primary provider (CEQUENS) failed: ${error.message || error}. Initiating failover to VictoryLink.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[SMS ROUTING] Primary provider (CEQUENS) failed: ${message}. Initiating failover to VictoryLink.`);
     }
   }
 
@@ -190,12 +192,13 @@ async function sendSmsWithFailover(phone: string, text: string): Promise<SendRes
   if (VICTORYLINK_USERNAME) {
     try {
       return await sendVictoryLinkSms(phone, text);
-    } catch (error: any) {
-      console.error(`[SMS ROUTING] Secondary provider (VictoryLink) also failed: ${error.message || error}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[SMS ROUTING] Secondary provider (VictoryLink) also failed: ${message}.`);
       return {
         success: false,
         channel: "sms",
-        errorMessage: `Primary (CEQUENS) and Secondary (VictoryLink) SMS gateways failed. Last error: ${error.message}`,
+        errorMessage: `Primary (CEQUENS) and Secondary (VictoryLink) SMS gateways failed. Last error: ${message}`,
       };
     }
   }
@@ -237,9 +240,9 @@ async function sendCequensSms(phone: string, text: string): Promise<SendResult> 
       const errorText = await res.text();
       throw new Error(`HTTP ${res.status}: ${errorText}`);
     }
-  } catch (err: any) {
+  } catch (error) {
     clearTimeout(timeout);
-    throw err;
+    throw error;
   }
 }
 
@@ -251,19 +254,21 @@ async function sendVictoryLinkSms(phone: string, text: string): Promise<SendResu
   const timeout = setTimeout(() => controller.abort(), 6000); // 6s SLA
 
   try {
-    // VictoryLink SOAP/REST XML or standard query string params
+    // VictoryLink legacy API expects parameters in a query-string format or x-www-form-urlencoded
+    const params = new URLSearchParams({
+      UserName: VICTORYLINK_USERNAME,
+      Password: VICTORYLINK_PASSWORD,
+      SMSText: text,
+      SMSReceiver: phone,
+      SenderName: SENDER_ID,
+    });
+
     const res = await fetch(VICTORYLINK_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({
-        UserName: VICTORYLINK_USERNAME,
-        Password: VICTORYLINK_PASSWORD,
-        SenderName: SENDER_ID,
-        SMSText: text,
-        SMSReceiver: phone, // Accepts +20... formats
-      }),
+      body: params.toString(),
       signal: controller.signal,
     });
 
@@ -275,9 +280,9 @@ async function sendVictoryLinkSms(phone: string, text: string): Promise<SendResu
       const errorText = await res.text();
       throw new Error(`HTTP ${res.status}: ${errorText}`);
     }
-  } catch (err: any) {
+  } catch (error) {
     clearTimeout(timeout);
-    throw err;
+    throw error;
   }
 }
 
@@ -326,12 +331,13 @@ async function sendWhatsAppMessage(phone: string, text: string): Promise<SendRes
       const errMsg = errorData.error?.message || `HTTP ${res.status}`;
       return { success: false, channel: "whatsapp", errorMessage: errMsg };
     }
-  } catch (err: any) {
+  } catch (error) {
     clearTimeout(timeout);
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
       channel: "whatsapp",
-      errorMessage: err.message || String(err),
+      errorMessage: message || String(error),
     };
   }
 }

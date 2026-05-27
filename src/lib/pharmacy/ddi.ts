@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { medications as medicationsTable, medicationInteractions, drugAllergyCrossReferences } from "@db/schema/pharmacy";
-import { eq, and, or, ilike, sql, inArray } from "drizzle-orm";
+import { and, or, sql, inArray } from "drizzle-orm";
 
 export interface Interaction {
   drug1: string;
@@ -38,7 +38,7 @@ export async function checkDrugInteractions(
   medications: { name: string; genericName?: string }[],
   patientAllergies: string[],
   chronicConditions: string[] = [],
-  tx: any = db // Fallback to global db if called outside tx
+  tx: Omit<typeof db, "$client"> = db // Fallback to global db if called outside tx
 ): Promise<DdiResult> {
   const interactions: Interaction[] = [];
   const allergyAlerts: AllergyAlert[] = [];
@@ -62,9 +62,30 @@ export async function checkDrugInteractions(
     const lowerIdentifiers = allIdentifiers.map(n => n.toLowerCase());
 
     // Optimization: First attempt an exact case-insensitive match for generic names (Fast Path)
-    // This handles the majority of standard interactions without trigram overhead.
-    const fastPathMatches = await tx
-      .select()
+    interface InteractionMatch {
+      drug1Name: string;
+      drug2Name: string;
+      drug1Generic: string | null;
+      drug2Generic: string | null;
+      severity: string;
+      mechanismAr: string | null;
+      mechanismEn: string | null;
+      clinicalEffectAr: string | null;
+      clinicalEffectEn: string | null;
+    }
+
+    const fastPathMatches: InteractionMatch[] = await tx
+      .select({
+        drug1Name: medicationInteractions.drug1Name,
+        drug2Name: medicationInteractions.drug2Name,
+        drug1Generic: medicationInteractions.drug1Generic,
+        drug2Generic: medicationInteractions.drug2Generic,
+        severity: medicationInteractions.severity,
+        mechanismAr: medicationInteractions.mechanismAr,
+        mechanismEn: medicationInteractions.mechanismEn,
+        clinicalEffectAr: medicationInteractions.clinicalEffectAr,
+        clinicalEffectEn: medicationInteractions.clinicalEffectEn,
+      })
       .from(medicationInteractions)
       .where(
         or(
@@ -83,14 +104,14 @@ export async function checkDrugInteractions(
 
     // Track which identifiers were resolved via fast path
     const resolvedIds = new Set<string>();
-    fastPathMatches.forEach((match: any) => {
+    fastPathMatches.forEach((match) => {
       resolvedIds.add(match.drug1Generic?.toLowerCase() || match.drug1Name.toLowerCase());
       resolvedIds.add(match.drug2Generic?.toLowerCase() || match.drug2Name.toLowerCase());
       
       interactions.push({
         drug1: match.drug1Name,
         drug2: match.drug2Name,
-        severity: match.severity as any,
+        severity: match.severity as Interaction['severity'],
         mechanismAr: match.mechanismAr || undefined,
         mechanismEn: match.mechanismEn || undefined,
         effectAr: match.clinicalEffectAr || undefined,
@@ -99,12 +120,11 @@ export async function checkDrugInteractions(
     });
 
     // 2. Fuzzy Path: Resolve unresolved identifiers to canonical generics first
-    // This prevents polypharmacy query blow-up by avoiding combinatorial trigram ORs
     const unresolvedIds = lowerIdentifiers.filter(id => !resolvedIds.has(id));
 
     if (unresolvedIds.length >= 1) {
       // 2a. Resolve identifiers to canonical catalog generic names
-      const resolvedGenericsFromCatalog = await tx
+      const resolvedGenericsFromCatalog: { genericName: string }[] = await tx
         .select({ genericName: medicationsTable.genericName })
         .from(medicationsTable)
         .where(
@@ -120,13 +140,23 @@ export async function checkDrugInteractions(
         )
         .limit(20);
 
-      const resolvedGenerics = [...new Set(resolvedGenericsFromCatalog.map((m: any) => m.genericName.toLowerCase()))];
+      const resolvedGenerics = [...new Set(resolvedGenericsFromCatalog.map((m) => m.genericName.toLowerCase()))];
       const allResolvedGenerics = [...new Set([...Array.from(resolvedIds), ...resolvedGenerics])];
 
       if (allResolvedGenerics.length >= 2) {
         // 2b. Exact match on interactions table using canonical generics
-        const fuzzyDdiMatches = await tx
-          .select()
+        const fuzzyDdiMatches: InteractionMatch[] = await tx
+          .select({
+            drug1Name: medicationInteractions.drug1Name,
+            drug2Name: medicationInteractions.drug2Name,
+            drug1Generic: medicationInteractions.drug1Generic,
+            drug2Generic: medicationInteractions.drug2Generic,
+            severity: medicationInteractions.severity,
+            mechanismAr: medicationInteractions.mechanismAr,
+            mechanismEn: medicationInteractions.mechanismEn,
+            clinicalEffectAr: medicationInteractions.clinicalEffectAr,
+            clinicalEffectEn: medicationInteractions.clinicalEffectEn,
+          })
           .from(medicationInteractions)
           .where(
             and(
@@ -135,7 +165,7 @@ export async function checkDrugInteractions(
             )
           );
 
-        fuzzyDdiMatches.forEach((match: any) => {
+        fuzzyDdiMatches.forEach((match) => {
           const isDuplicate = interactions.some(i => 
             (i.drug1 === match.drug1Name && i.drug2 === match.drug2Name) ||
             (i.drug1 === match.drug2Name && i.drug2 === match.drug1Name)
@@ -145,7 +175,7 @@ export async function checkDrugInteractions(
             interactions.push({
               drug1: match.drug1Name,
               drug2: match.drug2Name,
-              severity: match.severity as any,
+              severity: match.severity as Interaction['severity'],
               mechanismAr: match.mechanismAr || undefined,
               mechanismEn: match.mechanismEn || undefined,
               effectAr: match.clinicalEffectAr || undefined,
@@ -168,7 +198,7 @@ export async function checkDrugInteractions(
 
     for (const match of allergyMatches) {
       // Check if any prescribed med is in the cross-reacting list
-      const reactingMeds: string[] = match.crossReactingDrugs || [];
+      const reactingMeds: string[] = (match.crossReactingDrugs as string[]) || [];
       const foundReaction = allIdentifiers.find(id => 
         reactingMeds.some((rm: string) => rm.toLowerCase() === id.toLowerCase())
       );

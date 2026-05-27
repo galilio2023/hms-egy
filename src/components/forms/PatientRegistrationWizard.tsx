@@ -250,9 +250,9 @@ export function PatientRegistrationWizard({ hospitalSlug, currentUserName }: Pat
         toast.success(t("successMessage"));
         router.push(`/${hospitalSlug}/patients/${result.patientId}`);
       } else {
-        toast.error((result as any).error || t("errorMessage"));
+        toast.error((result as { error?: string }).error || t("errorMessage"));
       }
-    } catch (err: any) {
+    } catch (err) {
       toast.error(isRtl ? "حدث خطأ غير متوقع" : "An unexpected server error occurred.");
       console.error(err);
     } finally {

@@ -28,7 +28,7 @@ export async function getRadiologyQueueAction(statusFilter?: string) {
 
   try {
     const results = await withTenantContext(hospitalId, async (tx) => {
-      let query = tx
+      const query = tx
         .select({
           id: radiologyOrders.id,
           procedureNameAr: radiologyOrders.procedureNameAr,
@@ -176,6 +176,7 @@ export async function submitRadiologyReportAction(input: ReportInput) {
     return { success: true, data: result };
   } catch (error) {
     console.error("[SUBMIT_RADIOLOGY_REPORT_ERROR]", error);
-    return { success: false, error: "فشل تقديم تقرير الأشعة." };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: "فشل تقديم تقرير الأشعة: " + message };
   }
 }

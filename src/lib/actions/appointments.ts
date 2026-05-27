@@ -14,6 +14,10 @@ import { revalidatePath } from "next/cache";
 import { toCairoTime } from "@/lib/utils/egypt";
 import { formatInTimeZone } from "date-fns-tz";
 
+import { type User } from "@/types/auth-api.types";
+
+export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_show";
+
 // Helper: Formats a Date object's time to "HH:MM:SS" strictly in Cairo time
 function formatTimeStr(date: Date) {
   return formatInTimeZone(date, "Africa/Cairo", "HH:mm:00");
@@ -33,11 +37,11 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
-  const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
+  const effectiveHospitalId = targetHospitalId && (session.user as unknown as User).role === "SUPER_ADMIN"
     ? targetHospitalId
     : (session.activeHospitalId || session.user.hospitalId);
 
-  const isAuthorized = hasPermission(session.user as any, "appointments:create", {
+  const isAuthorized = hasPermission(session.user as unknown as User, "appointments:create", {
     hospitalId: effectiveHospitalId,
   });
 
@@ -163,7 +167,7 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
       return { success: true, appointmentId: newApp.id };
     });
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[APPOINTMENTS_ACTION] createAppointment failed:", error);
     if (error instanceof AppError) {
       return { success: false, error: error.message };
@@ -175,17 +179,17 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
 /**
  * Updates an appointment's clinical status (scheduled -> completed, cancelled, no_show).
  */
-export async function updateAppointmentStatus(id: string, status: string, cancellationReason?: string, targetHospitalId?: string) {
+export async function updateAppointmentStatus(id: string, status: AppointmentStatus, cancellationReason?: string, targetHospitalId?: string) {
   const session = await auth();
   if (!session) {
     return { success: false, error: "Unauthorized: Please log in." };
   }
 
-  const effectiveHospitalId = targetHospitalId && session.user.role === "SUPER_ADMIN"
+  const effectiveHospitalId = targetHospitalId && (session.user as unknown as User).role === "SUPER_ADMIN"
     ? targetHospitalId
     : (session.activeHospitalId || session.user.hospitalId);
 
-  const isAuthorized = hasPermission(session.user as any, "appointments:edit", {
+  const isAuthorized = hasPermission(session.user as unknown as User, "appointments:edit", {
     hospitalId: effectiveHospitalId,
   });
 
@@ -203,7 +207,7 @@ export async function updateAppointmentStatus(id: string, status: string, cancel
       const [updated] = await tx
         .update(appointments)
         .set({
-          status: status as any,
+          status,
           cancellationReason: cancellationReason || null,
           updatedAt: new Date(),
         })
@@ -224,7 +228,7 @@ export async function updateAppointmentStatus(id: string, status: string, cancel
       revalidatePath(`/[locale]/${hospitalSlug}/appointments`, "page");
       return { success: true };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[APPOINTMENTS_ACTION] updateAppointmentStatus failed:", error);
     if (error instanceof AppError) {
       return { success: false, error: error.message };
@@ -447,7 +451,7 @@ export async function addToWaitingList(data: {
       revalidatePath(`/[locale]/${hospitalSlug}/appointments`, "page");
       return { success: true, id: newEntry.id };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[APPOINTMENTS_ACTION] addToWaitingList failed:", error);
     return { success: false, error: "حدث خطأ غير متوقع أثناء الإضافة لقائمة الانتظار." };
   }

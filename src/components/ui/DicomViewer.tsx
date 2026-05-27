@@ -17,11 +17,10 @@ import {
   Sun, 
   Sliders, 
   RotateCcw, 
-  Maximize, 
+  ShieldAlert,
   ChevronLeft, 
   ChevronRight, 
-  Eye, 
-  FileCheck 
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -44,19 +43,53 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   
   // Image element loading reference
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
   // Load image element
   useEffect(() => {
+    let isMounted = true;
+    const isRawDicom = imageUrl?.toLowerCase().endsWith(".dcm");
+    if (isRawDicom) {
+      setTimeout(() => {
+        if (isMounted) {
+          setLoadError(isRtl 
+            ? "ملفات DICOM (.dcm) الخام غير مدعومة مباشرة في المتصفح. يرجى استخدام رابط لمعاينة الصورة (JPEG/PNG)." 
+            : "Raw DICOM (.dcm) files are not supported natively in the browser. Please provide a server-rendered preview URL (JPEG/PNG).");
+        }
+      }, 0);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const timer = setTimeout(() => {
+      if (isMounted) setLoadError(null);
+    }, 0);
+
     const img = new Image();
     // Default to high-fidelity X-ray placeholder if no URL is attached
     img.src = imageUrl || "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80";
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      imageRef.current = img;
-      setImageLoaded(true);
+      if (isMounted) {
+        imageRef.current = img;
+        setImageLoaded(true);
+      }
     };
-  }, [imageUrl]);
+    img.onerror = () => {
+      setTimeout(() => {
+        if (isMounted) {
+          setLoadError(isRtl ? "فشل تحميل الصورة التشخيصية." : "Failed to load diagnostic image.");
+        }
+      }, 0);
+    };
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [imageUrl, isRtl]);
 
   // Redraw viewport whenever properties change
   useEffect(() => {
@@ -107,12 +140,18 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     ctx.fillText(`Slice: ${currentSlice}/${totalSlices}`, 20, 50);
     ctx.fillText(`Zoom: ${zoom.toFixed(1)}x`, 20, 70);
     
-    // Draw corner anatomical markers (R: Right, L: Left)
+    // Draw corner anatomical markers (R: Right, L: Left, S: Superior, I: Inferior or A/P for Sagittal)
     ctx.fillStyle = "rgba(245, 158, 11, 0.8)"; // anatomical warning amber
     ctx.font = "bold 14px sans-serif";
+    
+    // Frontal projections (like Chest X-Rays) use S/I, while Sagittal use A/P
+    const isFrontal = procedureName.toLowerCase().includes("x-ray") || 
+                      procedureName.toLowerCase().includes("chest") || 
+                      procedureName.toLowerCase().includes("frontal");
+    
     ctx.fillText("R", 20, canvas.height - 30);
-    ctx.fillText("A", canvas.width / 2 - 5, 30);
-    ctx.fillText("P", canvas.width / 2 - 5, canvas.height - 30);
+    ctx.fillText(isFrontal ? "S" : "A", canvas.width / 2 - 5, 30);
+    ctx.fillText(isFrontal ? "I" : "P", canvas.width / 2 - 5, canvas.height - 30);
     ctx.fillText("L", canvas.width - 35, canvas.height - 30);
 
   }, [imageLoaded, zoom, brightness, contrast, currentSlice, isRtl]);
@@ -141,7 +180,14 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
 
       {/* Main Viewport Workspace */}
       <div className="relative flex items-center justify-center bg-black border border-slate-900 rounded-xl overflow-hidden aspect-square sm:aspect-video w-full max-h-[360px]">
-        {!imageLoaded ? (
+        {loadError ? (
+          <div className="flex flex-col items-center gap-3 text-center p-6">
+            <ShieldAlert className="h-8 w-8 text-red-500 animate-pulse" />
+            <span className="text-xs font-semibold text-slate-400 max-w-[240px] leading-relaxed">
+              {loadError}
+            </span>
+          </div>
+        ) : !imageLoaded ? (
           <div className="flex flex-col items-center gap-2 text-slate-500">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-500" />
             <span className="text-xs font-semibold">{isRtl ? "جاري تحميل فحص DICOM..." : "Streaming DICOM slices..."}</span>

@@ -169,13 +169,10 @@ export function TelemedicineClientRoom({
     });
   }, [medications]);
 
-  useEffect(() => {
-    if (!medQuery.trim()) {
-      setMedSearchResults([]);
-      return;
-    }
-    const results = fuse.search(medQuery).map(r => r.item);
-    setMedSearchResults(results.slice(0, 10));
+  // Use memoized search results to avoid setState in effect
+  const medSearchResults = useMemo(() => {
+    if (!medQuery.trim()) return [];
+    return fuse.search(medQuery).map(r => r.item).slice(0, 10);
   }, [medQuery, fuse]);
 
   // Prescription State

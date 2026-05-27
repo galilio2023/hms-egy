@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ data: results });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[MEDICATION_SEARCH_API_ERROR]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }

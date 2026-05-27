@@ -333,7 +333,7 @@ export default function LaboratoryDashboardClient({
                   <p className="text-xs font-medium text-rose-600/80 mt-1">
                     {isRtl ? alert.doctorNameAr : alert.doctorNameEn} • {format(alert.notifiedAt, "HH:mm", { locale: dateLocale })}
                   </p>
-                  {alert.notes && <p className="text-[11px] mt-2 font-bold text-rose-800 dark:text-rose-300 bg-rose-500/5 p-2 rounded-lg italic">"{alert.notes}"</p>}
+                  {alert.notes && <p className="text-[11px] mt-2 font-bold text-rose-800 dark:text-rose-300 bg-rose-500/5 p-2 rounded-lg italic">&quot;{alert.notes}&quot;</p>}
                 </div>
                 <Button 
                   size="sm" 

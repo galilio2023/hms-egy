@@ -40,7 +40,7 @@ export default async function PrescribePage({
     notFound();
   }
 
-  const patient = (patientRes as any).data;
+  const patient = patientRes.data;
 
   // Security: Verify patient ownership
   if (patient.hospitalId !== hospital.id) {

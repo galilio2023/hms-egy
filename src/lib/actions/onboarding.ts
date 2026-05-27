@@ -49,9 +49,11 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
       }
 
       createdUserId = userResult.user.id;
-    } catch (authError: any) {
+    } catch (authError) {
       console.error("[ONBOARDING] Better Auth signUpEmail failed", authError);
-      if (authError?.message?.includes("unique_violation") || authError?.message?.includes("already exists") || authError?.code === "23505") {
+      const message = authError instanceof Error ? authError.message : String(authError);
+      const errCode = authError && typeof authError === "object" && "code" in authError ? (authError as { code?: string }).code : undefined;
+      if (message.includes("unique_violation") || message.includes("already exists") || errCode === "23505") {
         return { error: "البريد الإلكتروني هذا مسجل بالفعل في النظام." };
       }
       throw authError;
@@ -114,7 +116,7 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
       console.log(`[ONBOARDING] Successfully established hospital ${result.nameEn} and admin account ${adminEmail}`);
       return { success: true, hospitalId: result.id };
 
-    } catch (dbError: any) {
+    } catch (dbError) {
       console.error("[ONBOARDING_CLEANUP] Database transaction failed. Rolling back Better Auth user...", dbError);
       // Clean up the created Better Auth user
       if (createdUserId) {
@@ -125,13 +127,15 @@ export async function setupHospital(data: HospitalOnboarding): Promise<{
       throw dbError;
     }
 
-  } catch (error: any) {
-    if (error?.code === "23505" || error?.message?.includes("unique constraint") || error?.message?.includes("unique_violation")) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const errCode = error && typeof error === "object" && "code" in error ? (error as { code?: string }).code : undefined;
+    if (errCode === "23505" || message.includes("unique constraint") || message.includes("unique_violation")) {
       return { error: "الرابط التعريفي للمستشفى محجوز بالفعل. يرجى اختيار اسم آخر." };
     }
     
     console.error(`[ONBOARDING_FAILURE] Slug: ${validated.data.slug}`, {
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: message || "Unknown error",
     });
     
     return { error: "حدث خطأ غير متوقع أثناء إعداد النظام. يرجى المحاولة مرة أخرى." };

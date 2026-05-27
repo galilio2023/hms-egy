@@ -81,8 +81,8 @@ export async function GET(req: NextRequest) {
 
     console.log(`Found ${overdueInvoices.length} unpaid/partially paid invoices overdue by 7+ days.`);
 
-    const remindersToInsert: any[] = [];
-    const overdueRemindersMap = new Map<string, any>();
+    const remindersToInsert: (typeof sentReminders.$inferInsert)[] = [];
+    const overdueRemindersMap = new Map<string, (typeof overdueInvoices)[number]>();
 
       for (const invoice of overdueInvoices) {
         const key = `invoice_overdue_7days_${invoice.id}`;
@@ -139,10 +139,10 @@ export async function GET(req: NextRequest) {
       message: "Payment reminders cron executed successfully.",
       stats: results,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ [CRON_PAYMENT_REMINDERS_ERROR]:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Internal Server Error" },
+      { success: false, error: error instanceof Error ? error.message : "Internal Server Error" },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useTransition, useCallback } from "react";
 import { useRouter } from "@/i18n/routing";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,51 @@ import { cn } from "@/lib/utils";
 import { toZonedTime } from "date-fns-tz";
 import { getOrSchedule, createSurgicalCase } from "@/lib/actions/surgical";
 import { searchPatientsAction } from "@/lib/actions/patients";
+import { type AnesthesiaType } from "@/types";
+
+interface SurgicalRoom {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  floor: string;
+  type: string;
+  isActive: boolean;
+}
+
+interface SurgicalBlock {
+  id: string;
+  orRoomId: string;
+  departmentId: string;
+  owningDoctorId?: string | null;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  blockName: string;
+  isRecurring: boolean;
+  departmentNameAr?: string;
+  departmentNameEn?: string;
+  doctorNameAr?: string;
+  doctorNameEn?: string;
+}
+
+interface SurgicalCase {
+  id: string;
+  caseNumber: string;
+  orRoomId: string;
+  procedureName: string;
+  procedureNameAr: string;
+  scheduledStartTime: string;
+  estimatedDurationMinutes: number;
+  status: string;
+  anesthesiaType: string;
+  patientId: string;
+  patientNameAr?: string;
+  patientNameEn?: string;
+  patientNumber?: string;
+  surgeonNameAr?: string;
+  surgeonNameEn?: string;
+  notes?: string | null;
+}
 
 interface SurgicalScheduleClientProps {
   surgeons: { id: string; nameAr: string; nameEn: string }[];
@@ -71,9 +116,9 @@ export function SurgicalScheduleClient({
   });
 
   // Daily calendar data
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [blocks, setBlocks] = useState<any[]>([]);
-  const [cases, setCases] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<SurgicalRoom[]>([]);
+  const [blocks, setBlocks] = useState<SurgicalBlock[]>([]);
+  const [cases, setCases] = useState<SurgicalCase[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Quick book modal state
@@ -96,7 +141,7 @@ export function SurgicalScheduleClient({
   const [validationError, setValidationError] = useState("");
 
   // Case details drawer state
-  const [selectedCase, setSelectedCase] = useState<any | null>(null);
+  const [selectedCase, setSelectedCase] = useState<SurgicalCase | null>(null);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
 
   // Debounced Patient Search State
@@ -113,39 +158,52 @@ export function SurgicalScheduleClient({
   const timelineWidth = totalHours * columnWidth; // 1500px total grid width
 
   // Fetch rooms, blocks, and cases for selected date
-  const loadScheduleData = async () => {
+  const loadScheduleData = useCallback(async () => {
     setLoading(true);
     const res = await getOrSchedule(selectedDate);
     if (res.success && "rooms" in res) {
-      setRooms(res.rooms || []);
-      setBlocks(res.blocks || []);
-      setCases(res.cases || []);
+      setRooms((res.rooms as SurgicalRoom[]) || []);
+      setBlocks((res.blocks as SurgicalBlock[]) || []);
+      setCases((res.cases as SurgicalCase[]) || []);
     } else {
-      const errorMsg = res && "error" in res ? (res as any).error : "Failed to load schedule board";
+      const errorMsg = res && "error" in res ? (res.error as string) : "Failed to load schedule board";
       toast.error(errorMsg);
     }
     setLoading(false);
-  };
-
-  useEffect(() => {
-    loadScheduleData();
   }, [selectedDate]);
 
   useEffect(() => {
+    // Defer async loading to avoid synchronous setState in effect body
+    const timer = setTimeout(() => loadScheduleData(), 0);
+    return () => clearTimeout(timer);
+  }, [loadScheduleData]);
+
+  useEffect(() => {
+    let isMounted = true;
     const delayDebounceFn = setTimeout(async () => {
       if (patientSearchQuery.trim() === "") {
         setPatientSearchResults(patients);
         return;
       }
-      setIsSearchingPatients(true);
+
+      const timer = setTimeout(() => {
+        if (isMounted) setIsSearchingPatients(true);
+      }, 0);
+
       const res = await searchPatientsAction(patientSearchQuery);
-      if (res.success && "data" in res && res.data) {
-        setPatientSearchResults(res.data as any);
+      if (isMounted) {
+        if (res.success && "data" in res && res.data) {
+          setPatientSearchResults((res.data as { id: string; nameAr: string; nameEn: string; patientNumber: string }[]) || []);
+        }
+        setIsSearchingPatients(false);
+        clearTimeout(timer);
       }
-      setIsSearchingPatients(false);
     }, 500);
 
-    return () => clearTimeout(delayDebounceFn);
+    return () => {
+      isMounted = false;
+      clearTimeout(delayDebounceFn);
+    };
   }, [patientSearchQuery, patients]);
 
   // Position calculation helper for grid cards
@@ -200,7 +258,7 @@ export function SurgicalScheduleClient({
       cptCode: cptCode.trim() || undefined,
       scheduledAt,
       estimatedDuration: Number(duration),
-      anesthesiaType: anesthesiaType as any,
+      anesthesiaType: anesthesiaType as AnesthesiaType,
       asaClass: asaClass,
     };
 
@@ -248,7 +306,7 @@ export function SurgicalScheduleClient({
   };
 
   // Status style helpers for surgery cases
-  const getCaseStatusStyle = (status: string, leadNotes: string | null) => {
+  const getCaseStatusStyle = (status: string, leadNotes: string | null | undefined) => {
     // Glowing crimson overrides for Emergency/Bypass cases
     if (leadNotes && leadNotes.includes("[حالة طارئة")) {
       return "bg-red-500/10 hover:bg-red-500/15 border-red-500/50 text-red-900 shadow-sm animate-pulse ring-1 ring-red-500/30";
@@ -794,7 +852,7 @@ export function SurgicalScheduleClient({
                         {isRtl ? "مذكرة مبرر التدخل العاجل" : "Clinical Emergency Justification"}
                       </span>
                       <p className="text-rose-900 font-bold italic leading-relaxed">
-                        "{selectedCase.notes}"
+                        &quot;{selectedCase.notes}&quot;
                       </p>
                     </div>
                   )}

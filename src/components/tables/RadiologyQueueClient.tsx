@@ -86,7 +86,7 @@ export function RadiologyQueueClient({ orders: initialOrders, hospitalSlug }: Ra
   const [validationError, setValidationError] = useState("");
 
   // Helper: calculate age
-  const getAge = (dobString: any) => {
+  const getAge = (dobString: string | Date | null | undefined) => {
     if (!dobString) return 0;
     const birthDate = new Date(dobString);
     const today = new Date();
@@ -99,7 +99,7 @@ export function RadiologyQueueClient({ orders: initialOrders, hospitalSlug }: Ra
   };
 
   // Helper: format date
-  const formatDate = (date: any) => {
+  const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return "";
     const d = new Date(date);
     return d.toLocaleDateString(isRtl ? "ar-EG" : "en-US", {

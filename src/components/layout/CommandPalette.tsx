@@ -35,7 +35,7 @@ export function CommandPalette({ isOpen, setIsOpen }: CommandPaletteProps) {
   const router = useRouter();
   const { data: session } = useSession();
   
-  const hospitalSlug = (session?.session as any)?.activeHospitalId || (session?.user as any)?.hospitalId || "system-wide";
+  const hospitalSlug = (session?.session as Record<string, unknown> & { activeHospitalId?: string })?.activeHospitalId || (session?.user as Record<string, unknown> & { hospitalId?: string })?.hospitalId || "system-wide";
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

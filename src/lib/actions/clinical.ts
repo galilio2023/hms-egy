@@ -13,7 +13,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
-import { normalizeDecimal } from "@/lib/utils/egypt";
+import { normalizeDecimal, latinizeNumerals } from "@/lib/utils/egypt";
 
 interface PrescriptionItemInput {
   medicationId: string;
@@ -802,6 +802,12 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
       };
     });
 
+    if (result.success) {
+      const hSlug = result.hospitalSlug;
+      revalidatePath(`/ar/${hSlug}/patients/${result.patientId}`);
+      revalidatePath(`/en/${hSlug}/patients/${result.patientId}`);
+    }
+
     return result;
   } catch (error) {
     console.error("[CLINICAL_ACTION] createMedicalRecord failed:", error);
@@ -892,7 +898,31 @@ Transcript: "${transcript}"`;
 
       if (response.ok) {
         const resJson = await response.json();
-        const toolUse = resJson.content.find((c: any) => c.type === "tool_use" && c.name === "provide_ambient_scribe_results");
+        
+        interface ClaudeToolUse {
+          type: "tool_use";
+          name: string;
+          input: {
+            symptoms: string;
+            diagnosis: string;
+            soapNotes: string;
+            bpSystolic?: string;
+            bpDiastolic?: string;
+            heartRate?: string;
+            temperature?: string;
+            oxygenSaturation?: string;
+          };
+          [key: string]: unknown;
+        }
+
+        interface ClaudeMessageContent {
+          type: "text" | "tool_use";
+          [key: string]: unknown;
+        }
+
+        const toolUse = (resJson.content as ClaudeMessageContent[]).find(
+          (c): c is ClaudeToolUse => c.type === "tool_use" && c.name === "provide_ambient_scribe_results"
+        );
         if (toolUse) {
           const input = toolUse.input;
           return {
@@ -920,7 +950,7 @@ Transcript: "${transcript}"`;
   // 2. Local Rule-Based Medical NLP Engine Fallback
   // Parsers specifically coded for common Egyptian medical keywords & numbers
   try {
-    const text = transcript.toLowerCase();
+    const text = latinizeNumerals(transcript.toLowerCase());
     
     // Default mock structures
     let symptoms = "Patient presented with general symptoms.";

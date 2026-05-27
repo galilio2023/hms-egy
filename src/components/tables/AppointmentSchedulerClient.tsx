@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useTransition, useCallback } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/tables/DataTable";
@@ -51,11 +51,44 @@ import {
   getWaitingList, 
   getDoctorAvailability, 
   scheduleFromWaitingList,
-  addToWaitingList 
+  addToWaitingList,
+  type AppointmentStatus
 } from "@/lib/actions/appointments";
 
+interface Appointment {
+  id: string;
+  patientId: string;
+  patientNameAr?: string;
+  patientNameEn?: string;
+  patientNumber?: string;
+  patientPhone?: string;
+  doctorId: string;
+  doctorNameAr?: string;
+  doctorNameEn?: string;
+  departmentId: string;
+  departmentNameAr?: string;
+  departmentNameEn?: string;
+  scheduledDate: string | Date;
+  startTime: string;
+  endTime: string;
+  type: string;
+  status: string;
+  notes?: string | null;
+  cancellationReason?: string | null;
+}
+
+interface WaitingListEntry {
+  id: string;
+  patientId: string;
+  patientNameAr?: string;
+  patientNameEn?: string;
+  departmentId: string;
+  preferredDoctorId?: string | null;
+  notes?: string | null;
+}
+
 interface AppointmentSchedulerClientProps {
-  initialAppointments: any[];
+  initialAppointments: Appointment[];
   departments: { id: string; nameAr: string; nameEn: string }[];
   doctors: { id: string; nameAr: string; nameEn: string }[];
   hospitalSlug: string;
@@ -73,8 +106,17 @@ export function AppointmentSchedulerClient({
   const isRtl = locale === "ar";
   const router = useRouter();
 
-  const [appointments, setAppointments] = useState<any[]>(initialAppointments);
-  const [waitingList, setWaitingList] = useState<any[]>([]);
+  // Initialize from props to avoid setState in effect
+  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  
+  // Adjust state during render if props change (React Docs recommended pattern)
+  const [prevInitialAppointments, setPrevInitialAppointments] = useState(initialAppointments);
+  if (initialAppointments !== prevInitialAppointments) {
+    setAppointments(initialAppointments);
+    setPrevInitialAppointments(initialAppointments);
+  }
+
+  const [waitingList, setWaitingList] = useState<WaitingListEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -94,12 +136,12 @@ export function AppointmentSchedulerClient({
   const [showWaitingList, setShowWaitingList] = useState(false);
 
   // Selected appointment details drawer state
-  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
   // Waiting list schedule converter modal state
-  const [selectedWaitingEntry, setSelectedWaitingEntry] = useState<any | null>(null);
+  const [selectedWaitingEntry, setSelectedWaitingEntry] = useState<WaitingListEntry | null>(null);
   const [scheduleDate, setScheduleDate] = useState<string>("");
   const [scheduleDoctorId, setScheduleDoctorId] = useState<string>("");
   const [availableSlots, setAvailableSlots] = useState<{ time: string; available: boolean }[]>([]);
@@ -107,42 +149,56 @@ export function AppointmentSchedulerClient({
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   // Fetch waiting list queue on load and when queue updates
-  const loadWaitingList = async () => {
+  const loadWaitingList = useCallback(async () => {
     const res = await getWaitingList();
     if (res.success && "data" in res) {
-      setWaitingList(res.data);
+      setWaitingList(res.data as WaitingListEntry[]);
     }
-  };
-
-  useEffect(() => {
-    loadWaitingList();
   }, []);
 
-  // Sync state with props
   useEffect(() => {
-    setAppointments(initialAppointments);
-  }, [initialAppointments]);
+    // Defer async loading to avoid synchronous setState in effect body
+    const timer = setTimeout(() => loadWaitingList(), 0);
+    return () => clearTimeout(timer);
+  }, [loadWaitingList]);
 
   // Load slots for the waiting list scheduling wizard
   useEffect(() => {
     if (scheduleDoctorId && scheduleDate) {
-      setLoadingSlots(true);
-      setSelectedSlot("");
-      getDoctorAvailability(scheduleDoctorId, scheduleDate).then((res) => {
-        if (res.success && "slots" in res) {
-          setAvailableSlots(res.slots);
-        } else {
-          setAvailableSlots([]);
+      // Use a local flag to prevent setState if component unmounts
+      let isMounted = true;
+      
+      // Defer loading state to avoid synchronous cascading renders
+      const timer = setTimeout(() => {
+        if (isMounted) {
+          setLoadingSlots(true);
+          setSelectedSlot("");
         }
-        setLoadingSlots(false);
+      }, 0);
+
+      getDoctorAvailability(scheduleDoctorId, scheduleDate).then((res) => {
+        if (isMounted) {
+          if (res.success && "slots" in res) {
+            setAvailableSlots(res.slots);
+          } else {
+            setAvailableSlots([]);
+          }
+          setLoadingSlots(false);
+        }
       });
+      return () => { 
+        isMounted = false; 
+        clearTimeout(timer);
+      };
     } else {
-      setAvailableSlots([]);
+      setTimeout(() => {
+        setAvailableSlots([]);
+      }, 0);
     }
   }, [scheduleDoctorId, scheduleDate]);
 
   // Handle status update
-  const handleStatusChange = (status: string) => {
+  const handleStatusChange = (status: AppointmentStatus) => {
     if (!selectedAppointment) return;
     startTransition(async () => {
       const res = await updateAppointmentStatus(
@@ -262,7 +318,7 @@ export function AppointmentSchedulerClient({
     });
   };
 
-  const handleRowClick = (app: any) => {
+  const handleRowClick = (app: Appointment) => {
     setSelectedAppointment(app);
     setIsDetailDrawerOpen(true);
   };
@@ -298,7 +354,7 @@ export function AppointmentSchedulerClient({
     }
   };
 
-  const columns: ColumnDef<any>[] = [
+  const columns: ColumnDef<Appointment>[] = [
     {
       accessorKey: "scheduledDate",
       header: isRtl ? "التاريخ والوقت" : "Date & Time",
@@ -676,7 +732,7 @@ export function AppointmentSchedulerClient({
                     {selectedAppointment.notes && (
                       <div className="pt-2 border-t border-border/10 text-muted-foreground">
                         <span className="text-[10px] block uppercase font-bold">{isRtl ? "شكوى المريض" : "Patient Complaint / Notes"}</span>
-                        <span className="italic">"{selectedAppointment.notes}"</span>
+                        <span className="italic">&quot;{selectedAppointment.notes}&quot;</span>
                       </div>
                     )}
                   </div>
@@ -725,7 +781,7 @@ export function AppointmentSchedulerClient({
                           dir={isRtl ? "rtl" : "ltr"}
                           className="hms-select-native"
                           value={selectedAppointment.status}
-                          onChange={(e) => handleStatusChange(e.target.value)}
+                          onChange={(e) => handleStatusChange(e.target.value as AppointmentStatus)}
                         >
                           <option value="scheduled">{isRtl ? "مؤكد" : "Scheduled"}</option>
                           <option value="completed">{isRtl ? "مكتمل" : "Completed"}</option>

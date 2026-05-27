@@ -84,8 +84,18 @@ export default function PharmacyInventoryClient({
   const [adjQuantity, setAdjQuantity] = useState(1);
   const [adjNotes, setAdjNotes] = useState("");
 
+interface HistoryItem {
+  id: string;
+  type: string;
+  quantity: number;
+  notes: string | null;
+  performerNameAr: string | null;
+  performerNameEn: string | null;
+  createdAt: string | Date;
+}
+
   // History State
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const openAdjust = (med: Medication) => {
@@ -329,7 +339,7 @@ export default function PharmacyInventoryClient({
           <div className="grid gap-6 py-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-muted-foreground ps-1">{t("status")}</label>
-              <Select value={adjType} onValueChange={(v: any) => setAdjType(v)}>
+              <Select value={adjType} onValueChange={(v) => setAdjType(v as "stock_in" | "adjustment" | "waste" | "return")}>
                 <SelectTrigger className="h-12 rounded-xl border-border/40">
                   <SelectValue />
                 </SelectTrigger>

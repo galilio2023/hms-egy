@@ -122,7 +122,7 @@ export class ETAClient {
     return response.json();
   }
 
-  async getDocument(uuid: string, creds: ETACredentials): Promise<any> {
+  async getDocument(uuid: string, creds: ETACredentials): Promise<unknown> {
     const token = await this.getToken(creds);
 
     const response = await fetch(`${API_URL}/api/v1.0/documents/${uuid}/details`, {
@@ -140,7 +140,7 @@ export class ETAClient {
     return response.json();
   }
 
-  async cancelDocument(uuid: string, reason: string, creds: ETACredentials): Promise<any> {
+  async cancelDocument(uuid: string, reason: string, creds: ETACredentials): Promise<unknown> {
     const token = await this.getToken(creds);
 
     const response = await fetch(`${API_URL}/api/v1.0/documents/state/${uuid}/state`, {

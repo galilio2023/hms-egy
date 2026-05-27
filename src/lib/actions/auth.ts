@@ -10,7 +10,7 @@ import { authInstance } from "@/lib/auth";
  * Enforces a 5-failed-attempts account lockout mechanism for high-security clinical settings.
  */
 export async function loginAction(
-  prevState: any,
+  prevState: unknown,
   formData: FormData
 ): Promise<{ success: boolean; error?: string; redirectTo?: string }> {
   const startTime = Date.now();
@@ -246,11 +246,12 @@ export async function changePasswordAction(oldPassword: string, newPassword: str
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("[CHANGE_PASSWORD_ERROR]", error);
+    const message = error instanceof Error ? error.message : String(error);
     return { 
       success: false, 
-      error: "فشل تحديث كلمة المرور. يرجى التحقق من صحة كلمة المرور الحالية والمحاولة مجدداً." 
+      error: "فشل تحديث كلمة المرور. يرجى التحقق من صحة كلمة المرور الحالية والمحاولة مجدداً: " + message
     };
   }
 }

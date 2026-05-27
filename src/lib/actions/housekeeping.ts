@@ -132,7 +132,7 @@ export async function createHousekeepingTask(payload: {
           messageEn: bedNumber
             ? `Cleaning requested for bed ${bedNumber} in room ${roomNumber}. Priority: ${payload.priority}.`
             : `Cleaning requested for room ${roomNumber}. Priority: ${payload.priority}.`,
-          type: (payload.priority === "urgent" ? "warning" : "info") as any,
+          type: (payload.priority === "urgent" ? "warning" : "info") as "warning" | "info",
           isRead: false,
         }));
 
@@ -145,9 +145,10 @@ export async function createHousekeepingTask(payload: {
 
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return { success: result.success, taskId: result.taskId };
-  } catch (error: any) {
+  } catch (error) {
     console.error("[CREATE_HOUSEKEEPING_TASK_ERROR]", error);
-    return { success: false, error: error.message || "Failed to create task" };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message || "Failed to create task" };
   }
 }
 
@@ -216,7 +217,7 @@ export async function assignHousekeepingTask(taskId: string, staffId: string) {
           titleEn: "📌 Housekeeping Task Assigned",
           messageAr: `تم إسناد مهمة تنظيف جديدة لك. يرجى مراجعة لوحة المهام والبدء عند الاستعداد.`,
           messageEn: `A new cleaning task has been assigned to you. Please start when ready.`,
-          type: "info" as any,
+          type: "info",
           isRead: false,
         });
       }
@@ -226,9 +227,10 @@ export async function assignHousekeepingTask(taskId: string, staffId: string) {
 
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return { success: result.success };
-  } catch (error: any) {
+  } catch (error) {
     console.error("[ASSIGN_HOUSEKEEPING_TASK_ERROR]", error);
-    return { success: false, error: error.message || "Failed to assign task" };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message || "Failed to assign task" };
   }
 }
 
@@ -295,9 +297,10 @@ export async function startHousekeepingTask(taskId: string) {
 
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return result;
-  } catch (error: any) {
+  } catch (error) {
     console.error("[START_HOUSEKEEPING_TASK_ERROR]", error);
-    return { success: false, error: error.message || "Failed to start task" };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message || "Failed to start task" };
   }
 }
 
@@ -434,7 +437,7 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
           titleEn: "✅ Bed Ready for Admission",
           messageAr: `تم إكمال عملية تنظيف وتعقيم ${bedDetailsAr} وهو جاهز الآن لاستقبال المرضى.`,
           messageEn: `Housekeeping has finished cleaning ${bedDetailsEn}. It is now available for admission.`,
-          type: "success" as any,
+          type: "success" as const,
           isRead: false,
         }));
 
@@ -462,9 +465,10 @@ export async function completeHousekeepingTask(taskId: string, photoUrl?: string
 
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/housekeeping`, "layout");
     return { success: result.success };
-  } catch (error: any) {
+  } catch (error) {
     console.error("[COMPLETE_HOUSEKEEPING_TASK_ERROR]", error);
-    return { success: false, error: error.message || "Failed to complete task" };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message || "Failed to complete task" };
   }
 }
 
@@ -512,7 +516,8 @@ export async function getHousekeepingQueue() {
 
       return { success: true, data: queue };
     });
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
