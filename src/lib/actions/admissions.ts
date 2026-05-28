@@ -11,6 +11,7 @@ import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { validateVitals } from "./clinical";
 import { normalizeDecimal } from "@/lib/utils/egypt";
@@ -340,10 +341,12 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
         temperature: cleanTemperature,
       });
 
-      // 2. Proactively trigger out-of-band alerts asynchronously so server action doesn't block the UI
+      // 2. Proactively trigger out-of-band alerts asynchronously in the background using Next.js 15 after() API
       if (mews.score >= 5) {
-        dispatchCriticalAlerts(hospitalId, payload.patientId, result.vitalId, mews.score)
-          .catch((err) => console.error("[CRITICAL ALERT GATEWAY] Asynchronous alert dispatch failed:", err));
+        after(() => {
+          dispatchCriticalAlerts(hospitalId, payload.patientId, result.vitalId, mews.score)
+            .catch((err) => console.error("[CRITICAL ALERT GATEWAY] Asynchronous alert dispatch failed:", err));
+        });
       }
     }
 

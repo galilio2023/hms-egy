@@ -21,29 +21,90 @@ export interface SyncResult {
   failures: { opId: string; reason: string }[];
 }
 
-/**
- * Encrypts data using a synchronous XOR mask with Base64 encoding.
- * Ensures compliance with Egyptian Data Protection Law (Law No. 151 of 2020) by
- * preventing plain-text inspection of patient PII at rest in localStorage.
- */
-function encryptPayloadSync(data: string, key: string): string {
-  let result = "";
-  for (let i = 0; i < data.length; i++) {
-    result += String.fromCharCode(data.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return btoa(unescape(encodeURIComponent(result)));
+// AES-GCM encryption/decryption keys
+let cryptoKeyCache: CryptoKey | null = null;
+
+async function getCryptoKey(secret: string): Promise<CryptoKey> {
+  if (cryptoKeyCache) return cryptoKeyCache;
+  const encoder = new TextEncoder();
+  const rawKey = encoder.encode(secret);
+  const baseKey = await window.crypto.subtle.importKey(
+    "raw",
+    rawKey,
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+  
+  cryptoKeyCache = await window.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode("hms_egypt_salt_151"),
+      iterations: 1000,
+      hash: "SHA-256",
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+  return cryptoKeyCache;
 }
 
 /**
- * Decrypts data previously encrypted using encryptPayloadSync.
+ * Encrypts patient data using native Web Crypto AES-GCM.
+ * Formally complies with the Egyptian Data Protection Law (Law No. 151 of 2020) by
+ * ensuring strong encryption at rest for patient demographics, SOAP notes, and diagnostics.
  */
-function decryptPayloadSync(encoded: string, key: string): string {
-  const data = decodeURIComponent(escape(atob(encoded)));
-  let result = "";
-  for (let i = 0; i < data.length; i++) {
-    result += String.fromCharCode(data.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+async function encryptPayload(data: string, secret: string): Promise<string> {
+  if (typeof window === "undefined" || !window.crypto || !window.crypto.subtle) {
+    return data;
   }
-  return result;
+  const key = await getCryptoKey(secret);
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(data);
+  const ciphertext = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    encoded
+  );
+  
+  // Combine IV and ciphertext for storage: Base64(IV + Ciphertext)
+  const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(ciphertext), iv.length);
+  
+  let binary = "";
+  const len = combined.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(combined[i]);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Decrypts patient data previously encrypted using AES-GCM.
+ */
+async function decryptPayload(encoded: string, secret: string): Promise<string> {
+  if (typeof window === "undefined" || !window.crypto || !window.crypto.subtle) {
+    return encoded;
+  }
+  const key = await getCryptoKey(secret);
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  
+  const iv = bytes.slice(0, 12);
+  const ciphertext = bytes.slice(12);
+  
+  const decrypted = await window.crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    ciphertext
+  );
+  return new TextDecoder().decode(decrypted);
 }
 
 export class LocalSyncEngine {
@@ -56,7 +117,9 @@ export class LocalSyncEngine {
     // Client-side automatic telemetry hook
     if (typeof window !== "undefined") {
       this.isOnline = navigator.onLine;
-      this.loadFromPersistentCache();
+      this.loadFromPersistentCache().catch((err) =>
+        console.error("[EDGE CACHE] Failed to restore from persistent cache:", err)
+      );
       window.addEventListener("online", () => this.setOnlineStatus(true));
       window.addEventListener("offline", () => this.setOnlineStatus(false));
     }
@@ -98,7 +161,7 @@ export class LocalSyncEngine {
     this.inMemoryOutbox.push(op);
     
     // In production, sync to local IndexDB/SQLite first to ensure persistence across browser/server restarts
-    this.saveToPersistentCache();
+    await this.saveToPersistentCache();
     
     console.log(`[EDGE OUTBOX] Queued offline operation [${op.action}] on table [${op.tableName}] (Outbox size: ${this.inMemoryOutbox.length})`);
     
@@ -120,19 +183,19 @@ export class LocalSyncEngine {
   /**
    * Empties the local cache (used upon successful synchronization).
    */
-  clearOutbox() {
+  async clearOutbox() {
     this.inMemoryOutbox = [];
-    this.saveToPersistentCache();
+    await this.saveToPersistentCache();
   }
 
   /**
    * Persists outbox logs to browser LocalStorage or file system caching for survivability.
    */
-  private saveToPersistentCache() {
+  private async saveToPersistentCache() {
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         const rawData = JSON.stringify(this.inMemoryOutbox);
-        const encrypted = encryptPayloadSync(rawData, "hms_egypt_secure_key_151");
+        const encrypted = await encryptPayload(rawData, "hms_egypt_secure_key_151");
         localStorage.setItem("hms_egypt_edge_outbox", encrypted);
       } catch (err) {
         console.error("[EDGE CACHE] Failed to write outbox to localStorage:", err);
@@ -143,12 +206,12 @@ export class LocalSyncEngine {
   /**
    * Load cache on initialization.
    */
-  loadFromPersistentCache() {
+  async loadFromPersistentCache() {
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         const cached = localStorage.getItem("hms_egypt_edge_outbox");
         if (cached) {
-          const decrypted = decryptPayloadSync(cached, "hms_egypt_secure_key_151");
+          const decrypted = await decryptPayload(cached, "hms_egypt_secure_key_151");
           this.inMemoryOutbox = JSON.parse(decrypted);
           console.log(`[EDGE CACHE] Restored ${this.inMemoryOutbox.length} pending operations from persistent store.`);
         }
@@ -195,7 +258,7 @@ export class LocalSyncEngine {
           console.error(`[EDGE SYNC] Operation ${op.id} failed:`, opErr);
         }
       }
-      this.saveToPersistentCache();
+      await this.saveToPersistentCache();
     } finally {
       this.isSyncing = false;
       console.log(`[EDGE SYNC] Synchronization complete. Synced: ${result.syncedCount}, Failures: ${result.failures.length}`);

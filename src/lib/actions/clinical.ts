@@ -898,6 +898,11 @@ Transcript: "${transcript}"`;
 
       if (response.ok) {
         const resJson = await response.json();
+
+        // Defensive guard rails to prevent runtime crashes if API errors or unexpected JSON are returned
+        if (!resJson || !Array.isArray(resJson.content)) {
+          throw new Error("Invalid response structure from Anthropic API.");
+        }
         
         interface ClaudeToolUse {
           type: "tool_use";
