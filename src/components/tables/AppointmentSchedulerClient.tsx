@@ -157,7 +157,6 @@ export function AppointmentSchedulerClient({
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadWaitingList();
   }, [loadWaitingList]);
 
@@ -165,9 +164,7 @@ export function AppointmentSchedulerClient({
   useEffect(() => {
     let isMounted = true;
     if (scheduleDoctorId && scheduleDate) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingSlots(true);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedSlot("");
 
       getDoctorAvailability(scheduleDoctorId, scheduleDate).then((res) => {
@@ -181,7 +178,6 @@ export function AppointmentSchedulerClient({
         }
       });
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAvailableSlots([]);
     }
     return () => {

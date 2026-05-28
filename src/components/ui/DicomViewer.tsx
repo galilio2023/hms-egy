@@ -144,9 +144,18 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
 
     const img = imageRef.current;
     
-    // Calculate draw dimensions matching zoom in layout coordinates
-    const drawWidth = displayWidth * zoom;
-    const drawHeight = displayHeight * zoom;
+    const imgRatio = img.width / img.height;
+    const canvasRatio = displayWidth / displayHeight;
+    let drawWidth: number, drawHeight: number;
+
+    if (imgRatio > canvasRatio) {
+      drawWidth = displayWidth * zoom;
+      drawHeight = (displayWidth / imgRatio) * zoom;
+    } else {
+      drawHeight = displayHeight * zoom;
+      drawWidth = (displayHeight * imgRatio) * zoom;
+    }
+
     const offsetX = (displayWidth - drawWidth) / 2 + pan.x;
     const offsetY = (displayHeight - drawHeight) / 2 + pan.y;
 

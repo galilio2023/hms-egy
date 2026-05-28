@@ -30,7 +30,6 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     const persistedLock = localStorage.getItem("workstation_locked") === "true";
     if (persistedLock) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLocked(true);
     }
   }, []);
@@ -38,7 +37,6 @@ export function WorkstationProvider({ children }: { children: React.ReactNode })
   // Automatically clear persistent lock state and timer on logout or when there's no active user session
   useEffect(() => {
     if (!isAuthenticated) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLocked(false);
       localStorage.removeItem("workstation_locked");
       if (timerRef.current) {

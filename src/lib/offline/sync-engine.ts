@@ -67,7 +67,7 @@ async function getCryptoKey(secret: string): Promise<CryptoKey> {
     {
       name: "PBKDF2",
       salt: encoder.encode("hms_egypt_salt_151"),
-      iterations: 1000,
+      iterations: 100000,
       hash: "SHA-256",
     },
     baseKey,

@@ -101,17 +101,14 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
     };
   }, [query]);
 
-  // Execute the fuzzy search locally when debounced query updates
   useEffect(() => {
     if (!fuse || !debouncedQuery.trim()) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults([]);
       return;
     }
 
     const searchResults = fuse.search(debouncedQuery).slice(0, 15).map(r => r.item);
     
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResults(searchResults);
   }, [debouncedQuery, fuse]);
 
