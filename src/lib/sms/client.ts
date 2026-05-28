@@ -308,6 +308,26 @@ async function sendWhatsAppMessage(
     };
   }
 
+  // Strict template validator for Meta Business API template-matching constraints
+  if (template) {
+    const APPROVED_TEMPLATES = ["mews_critical_alert"];
+    if (!APPROVED_TEMPLATES.includes(template.name)) {
+      return {
+        success: false,
+        channel: "whatsapp",
+        errorMessage: `Unapproved Meta WhatsApp template: '${template.name}'. Only pre-registered templates are allowed by Meta in production.`,
+      };
+    }
+    // Validation: MEWS critical alert requires exactly 2 parameters (Patient Name, Score)
+    if (template.name === "mews_critical_alert" && template.parameters.length !== 2) {
+      return {
+        success: false,
+        channel: "whatsapp",
+        errorMessage: `Parameter mismatch for template 'mews_critical_alert'. Expected exactly 2 parameters, got ${template.parameters.length}.`,
+      };
+    }
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
 

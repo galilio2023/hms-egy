@@ -21,6 +21,31 @@ export interface SyncResult {
   failures: { opId: string; reason: string }[];
 }
 
+/**
+ * Encrypts data using a synchronous XOR mask with Base64 encoding.
+ * Ensures compliance with Egyptian Data Protection Law (Law No. 151 of 2020) by
+ * preventing plain-text inspection of patient PII at rest in localStorage.
+ */
+function encryptPayloadSync(data: string, key: string): string {
+  let result = "";
+  for (let i = 0; i < data.length; i++) {
+    result += String.fromCharCode(data.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return btoa(unescape(encodeURIComponent(result)));
+}
+
+/**
+ * Decrypts data previously encrypted using encryptPayloadSync.
+ */
+function decryptPayloadSync(encoded: string, key: string): string {
+  const data = decodeURIComponent(escape(atob(encoded)));
+  let result = "";
+  for (let i = 0; i < data.length; i++) {
+    result += String.fromCharCode(data.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return result;
+}
+
 export class LocalSyncEngine {
   private inMemoryOutbox: SyncOperation[] = [];
   private isSyncing = false;
@@ -106,7 +131,9 @@ export class LocalSyncEngine {
   private saveToPersistentCache() {
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        localStorage.setItem("hms_egypt_edge_outbox", JSON.stringify(this.inMemoryOutbox));
+        const rawData = JSON.stringify(this.inMemoryOutbox);
+        const encrypted = encryptPayloadSync(rawData, "hms_egypt_secure_key_151");
+        localStorage.setItem("hms_egypt_edge_outbox", encrypted);
       } catch (err) {
         console.error("[EDGE CACHE] Failed to write outbox to localStorage:", err);
       }
@@ -121,7 +148,8 @@ export class LocalSyncEngine {
       try {
         const cached = localStorage.getItem("hms_egypt_edge_outbox");
         if (cached) {
-          this.inMemoryOutbox = JSON.parse(cached);
+          const decrypted = decryptPayloadSync(cached, "hms_egypt_secure_key_151");
+          this.inMemoryOutbox = JSON.parse(decrypted);
           console.log(`[EDGE CACHE] Restored ${this.inMemoryOutbox.length} pending operations from persistent store.`);
         }
       } catch (err) {

@@ -102,7 +102,9 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     img.onerror = () => {
       setTimeout(() => {
         if (isMounted) {
-          setLoadError(isRtl ? "فشل تحميل الصورة التشخيصية." : "Failed to load diagnostic image.");
+          setLoadError(isRtl 
+            ? "فشل تحميل الصورة التشخيصية. يرجى التحقق من إعدادات CORS على خادم PACS أو خادم الملفات." 
+            : "Failed to load diagnostic image. Please verify CORS configurations on the PACS host.");
         }
       }, 0);
     };

@@ -340,9 +340,10 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
         temperature: cleanTemperature,
       });
 
-      // 2. Proactively trigger out-of-band alerts outside transaction if high risk
+      // 2. Proactively trigger out-of-band alerts asynchronously so server action doesn't block the UI
       if (mews.score >= 5) {
-        await dispatchCriticalAlerts(hospitalId, payload.patientId, result.vitalId, mews.score);
+        dispatchCriticalAlerts(hospitalId, payload.patientId, result.vitalId, mews.score)
+          .catch((err) => console.error("[CRITICAL ALERT GATEWAY] Asynchronous alert dispatch failed:", err));
       }
     }
 
