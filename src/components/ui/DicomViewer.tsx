@@ -123,16 +123,32 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    // Set internal resolution matching devicePixelRatio for clinical-grade sharpness
+    const displayWidth = canvas.clientWidth || 640;
+    const displayHeight = canvas.clientHeight || 360;
+    const targetWidth = Math.round(displayWidth * dpr);
+    const targetHeight = Math.round(displayHeight * dpr);
+    
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+    }
+
+    // Reset and scale transform matrix to fit dpr automatically without changing layout math
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
     // Clear viewport
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
 
     const img = imageRef.current;
     
-    // Calculate draw dimensions matching zoom
-    const drawWidth = canvas.width * zoom;
-    const drawHeight = canvas.height * zoom;
-    const offsetX = (canvas.width - drawWidth) / 2 + pan.x;
-    const offsetY = (canvas.height - drawHeight) / 2 + pan.y;
+    // Calculate draw dimensions matching zoom in layout coordinates
+    const drawWidth = displayWidth * zoom;
+    const drawHeight = displayHeight * zoom;
+    const offsetX = (displayWidth - drawWidth) / 2 + pan.x;
+    const offsetY = (displayHeight - drawHeight) / 2 + pan.y;
 
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
@@ -142,20 +158,21 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     
     // Draw 5cm reference scale on right side
     ctx.beginPath();
-    ctx.moveTo(canvas.width - 25, 50);
-    ctx.lineTo(canvas.width - 25, 150);
-    ctx.moveTo(canvas.width - 35, 50);
-    ctx.lineTo(canvas.width - 15, 50);
-    ctx.moveTo(canvas.width - 35, 150);
-    ctx.lineTo(canvas.width - 15, 150);
+    ctx.moveTo(displayWidth - 25, 50);
+    ctx.lineTo(displayWidth - 25, 150);
+    ctx.moveTo(displayWidth - 35, 50);
+    ctx.lineTo(displayWidth - 15, 50);
+    ctx.moveTo(displayWidth - 35, 150);
+    ctx.lineTo(displayWidth - 15, 150);
     ctx.stroke();
     
     ctx.fillStyle = "rgba(16, 185, 129, 0.8)";
     ctx.font = "9px monospace";
-    ctx.fillText("5 cm", canvas.width - 55, 105);
+    ctx.fillText("5 cm", displayWidth - 55, 105);
 
     // Render orientation labels
     ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.font = "9px monospace";
     ctx.fillText(isRtl ? "مستشفى HMS مصر" : "HMS Egypt PACS Client", 20, 30);
     ctx.fillText(`Slice: ${currentSlice}/${totalSlices}`, 20, 50);
     ctx.fillText(`Zoom: ${zoom.toFixed(1)}x`, 20, 70);
@@ -169,10 +186,10 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
                       procedureName.toLowerCase().includes("chest") || 
                       procedureName.toLowerCase().includes("frontal");
     
-    ctx.fillText("R", 20, canvas.height - 30);
-    ctx.fillText(isFrontal ? "S" : "A", canvas.width / 2 - 5, 30);
-    ctx.fillText(isFrontal ? "I" : "P", canvas.width / 2 - 5, canvas.height - 30);
-    ctx.fillText("L", canvas.width - 35, canvas.height - 30);
+    ctx.fillText("R", 20, displayHeight - 30);
+    ctx.fillText(isFrontal ? "S" : "A", displayWidth / 2 - 5, 30);
+    ctx.fillText(isFrontal ? "I" : "P", displayWidth / 2 - 5, displayHeight - 30);
+    ctx.fillText("L", displayWidth - 35, displayHeight - 30);
 
   }, [imageLoaded, zoom, brightness, contrast, currentSlice, isRtl, procedureName, pan]);
 

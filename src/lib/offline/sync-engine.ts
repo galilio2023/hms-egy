@@ -23,6 +23,21 @@ export interface SyncResult {
 
 // AES-GCM encryption/decryption keys
 let cryptoKeyCache: CryptoKey | null = null;
+let sessionSecret: string | null = null;
+
+/**
+ * Dynamically registers the secure one-time session secret provided by the auth server at login.
+ * This re-derives the cryptokey dynamically for this session, complying with Law No. 151 of 2020.
+ */
+export function initializeSyncEngineKey(secretFromSession: string) {
+  sessionSecret = secretFromSession;
+  cryptoKeyCache = null; // Reset cache so key is derived using new secret
+  if (typeof window !== "undefined") {
+    edgeSyncEngine.loadFromPersistentCache().catch((err) =>
+      console.error("[EDGE CACHE] Failed to restore from persistent cache with session key:", err)
+    );
+  }
+}
 
 async function getCryptoKey(secret: string): Promise<CryptoKey> {
   if (cryptoKeyCache) return cryptoKeyCache;
@@ -195,7 +210,8 @@ export class LocalSyncEngine {
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         const rawData = JSON.stringify(this.inMemoryOutbox);
-        const encrypted = await encryptPayload(rawData, "hms_egypt_secure_key_151");
+        const secretKey = sessionSecret || "hms_egypt_secure_key_151";
+        const encrypted = await encryptPayload(rawData, secretKey);
         localStorage.setItem("hms_egypt_edge_outbox", encrypted);
       } catch (err) {
         console.error("[EDGE CACHE] Failed to write outbox to localStorage:", err);
@@ -211,7 +227,8 @@ export class LocalSyncEngine {
       try {
         const cached = localStorage.getItem("hms_egypt_edge_outbox");
         if (cached) {
-          const decrypted = await decryptPayload(cached, "hms_egypt_secure_key_151");
+          const secretKey = sessionSecret || "hms_egypt_secure_key_151";
+          const decrypted = await decryptPayload(cached, secretKey);
           this.inMemoryOutbox = JSON.parse(decrypted);
           console.log(`[EDGE CACHE] Restored ${this.inMemoryOutbox.length} pending operations from persistent store.`);
         }

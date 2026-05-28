@@ -119,11 +119,18 @@ export default function DispensePrescriptionClient({
   const qrScannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Auto-focus barcode input
+  // Auto-focus barcode input and cleanup audio context on unmount to prevent sound pipeline memory leaks
   useEffect(() => {
     if (barcodeInputRef.current) {
       barcodeInputRef.current.focus();
     }
+    return () => {
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        audioCtxRef.current.close().catch((err) =>
+          console.error("[SCANNER FEEDBACK] Failed to close AudioContext on unmount:", err)
+        );
+      }
+    };
   }, []);
 
   // Initialize audio context on first interaction

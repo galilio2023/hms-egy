@@ -103,28 +103,16 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
 
   // Execute the fuzzy search locally when debounced query updates
   useEffect(() => {
-    let isMounted = true;
-    
     if (!fuse || !debouncedQuery.trim()) {
-      const timer = setTimeout(() => {
-        if (isMounted) setResults([]);
-      }, 0);
-      return () => {
-        isMounted = false;
-        clearTimeout(timer);
-      };
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setResults([]);
+      return;
     }
 
     const searchResults = fuse.search(debouncedQuery).slice(0, 15).map(r => r.item);
     
-    const timer = setTimeout(() => {
-      if (isMounted) setResults(searchResults);
-    }, 0);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setResults(searchResults);
   }, [debouncedQuery, fuse]);
 
   // Toggle code selection
