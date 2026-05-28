@@ -853,6 +853,9 @@ export async function parseAmbientConsultationAction(
 
   // 1. Live Claude Structured Extraction if API Key is configured
   if (apiKey) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s SLA timeout
+
     try {
       const prompt = `You are a clinical EMR scribe inside an Egyptian hospital.
 Analyze the following bilingual (Egyptian Arabic colloquial + English medical jargon) consultation transcript between doctor and patient.
@@ -868,6 +871,7 @@ Transcript: "${transcript}"`;
           "anthropic-version": "2023-06-01",
           "content-type": "application/json",
         },
+        signal: controller.signal,
         body: JSON.stringify({
           model: "claude-3-5-haiku-20241022",
           max_tokens: 1000,
@@ -895,6 +899,8 @@ Transcript: "${transcript}"`;
           tool_choice: { type: "tool", name: "provide_ambient_scribe_results" }
         })
       });
+
+      clearTimeout(timeout);
 
       if (response.ok) {
         const resJson = await response.json();
@@ -948,6 +954,7 @@ Transcript: "${transcript}"`;
         }
       }
     } catch (apiErr) {
+      clearTimeout(timeout);
       console.warn("[AMBIENT SCRIBE] Live AI call failed, falling back to clinical rule-engine:", apiErr);
     }
   }

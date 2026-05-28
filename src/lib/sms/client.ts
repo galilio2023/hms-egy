@@ -56,8 +56,10 @@ export interface SendResult {
 export function normalizeEgyptianPhoneNumber(phone: string): string {
   let cleaned = phone.replace(/\D/g, "");
   
-  // If starts with +20 or 20, keep 20 as prefix
-  if (cleaned.startsWith("20")) {
+  // Handle international double zero prefixes
+  if (cleaned.startsWith("0020")) {
+    cleaned = cleaned.slice(4);
+  } else if (cleaned.startsWith("20")) {
     cleaned = cleaned.slice(2);
   }
   

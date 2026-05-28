@@ -31,8 +31,7 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
 
   // Prevent hydration mismatch for client-only components
   useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 0);
-    return () => clearTimeout(timer);
+    setMounted(true);
   }, []);
 
   // Update dynamic clock synced with Africa/Cairo time zone

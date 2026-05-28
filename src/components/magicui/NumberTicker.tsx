@@ -39,8 +39,7 @@ export function NumberTicker({
   const rounded = useTransform(springValue, (latest) => formatter.format(Math.round(latest)));
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsMounted(true), 0);
-    return () => clearTimeout(timer);
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {

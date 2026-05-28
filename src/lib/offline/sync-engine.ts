@@ -122,6 +122,86 @@ async function decryptPayload(encoded: string, secret: string): Promise<string> 
   return new TextDecoder().decode(decrypted);
 }
 
+class IndexedDBStore {
+  private dbName = "hms_egypt_edge_db";
+  private storeName = "outbox_store";
+  private dbVersion = 1;
+  private dbPromise: Promise<IDBDatabase> | null = null;
+
+  private getDB(): Promise<IDBDatabase> {
+    if (this.dbPromise) return this.dbPromise;
+
+    this.dbPromise = new Promise((resolve, reject) => {
+      const request = window.indexedDB.open(this.dbName, this.dbVersion);
+
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName);
+        }
+      };
+
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+
+      request.onerror = () => {
+        reject(request.error);
+      };
+    });
+
+    return this.dbPromise;
+  }
+
+  async get(key: string): Promise<string | null> {
+    if (typeof window === "undefined" || !window.indexedDB) return null;
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(this.storeName, "readonly");
+        const store = transaction.objectStore(this.storeName);
+        const request = store.get(key);
+
+        request.onsuccess = () => {
+          resolve((request.result as string) || null);
+        };
+
+        request.onerror = () => {
+          reject(request.error);
+        };
+      });
+    } catch (err) {
+      console.error("[EDGE IDB] Failed to get value from IndexedDB:", err);
+      return null;
+    }
+  }
+
+  async set(key: string, value: string): Promise<void> {
+    if (typeof window === "undefined" || !window.indexedDB) return;
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(this.storeName, "readwrite");
+        const store = transaction.objectStore(this.storeName);
+        const request = store.put(value, key);
+
+        request.onsuccess = () => {
+          resolve();
+        };
+
+        request.onerror = () => {
+          reject(request.error);
+        };
+      });
+    } catch (err) {
+      console.error("[EDGE IDB] Failed to set value in IndexedDB:", err);
+      throw err;
+    }
+  }
+}
+
+const idbStore = new IndexedDBStore();
+
 export class LocalSyncEngine {
   private inMemoryOutbox: SyncOperation[] = [];
   private isSyncing = false;
@@ -204,17 +284,21 @@ export class LocalSyncEngine {
   }
 
   /**
-   * Persists outbox logs to browser LocalStorage or file system caching for survivability.
+   * Persists outbox logs to browser IndexedDB or file system caching for survivability.
    */
   private async saveToPersistentCache() {
-    if (typeof window !== "undefined" && window.localStorage) {
+    if (typeof window !== "undefined" && window.indexedDB) {
       try {
         const rawData = JSON.stringify(this.inMemoryOutbox);
-        const secretKey = sessionSecret || "hms_egypt_secure_key_151";
+        const secretKey = sessionSecret;
+        if (!secretKey) {
+          throw new Error("[SECURITY ALERT] Unauthorized write attempt: Encryption key not initialized.");
+        }
         const encrypted = await encryptPayload(rawData, secretKey);
-        localStorage.setItem("hms_egypt_edge_outbox", encrypted);
+        await idbStore.set("hms_egypt_edge_outbox", encrypted);
       } catch (err) {
-        console.error("[EDGE CACHE] Failed to write outbox to localStorage:", err);
+        console.error("[EDGE CACHE] Failed to write outbox to IndexedDB:", err);
+        throw err;
       }
     }
   }
@@ -223,12 +307,15 @@ export class LocalSyncEngine {
    * Load cache on initialization.
    */
   async loadFromPersistentCache() {
-    if (typeof window !== "undefined" && window.localStorage) {
+    if (!sessionSecret) {
+      console.warn("[EDGE CACHE] Cannot load persistent cache: Encryption key not initialized yet.");
+      return;
+    }
+    if (typeof window !== "undefined" && window.indexedDB) {
       try {
-        const cached = localStorage.getItem("hms_egypt_edge_outbox");
+        const cached = await idbStore.get("hms_egypt_edge_outbox");
         if (cached) {
-          const secretKey = sessionSecret || "hms_egypt_secure_key_151";
-          const decrypted = await decryptPayload(cached, secretKey);
+          const decrypted = await decryptPayload(cached, sessionSecret);
           this.inMemoryOutbox = JSON.parse(decrypted);
           console.log(`[EDGE CACHE] Restored ${this.inMemoryOutbox.length} pending operations from persistent store.`);
         }
