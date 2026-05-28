@@ -972,11 +972,11 @@ Transcript: "${transcript}"`;
     const vitals: AmbientScribeResult["vitals"] = {};
 
     // A. Parse Vitals via RegEx matching Egyptian digits / decimal numbers
-    // Temperature: e.g. "٣٨.٥" or "38.5" or "حرارة ٣٧"
-    const tempMatch = text.match(/(?:حرارة|حرارته|درجة الحرارة|temp|temperature)\s*(\d{2}(?:\.\d)?)/) || 
-                      text.match(/(\d{2}\.\d)\s*(?:c|درجة|مئوية)?/);
+    // Temperature: e.g. "٣٨.٥" or "38.5" or "حرارة ٣٧" or localized comma "38,5"
+    const tempMatch = text.match(/(?:حرارة|حرارته|درجة الحرارة|temp|temperature)\s*(\d{2}(?:[.,]\d)?)/) || 
+                      text.match(/(\d{2}[.,]\d)\s*(?:c|درجة|مئوية)?/);
     if (tempMatch) {
-      vitals.temperature = tempMatch[1];
+      vitals.temperature = tempMatch[1].replace(",", ".");
     }
 
     // BP: e.g. "ضغط ١٢٠ على ٨٠" or "120/80" or "ضغط ١٢٠/٨٠"

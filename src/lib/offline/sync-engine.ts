@@ -332,7 +332,12 @@ export class LocalSyncEngine {
           console.log(`[EDGE CACHE] Restored ${this.inMemoryOutbox.length} pending operations from persistent store.`);
         }
       } catch (err) {
-        console.error("[EDGE CACHE] Failed to parse cached outbox:", err);
+        console.error("[EDGE CACHE] Key mismatch during decryption. Safely purging unreadable outbox payload to prevent disk blockages.", err);
+        try {
+          await idbStore.set("hms_egypt_edge_outbox", "");
+        } catch (dbErr) {
+          console.error("[EDGE CACHE] Failed to purge unreadable store:", dbErr);
+        }
       }
     }
   }

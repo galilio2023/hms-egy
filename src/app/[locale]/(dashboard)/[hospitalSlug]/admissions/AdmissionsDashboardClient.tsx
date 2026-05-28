@@ -1073,7 +1073,7 @@ export default function AdmissionsDashboardClient({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/40">
-                      {vitalsHistory[selectedBed.patientId].map((v) => {
+                      {(selectedBed ? vitalsHistory[selectedBed.patientId] || [] : []).map((v) => {
                         const mews = memoizedMewsHistory[v.id] || calculateMEWS({
                           systolicBp: v.bloodPressureSystolic,
                           heartRate: v.heartRate,
