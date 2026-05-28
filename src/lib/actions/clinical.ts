@@ -854,8 +854,8 @@ export function anonymizePatientData(text: string): string {
   const namePrefixesAr = ["المريض", "أستاذ", "أستاذة", "دكتور", "دكتورة", "يا", "مدام", "أنسة"];
   const namePrefixesEn = ["Patient", "Mr.", "Mrs.", "Ms.", "Dr.", "A/O", "Madam", "Miss"];
   
-  // Pattern to catch "[Prefix] [Name]" where Name starts with a capital or Arabic character
-  const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "g");
+  // Code Review Fix: Use explicit Arabic word boundaries and handle compound names
+  const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+([أ-ي]+(?:\\s+[أ-ي]+)?)`, "g");
   const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "g");
   
   sanitized = sanitized.replace(prefixPatternAr, (match) => {

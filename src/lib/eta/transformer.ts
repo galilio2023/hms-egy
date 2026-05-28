@@ -139,7 +139,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
     },
     documentType: "I",
     documentTypeVersion: "1.0",
-    dateTimeIssued: invoice.createdAt.toISOString(),
+    dateTimeIssued: invoice.createdAt ? new Date(invoice.createdAt).toISOString() : new Date().toISOString(),
     taxpayerActivityCode: settings?.etaTaxpayerActivityCode || "8610",
     internalID: invoice.invoiceNumber,
     payment: {
@@ -259,7 +259,7 @@ export function transformInvoiceToETAReceipt(
   // must be generated using an authorized physical Hardware Security Module (HSM) or POS USB token
   // (e.g., A-Trust / Egypt Trust). The SHA-256 hashing below is a sandbox-compliant simulation.
   let receiptUuid: string;
-  const rawHashInput = `${invoice.invoiceNumber}|${invoice.createdAt.toISOString()}|${totalAmount.toFixed(5)}|${totalNetAmount.toFixed(5)}|${posSerialNumber}`;
+  const rawHashInput = `${invoice.invoiceNumber}|${(invoice.createdAt ? new Date(invoice.createdAt).toISOString() : new Date().toISOString())}|${totalAmount.toFixed(5)}|${totalNetAmount.toFixed(5)}|${posSerialNumber}`;
 
   if (process.env.PROCESS_ETA_VIA_HSM === "true") {
     // Architectural Boundary: Delegate signature generation to POS HSM or Certified USB Token bridge client
@@ -274,7 +274,7 @@ export function transformInvoiceToETAReceipt(
     receiptNumber: invoice.invoiceNumber,
     uuid: receiptUuid,
     previousReceiptUUID: previousReceiptUUID || "0000000000000000000000000000000000000000000000000000000000000000",
-    dateTimeIssued: invoice.createdAt.toISOString(),
+    dateTimeIssued: invoice.createdAt ? new Date(invoice.createdAt).toISOString() : new Date().toISOString(),
     receiptType: "S",
     receiptVersion: "1.0",
     seller: {

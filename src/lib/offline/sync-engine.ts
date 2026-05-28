@@ -259,6 +259,11 @@ export class LocalSyncEngine {
    * Queues a database modification locally when WAN or Cloud DB is offline/sluggish.
    */
   async queueWrite(operation: Omit<SyncOperation, "id" | "timestamp">): Promise<SyncOperation> {
+    // Code Review Improvement: Explicitly block writes if the secure session hasn't been initialized
+    if (!sessionSecret) {
+      throw new Error("[SYNC ENGINE SECURITY] Attempted offline storage write before secure session/encryption initialization. Action blocked to prevent PII leak.");
+    }
+
     const op: SyncOperation = {
       ...operation,
       id: typeof crypto !== "undefined" ? crypto.randomUUID() : Math.random().toString(36).substring(7),

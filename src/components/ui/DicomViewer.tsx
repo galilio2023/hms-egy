@@ -48,17 +48,25 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   useEffect(() => {
     if (!containerRef.current) return;
     
+    let timeoutId: NodeJS.Timeout | null = null;
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0) {
-          setDimensions({ width, height });
+          // Code Review Fix: Debounce dimension updates to prevent infinite layout loops
+          if (timeoutId) clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            setDimensions({ width, height });
+          }, 100);
         }
       }
     });
     
     resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
   
   // Panning & dragging states

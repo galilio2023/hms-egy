@@ -107,6 +107,7 @@ export function BookingWizardClient({
   // Trigger slot availability lookup when doctor or date changes
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
+      if (!selectedDate || !selectedDate.includes("-")) return;
       let isMounted = true;
       // 1. Cairo Timezone weekend check (Friday = 5, Saturday = 6)
       // Code Review Fix: Evaluation must be strictly in Cairo's timezone offset to prevent day-shift skews.
