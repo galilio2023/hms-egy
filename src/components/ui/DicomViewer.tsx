@@ -153,10 +153,10 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
     // Add calibration scale / caliper overlays (Standard diagnostic UI)
-    ctx.strokeStyle = "rgba(16, 185, 129, 0.6)"; // clinical emerald accent
+    ctx.strokeStyle = "rgba(239, 68, 68, 0.4)"; // clinical warning red accent
     ctx.lineWidth = 1.5;
     
-    // Draw 5cm reference scale on right side
+    // Draw 5cm reference scale on right side (Representative Only)
     ctx.beginPath();
     ctx.moveTo(displayWidth - 25, 50);
     ctx.lineTo(displayWidth - 25, 150);
@@ -166,9 +166,16 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     ctx.lineTo(displayWidth - 15, 150);
     ctx.stroke();
     
-    ctx.fillStyle = "rgba(16, 185, 129, 0.8)";
+    ctx.fillStyle = "rgba(239, 68, 68, 0.8)";
     ctx.font = "9px monospace";
-    ctx.fillText("5 cm", displayWidth - 55, 105);
+    ctx.fillText("5 cm (Approx.)", displayWidth - 95, 105);
+
+    // Uncalibrated Viewport Warning to protect against clinical diagnostic errors
+    ctx.fillStyle = "rgba(239, 68, 68, 0.95)"; // Red warning alert
+    ctx.font = "bold 9px sans-serif";
+    ctx.fillText(isRtl ? "تنبيه: مقياس غير معاير - معاينة فقط" : "WARNING: UNCALIBRATED VIEWPORT", displayWidth - 210, 30);
+    ctx.fillStyle = "rgba(239, 68, 68, 0.7)";
+    ctx.fillText(isRtl ? "مقياس تمثيلي تقريبي" : "Representative Scale Only", displayWidth - 210, 42);
 
     // Render orientation labels
     ctx.fillStyle = "rgba(255, 255, 255, 0.7)";

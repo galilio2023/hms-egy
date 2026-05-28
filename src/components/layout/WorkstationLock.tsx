@@ -8,6 +8,7 @@ import { Lock, Unlock, UserMinus, ShieldAlert, Loader2, KeyRound } from "lucide-
 import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
 import { type User } from "@/types/auth-api.types";
+import { purgeSyncEngineKey } from "@/lib/offline/sync-engine";
 
 export default function WorkstationLock() {
   const { isLocked, unlockStation } = useWorkstation();
@@ -56,6 +57,7 @@ export default function WorkstationLock() {
 
   const handleSwitchUser = async () => {
     try {
+      purgeSyncEngineKey();
       await signOut();
       localStorage.removeItem("workstation_locked");
       window.location.href = `/${locale}/login`; // Force redirect and reload state

@@ -999,6 +999,34 @@ Transcript: "${transcript}"`;
       vitals.oxygenSaturation = o2Match[1];
     }
 
+    // Validate parsed vitals before assigning to prevent clinical garbage inputs or parsing anomalies
+    if (vitals.temperature) {
+      const t = parseFloat(vitals.temperature);
+      if (isNaN(t) || t < 30 || t > 45) {
+        vitals.temperature = undefined; // Discard invalid/extreme temperature
+      }
+    }
+    if (vitals.bpSystolic && vitals.bpDiastolic) {
+      const sys = parseInt(vitals.bpSystolic);
+      const dia = parseInt(vitals.bpDiastolic);
+      if (isNaN(sys) || isNaN(dia) || sys < 50 || sys > 250 || dia < 30 || dia > 150) {
+        vitals.bpSystolic = undefined;
+        vitals.bpDiastolic = undefined; // Discard invalid blood pressure readings
+      }
+    }
+    if (vitals.heartRate) {
+      const hr = parseInt(vitals.heartRate);
+      if (isNaN(hr) || hr < 20 || hr > 300) {
+        vitals.heartRate = undefined; // Discard invalid heart rates
+      }
+    }
+    if (vitals.oxygenSaturation) {
+      const o2 = parseInt(vitals.oxygenSaturation);
+      if (isNaN(o2) || o2 < 10 || o2 > 100) {
+        vitals.oxygenSaturation = undefined; // Discard invalid oxygen saturation
+      }
+    }
+
     // B. Keyword Classifier for Symptoms & Diagnoses
     if (text.includes("صداع") || text.includes("حرارة") || text.includes("كحة") || text.includes("سخونية") || text.includes("رشح")) {
       symptoms = "المريض يعاني من صداع، ارتفاع في درجة الحرارة، وكحة حادة مستمرة.";

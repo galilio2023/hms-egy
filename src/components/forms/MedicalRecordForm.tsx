@@ -904,6 +904,9 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
             {/* Simulated Audio Telemetry Scribe */}
             <div className="p-5 rounded-2xl border border-slate-800 bg-black/60 space-y-4 text-center">
               <div className="flex flex-col items-center gap-3">
+                <div className="text-[9px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border border-amber-500/20">
+                  {isRtl ? "وضع محاكاة الميكروفون - العرض التجريبي فقط" : "Simulation Mode - Demo Sandbox Only"}
+                </div>
                 {isRecording ? (
                   <div className="flex items-center gap-1 h-8">
                     {[1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2, 1].map((h, i) => (

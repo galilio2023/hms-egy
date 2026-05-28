@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useSession, signOut } from "@/lib/auth/client";
 import { useParams } from "next/navigation";
+import { purgeSyncEngineKey } from "@/lib/offline/sync-engine";
 import { 
   LayoutDashboard, 
   Users, 
@@ -219,6 +220,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
   };
 
   const handleLogout = async () => {
+    purgeSyncEngineKey();
     await signOut();
     router.push("/login");
   };

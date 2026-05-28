@@ -39,6 +39,18 @@ export function initializeSyncEngineKey(secretFromSession: string) {
   }
 }
 
+/**
+ * Safely purges the dynamic session keys and secrets upon user logout.
+ * Prevents session-hijacking of local IndexedDB data on shared hospital terminal computers.
+ */
+export function purgeSyncEngineKey() {
+  sessionSecret = null;
+  cryptoKeyCache = null;
+  if (typeof window !== "undefined") {
+    console.log("[EDGE SECURITY] Successfully purged dynamic encryption keys from memory.");
+  }
+}
+
 async function getCryptoKey(secret: string): Promise<CryptoKey> {
   if (cryptoKeyCache) return cryptoKeyCache;
   const encoder = new TextEncoder();

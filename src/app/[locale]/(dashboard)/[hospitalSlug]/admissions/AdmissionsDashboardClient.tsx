@@ -158,6 +158,23 @@ export default function AdmissionsDashboardClient({
   // Selection states
   const [selectedBed, setSelectedBed] = useState<BedDataRow | null>(null);
   
+  // Memoize MEWS score calculations for the selected patient's vitals history to prevent redundant calculations on every render pass
+  const memoizedMewsHistory = useMemo(() => {
+    const patientId = selectedBed?.patientId;
+    if (!patientId) return {};
+    const patientVitals = vitalsHistory[patientId] || [];
+    const results: Record<string, ReturnType<typeof calculateMEWS>> = {};
+    for (const v of patientVitals) {
+      results[v.id] = calculateMEWS({
+        systolicBp: v.bloodPressureSystolic,
+        heartRate: v.heartRate,
+        respiratoryRate: v.respiratoryRate,
+        temperature: v.temperature,
+      });
+    }
+    return results;
+  }, [selectedBed?.patientId, vitalsHistory]);
+  
   // New Admission Dialog fields
   const [patientQuery, setPatientQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchedPatient[]>([]);
@@ -1057,7 +1074,7 @@ export default function AdmissionsDashboardClient({
                     </thead>
                     <tbody className="divide-y divide-border/40">
                       {vitalsHistory[selectedBed.patientId].map((v) => {
-                        const mews = calculateMEWS({
+                        const mews = memoizedMewsHistory[v.id] || calculateMEWS({
                           systolicBp: v.bloodPressureSystolic,
                           heartRate: v.heartRate,
                           respiratoryRate: v.respiratoryRate,
