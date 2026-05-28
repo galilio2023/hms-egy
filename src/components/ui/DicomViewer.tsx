@@ -10,7 +10,7 @@
 
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -43,6 +43,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   // Layout states for responsive resizing
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const observerRef = useRef<ResizeObserver | null>(null);
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Code Review Fix: Use callback ref for ResizeObserver to ensure robust initialization
   // and cleanup, preventing potential memory leaks in non-React 19 environments.
@@ -51,15 +52,16 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
       observerRef.current.disconnect();
       observerRef.current = null;
     }
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
 
     if (node) {
-      let timeoutId: NodeJS.Timeout | null = null;
       const resizeObserver = new ResizeObserver((entries) => {
         const entry = entries[0];
         if (entry && entry.contentRect.width > 0) {
           // Debounce dimension updates to prevent layout thrashing
-          if (timeoutId) clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => {
+          resizeTimeoutRef.current = setTimeout(() => {
             setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
           }, 100);
         }
@@ -281,17 +283,22 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
             <span className="text-xs font-semibold">{isRtl ? "جاري تحميل فحص DICOM..." : "Streaming DICOM slices..."}</span>
           </div>
         ) : (
-          <canvas 
-            ref={canvasRef} 
-            width={640} 
-            height={360} 
-            className="w-full h-full object-contain cursor-move"
-            style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)` }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUpOrLeave}
-            onMouseLeave={handleMouseUpOrLeave}
-          />
+          <>
+            <div className="absolute top-2 right-2 z-10 bg-rose-600/95 text-white font-bold text-[9px] px-2 py-0.5 rounded-md border border-rose-500 shadow-md animate-pulse">
+              {isRtl ? "معاينة غير معايرة" : "NON-DIAGNOSTIC PREVIEW"}
+            </div>
+            <canvas
+              ref={canvasRef}
+              width={640}
+              height={360}
+              className="w-full h-full object-contain cursor-move"
+              style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)` }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUpOrLeave}
+              onMouseLeave={handleMouseUpOrLeave}
+            />
+          </>
         )}
 
         {/* Slice selection navigator overlays */}

@@ -431,3 +431,10 @@ export class LocalSyncEngine {
 }
 
 export const edgeSyncEngine = new LocalSyncEngine();
+
+// Code Review Fix: Session-end safety trigger for shared Egyptian hospital terminals
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    purgeSyncEngineKey();
+  });
+}

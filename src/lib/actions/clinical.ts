@@ -837,7 +837,7 @@ export interface AmbientScribeResult {
  * transcripts to comply with Egyptian Data Protection Law No. 151 of 2020 cross-border sovereignty.
  * Scrubs explicit National IDs, phone numbers, and common name prefixes.
  */
-export function anonymizePatientData(text: string): string {
+function anonymizePatientData(text: string): string {
   let sanitized = text;
 
   // 1. Scrub 14-digit Egyptian National ID patterns (Precise match for 2nd/3rd/4th century births)
@@ -857,7 +857,9 @@ export function anonymizePatientData(text: string): string {
   // Code Review Fix: Use Unicode property escapes for robust Arabic character detection
   // This ensures coverage for Madda, Hamza, and other variants often missed by basic [أ-ي] ranges.
   const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+(\\p{Script=Arabic}+(?:\\s+\\p{Script=Arabic}+)?)`, "gu");
-  const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "gu");
+  
+  // Code Review Fix: Expand English prefix regex to capture hyphenated or space-separated compound names
+  const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Z][a-zA-Z]*(?:[-'\\s][A-Z][a-zA-Z]*)?`, "gu");
   
   sanitized = sanitized.replace(prefixPatternAr, (match) => {
     const parts = match.split(/\s+/);
@@ -871,7 +873,7 @@ export function anonymizePatientData(text: string): string {
 
   // 4. Scrub explicit name mentions like "Patient name is [X]" or "اسمه [X]"
   // Code Review Fix: Use Unicode property escapes here as well for clinical safety.
-  sanitized = sanitized.replace(/(?:Patient\s+name\s+is|His\s+name\s+is|Her\s+name\s+is|اسم\s+المريض|اسمه|اسمها)\s+(\\p{Script=Arabic}+|[A-Zأ-ي][a-zأ-ي]*)/gui, (match) => {
+  sanitized = sanitized.replace(/(?:Patient\s+name\s+is|His\s+name\s+is|Her\s+name\s+is|اسم\s+المريض|اسمه|اسمها)\s+(\p{Script=Arabic}+|[A-Zأ-ي][a-zأ-ي]*)/gui, (match) => {
     const parts = match.split(/\s+/);
     const lastPart = parts.pop();
     return `${parts.join(" ")} [PATIENT_NAME]`;
