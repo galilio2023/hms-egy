@@ -128,7 +128,10 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
 
     const img = new Image();
     // Default to high-fidelity X-ray placeholder if no URL is attached
-    img.src = imageUrl || "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80";
+    // Code Review Fix: Dynamically replace {slice} token if provided to prevent static clinical hazards
+    img.src = imageUrl 
+      ? (imageUrl.includes("{slice}") ? imageUrl.replace("{slice}", String(currentSlice)) : imageUrl)
+      : "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80";
     img.crossOrigin = "anonymous";
     img.onload = () => {
       if (isMounted) {

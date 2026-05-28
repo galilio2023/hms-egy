@@ -838,7 +838,8 @@ export interface AmbientScribeResult {
  * Scrubs explicit National IDs, phone numbers, and common name prefixes.
  */
 function anonymizePatientData(text: string): string {
-  let sanitized = text;
+  // Code Review Fix: Pre-convert Eastern Arabic digits to Latin digits
+  let sanitized = latinizeNumerals(text);
 
   // 1. Scrub 14-digit Egyptian National ID patterns (Precise match for 2nd/3rd/4th century births)
   sanitized = sanitized.replace(/\b[234]\d{13}\b/g, "[NATIONAL_ID]");
@@ -855,9 +856,10 @@ function anonymizePatientData(text: string): string {
   const namePrefixesEn = ["Patient", "Mr.", "Mrs.", "Ms.", "Dr.", "A/O", "Madam", "Miss"];
   
   // Code Review Fix: Expand Arabic prefix pattern to capture conversational verbs preceding standalone names
+  // Code Review Fix: Allow longer matches for compound multi-word Egyptian names
   const verbPrefixesAr = ["قال", "قالت", "دخل", "دخلت", "جاء", "زار", "زارت", "اسم"];
   const combinedPatternAr = new RegExp(
-    `(?:${[...namePrefixesAr, ...verbPrefixesAr].join("|")})\\s+(\\p{Script=Arabic}+(?:\\s+\\p{Script=Arabic}+)?)`, 
+    `(?:${[...namePrefixesAr, ...verbPrefixesAr].join("|")})\\s+([\\p{Script=Arabic}\\s]{3,25})`, 
     "gu"
   );
   

@@ -4,6 +4,7 @@ import { hospitals, hospitalSettings } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
 import Big from "big.js";
 import { createHash } from "crypto";
+import { formatInTimeZone } from "date-fns-tz";
 import { validateNationalId } from "@/lib/utils/egypt";
 
 export type InvoiceWithRelations = typeof invoices.$inferSelect & {
@@ -139,7 +140,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
     },
     documentType: "I",
     documentTypeVersion: "1.0",
-    dateTimeIssued: invoice.createdAt ? new Date(invoice.createdAt).toISOString() : new Date().toISOString(),
+    dateTimeIssued: formatInTimeZone(invoice.createdAt || new Date(), "Africa/Cairo", "yyyy-MM-dd'T'HH:mm:ss'Z'"),
     taxpayerActivityCode: settings?.etaTaxpayerActivityCode || "8610",
     internalID: invoice.invoiceNumber,
     payment: {
@@ -274,7 +275,7 @@ export function transformInvoiceToETAReceipt(
     receiptNumber: invoice.invoiceNumber,
     uuid: receiptUuid,
     previousReceiptUUID: previousReceiptUUID || "0000000000000000000000000000000000000000000000000000000000000000",
-    dateTimeIssued: invoice.createdAt ? new Date(invoice.createdAt).toISOString() : new Date().toISOString(),
+    dateTimeIssued: formatInTimeZone(invoice.createdAt || new Date(), "Africa/Cairo", "yyyy-MM-dd'T'HH:mm:ss'Z'"),
     receiptType: "S",
     receiptVersion: "1.0",
     seller: {

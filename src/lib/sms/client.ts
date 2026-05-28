@@ -101,11 +101,6 @@ export async function sendResilientClinicalAlert(payload: OutboundMessagePayload
   // 1. Verify Rate Limiting for Patient (preventing loops and billing drain)
   if (patientId) {
     try {
-      // Code Review Fix: Standardize daily rate limit boundary to Cairo timezone
-      const cairoNow = toZonedTime(new Date(), "Africa/Cairo");
-      cairoNow.setHours(0, 0, 0, 0);
-      const todayUtcBoundary = new Date(cairoNow.getTime());
-
       const [sentTodayCount] = await db
         .select({ count: sql<number>`count(*)::integer` })
         .from(sentReminders)
@@ -113,7 +108,7 @@ export async function sendResilientClinicalAlert(payload: OutboundMessagePayload
           and(
             eq(sentReminders.patientId, patientId),
             eq(sentReminders.success, true),
-            sql`${sentReminders.sentAt} >= ${todayUtcBoundary}`
+            sql`timezone('Africa/Cairo', ${sentReminders.sentAt})::date = CURRENT_DATE`
           )
         );
 

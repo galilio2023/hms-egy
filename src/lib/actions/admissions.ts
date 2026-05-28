@@ -344,8 +344,13 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
       // 2. Proactively trigger out-of-band alerts asynchronously in the background using Next.js 15 after() API
       if (mews.score >= 5) {
         after(() => {
-          dispatchCriticalAlerts(hospitalId, payload.patientId, result.vitalId, mews.score)
-            .catch((err) => console.error("[CRITICAL ALERT GATEWAY] Asynchronous alert dispatch failed:", err));
+          withTenantContext(hospitalId, async (tx) => {
+            try {
+              await dispatchCriticalAlerts(hospitalId, payload.patientId, result.vitalId!, mews.score, tx);
+            } catch (err) {
+              console.error("[CRITICAL ALERT GATEWAY] Asynchronous alert dispatch failed:", err);
+            }
+          }).catch((err) => console.error("[TENANT CONTEXT] Failed to establish background context for alerts:", err));
         });
       }
     }
@@ -367,11 +372,12 @@ async function dispatchCriticalAlerts(
   hospitalId: string,
   patientId: string,
   vitalId: string,
-  mewsScore: number
+  mewsScore: number,
+  tx: Parameters<Parameters<typeof withTenantContext>[1]>[0]
 ) {
   try {
-    // A. Fetch Patient details
-    const [patient] = await db
+    // A. Fetch Patient details using the provided transaction context
+    const [patient] = await tx
       .select()
       .from(patients)
       .where(and(eq(patients.id, patientId), eq(patients.hospitalId, hospitalId)))
@@ -379,8 +385,8 @@ async function dispatchCriticalAlerts(
 
     if (!patient) return;
 
-    // B. Fetch attending doctor details from active admissions
-    const [activeAdmission] = await db
+    // B. Fetch attending doctor details from active admissions using transaction context
+    const [activeAdmission] = await tx
       .select({
         doctorNameAr: staff.nameAr,
         doctorNameEn: staff.nameEn,
