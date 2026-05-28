@@ -102,6 +102,12 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   // Load image element
   useEffect(() => {
     let isMounted = true;
+
+    // Code Review Fix: IMMEDIATELY reset loading state to prevent drawing stale imagery
+    // from a previous patient while the new scan is streaming.
+    setImageLoaded(false);
+    imageRef.current = null;
+
     const isRawDicom = imageUrl?.toLowerCase().endsWith(".dcm");
     if (isRawDicom) {
       setTimeout(() => {

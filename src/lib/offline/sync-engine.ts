@@ -33,7 +33,7 @@ export function initializeSyncEngineKey(secretFromSession: string) {
   sessionSecret = secretFromSession;
   cryptoKeyCache = null; // Reset cache so key is derived using new secret
   if (typeof window !== "undefined") {
-    edgeSyncEngine.loadFromPersistentCache().catch((err) =>
+    edgeSyncEngine.ensureInitialized().catch((err) =>
       console.error("[EDGE CACHE] Failed to restore from persistent cache with session key:", err)
     );
   }
@@ -219,17 +219,26 @@ export class LocalSyncEngine {
   private isSyncing = false;
   private isOnline = true;
   private onStatusChangeCallbacks: ((online: boolean) => void)[] = [];
+  private initPromise: Promise<void> | null = null;
 
   constructor() {
     // Client-side automatic telemetry hook
     if (typeof window !== "undefined") {
       this.isOnline = navigator.onLine;
-      this.loadFromPersistentCache().catch((err) =>
-        console.error("[EDGE CACHE] Failed to restore from persistent cache:", err)
-      );
+      // Do not auto-initialize here since key isn't registered yet
       window.addEventListener("online", () => this.setOnlineStatus(true));
       window.addEventListener("offline", () => this.setOnlineStatus(false));
     }
+  }
+
+  /**
+   * Ensures the persistent cache has been loaded into memory before proceeding with writes.
+   * Prevents race condition where queueWrite overwrites existing outbox if called during initialization.
+   */
+  async ensureInitialized(): Promise<void> {
+    if (this.initPromise) return this.initPromise;
+    this.initPromise = this.loadFromPersistentCache();
+    return this.initPromise;
   }
 
   /**
@@ -263,6 +272,9 @@ export class LocalSyncEngine {
     if (!sessionSecret) {
       throw new Error("[SYNC ENGINE SECURITY] Attempted offline storage write before secure session/encryption initialization. Action blocked to prevent PII leak.");
     }
+
+    // Ensure the cache has finished loading before we append and save
+    await this.ensureInitialized();
 
     const op: SyncOperation = {
       ...operation,

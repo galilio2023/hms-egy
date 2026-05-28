@@ -11,6 +11,7 @@ import { sentReminders } from "@db/schema/system";
 import { hospitalSettings } from "@db/schema/core";
 import { eq, and, sql } from "drizzle-orm";
 import { MAX_DAILY_SMS_PER_PATIENT } from "@/lib/utils/constants";
+import { toZonedTime } from "date-fns-tz";
 
 // Provider configs
 const CEQUENS_API_URL = process.env.CEQUENS_API_URL || "https://api.cequens.com/sms/v1/messages";
@@ -100,8 +101,10 @@ export async function sendResilientClinicalAlert(payload: OutboundMessagePayload
   // 1. Verify Rate Limiting for Patient (preventing loops and billing drain)
   if (patientId) {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Code Review Fix: Standardize daily rate limit boundary to Cairo timezone
+      const cairoNow = toZonedTime(new Date(), "Africa/Cairo");
+      cairoNow.setHours(0, 0, 0, 0);
+      const todayUtcBoundary = new Date(cairoNow.getTime());
 
       const [sentTodayCount] = await db
         .select({ count: sql<number>`count(*)::integer` })
@@ -110,7 +113,7 @@ export async function sendResilientClinicalAlert(payload: OutboundMessagePayload
           and(
             eq(sentReminders.patientId, patientId),
             eq(sentReminders.success, true),
-            sql`${sentReminders.sentAt} >= ${today}`
+            sql`${sentReminders.sentAt} >= ${todayUtcBoundary}`
           )
         );
 

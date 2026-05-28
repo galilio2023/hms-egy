@@ -854,15 +854,18 @@ function anonymizePatientData(text: string): string {
   const namePrefixesAr = ["المريض", "أستاذ", "أستاذة", "دكتور", "دكتورة", "يا", "مدام", "أنسة"];
   const namePrefixesEn = ["Patient", "Mr.", "Mrs.", "Ms.", "Dr.", "A/O", "Madam", "Miss"];
   
-  // Code Review Fix: Use Unicode property escapes for robust Arabic character detection
-  // This ensures coverage for Madda, Hamza, and other variants often missed by basic [أ-ي] ranges.
-  const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+(\\p{Script=Arabic}+(?:\\s+\\p{Script=Arabic}+)?)`, "gu");
+  // Code Review Fix: Expand Arabic prefix pattern to capture conversational verbs preceding standalone names
+  const verbPrefixesAr = ["قال", "قالت", "دخل", "دخلت", "جاء", "زار", "زارت", "اسم"];
+  const combinedPatternAr = new RegExp(
+    `(?:${[...namePrefixesAr, ...verbPrefixesAr].join("|")})\\s+(\\p{Script=Arabic}+(?:\\s+\\p{Script=Arabic}+)?)`, 
+    "gu"
+  );
   
   // Code Review Fix: Expand English prefix regex to capture hyphenated or space-separated compound names
   const escapedPrefixesEn = namePrefixesEn.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   const prefixPatternEn = new RegExp(`(?:${escapedPrefixesEn.join("|")})\\s+[A-Z][a-zA-Z]*(?:[-'\\s][A-Z][a-zA-Z]*)?`, "gu");
   
-  sanitized = sanitized.replace(prefixPatternAr, (match) => {
+  sanitized = sanitized.replace(combinedPatternAr, (match) => {
     const parts = match.split(/\s+/);
     return `${parts[0]} [PATIENT_NAME]`;
   });
