@@ -854,8 +854,9 @@ export function anonymizePatientData(text: string): string {
   const namePrefixesAr = ["المريض", "أستاذ", "أستاذة", "دكتور", "دكتورة", "يا", "مدام", "أنسة"];
   const namePrefixesEn = ["Patient", "Mr.", "Mrs.", "Ms.", "Dr.", "A/O", "Madam", "Miss"];
   
-  // Code Review Fix: Use explicit Arabic word boundaries and handle compound names
-  const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+([أ-ي]+(?:\\s+[أ-ي]+)?)`, "g");
+  // Code Review Fix: Use Unicode property escapes for robust Arabic character detection
+  // This ensures coverage for Madda, Hamza, and other variants often missed by basic [أ-ي] ranges.
+  const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+(\\p{Script=Arabic}+(?:\\s+\\p{Script=Arabic}+)?)`, "gu");
   const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "g");
   
   sanitized = sanitized.replace(prefixPatternAr, (match) => {
@@ -869,7 +870,8 @@ export function anonymizePatientData(text: string): string {
   });
 
   // 4. Scrub explicit name mentions like "Patient name is [X]" or "اسمه [X]"
-  sanitized = sanitized.replace(/(?:Patient\s+name\s+is|His\s+name\s+is|Her\s+name\s+is|اسم\s+المريض|اسمه|اسمها)\s+[A-Zأ-ي][a-zأ-ي]*/gi, (match) => {
+  // Code Review Fix: Use Unicode property escapes here as well for clinical safety.
+  sanitized = sanitized.replace(/(?:Patient\s+name\s+is|His\s+name\s+is|Her\s+name\s+is|اسم\s+المريض|اسمه|اسمها)\s+(\\p{Script=Arabic}+|[A-Zأ-ي][a-zأ-ي]*)/gui, (match) => {
     const parts = match.split(/\s+/);
     const lastPart = parts.pop();
     return `${parts.join(" ")} [PATIENT_NAME]`;

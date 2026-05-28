@@ -32,7 +32,6 @@ interface DicomViewerProps {
 
 export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = false }: DicomViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   
   // Viewport states
   const [zoom, setZoom] = useState(1.0);
@@ -44,25 +43,24 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   // Layout states for responsive resizing
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // Handle responsive resizing via ResizeObserver to prevent pixelation/distortion
-  useEffect(() => {
-    if (!containerRef.current) return;
+  // Code Review Fix: Use callback ref for ResizeObserver to ensure robust initialization
+  // when DOM nodes are dynamically rendered (e.g. inside Tabs or Accordions)
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
     
     let timeoutId: NodeJS.Timeout | null = null;
     const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          // Code Review Fix: Debounce dimension updates to prevent infinite layout loops
-          if (timeoutId) clearTimeout(timeoutId);
-          timeoutId = setTimeout(() => {
-            setDimensions({ width, height });
-          }, 100);
-        }
+      const entry = entries[0];
+      if (entry && entry.contentRect.width > 0) {
+        // Debounce dimension updates to prevent layout thrashing
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
+        }, 100);
       }
     });
     
-    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(node);
     return () => {
       resizeObserver.disconnect();
       if (timeoutId) clearTimeout(timeoutId);

@@ -1073,12 +1073,7 @@ export default function AdmissionsDashboardClient({
                     </thead>
                     <tbody className="divide-y divide-border/40">
                       {(selectedBed ? vitalsHistory[selectedBed.patientId] || [] : []).map((v) => {
-                        const mews = memoizedMewsHistory[v.id] || calculateMEWS({
-                          systolicBp: v.bloodPressureSystolic,
-                          heartRate: v.heartRate,
-                          respiratoryRate: v.respiratoryRate,
-                          temperature: v.temperature,
-                        });
+                        const mews = memoizedMewsHistory[v.id];
 
                         return (
                           <tr key={v.id} className="hover:bg-muted/40 transition-colors">
