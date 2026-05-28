@@ -24,7 +24,6 @@ import {
   CalendarCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { createAppointment, addToWaitingList, getDoctorAvailability } from "@/lib/actions/appointments";
 import { isEgyptianPublicHoliday } from "@/lib/utils/egypt";
@@ -110,11 +109,12 @@ export function BookingWizardClient({
     if (selectedDoctor && selectedDate) {
       let isMounted = true;
       // 1. Cairo Timezone weekend check (Friday = 5, Saturday = 6)
-      // Code Review Improvement: We use direct local date generation from YYYY-MM-DD components.
-      // This is highly reliable for locking the appointment to the Egyptian doctor's 
-      // calendar view regardless of whether the patient is booking from Cairo or abroad.
+      // Code Review Fix: Evaluation must be strictly in Cairo's timezone offset to prevent day-shift skews.
       const [year, month, dayNum] = selectedDate.split("-").map(Number);
-      const dateToCheck = new Date(year, month - 1, dayNum);
+      
+      // Create a UTC date representation of the selected day (midday to avoid edge offsets)
+      const utcDate = new Date(Date.UTC(year, month - 1, dayNum, 12, 0, 0));
+      const dateToCheck = toZonedTime(utcDate, "Africa/Cairo");
       
       const day = dateToCheck.getDay();
       const isWeekend = day === 5 || day === 6;

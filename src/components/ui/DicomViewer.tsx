@@ -128,6 +128,10 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     // Code Review Fix: Use explicit default dimensions or check clientWidth/Height to prevent zero-dimension anomalies
     const displayWidth = (canvas.clientWidth > 0) ? canvas.clientWidth : 640;
     const displayHeight = (canvas.clientHeight > 0) ? canvas.clientHeight : 360;
+
+    // Code Review Fix: Defer drawing until layout stabilizes to avoid crashes or scaling anomalies
+    if (displayWidth === 0 || displayHeight === 0) return;
+
     const targetWidth = Math.round(displayWidth * dpr);
     const targetHeight = Math.round(displayHeight * dpr);
     

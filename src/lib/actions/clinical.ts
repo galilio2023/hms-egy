@@ -982,7 +982,7 @@ export async function parseAmbientConsultationAction(
           interface ClaudeToolUse {
             type: string;
             name: string;
-            input: any;
+            input: Record<string, string | number | boolean | null | undefined>;
           }
           const toolUse = resJson.content?.find((c: ClaudeToolUse) => c.type === "tool_use" && c.name === "provide_ambient_scribe_results");
           if (toolUse) {
