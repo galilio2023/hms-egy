@@ -24,6 +24,7 @@ import {
   CalendarCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toZonedTime } from "date-fns-tz";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { createAppointment, addToWaitingList, getDoctorAvailability } from "@/lib/actions/appointments";
 import { isEgyptianPublicHoliday } from "@/lib/utils/egypt";

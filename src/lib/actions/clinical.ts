@@ -857,7 +857,7 @@ export function anonymizePatientData(text: string): string {
   // Code Review Fix: Use Unicode property escapes for robust Arabic character detection
   // This ensures coverage for Madda, Hamza, and other variants often missed by basic [أ-ي] ranges.
   const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+(\\p{Script=Arabic}+(?:\\s+\\p{Script=Arabic}+)?)`, "gu");
-  const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "g");
+  const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "gu");
   
   sanitized = sanitized.replace(prefixPatternAr, (match) => {
     const parts = match.split(/\s+/);

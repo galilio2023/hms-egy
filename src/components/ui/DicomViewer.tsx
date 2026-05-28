@@ -42,29 +42,32 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   
   // Layout states for responsive resizing
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const observerRef = useRef<ResizeObserver | null>(null);
 
   // Code Review Fix: Use callback ref for ResizeObserver to ensure robust initialization
-  // when DOM nodes are dynamically rendered (e.g. inside Tabs or Accordions)
+  // and cleanup, preventing potential memory leaks in non-React 19 environments.
   const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-    
-    let timeoutId: NodeJS.Timeout | null = null;
-    const resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry && entry.contentRect.width > 0) {
-        // Debounce dimension updates to prevent layout thrashing
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
-        }, 100);
-      }
-    });
-    
-    resizeObserver.observe(node);
-    return () => {
-      resizeObserver.disconnect();
-      if (timeoutId) clearTimeout(timeoutId);
-    };
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
+    if (node) {
+      let timeoutId: NodeJS.Timeout | null = null;
+      const resizeObserver = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (entry && entry.contentRect.width > 0) {
+          // Debounce dimension updates to prevent layout thrashing
+          if (timeoutId) clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
+          }, 100);
+        }
+      });
+      
+      resizeObserver.observe(node);
+      observerRef.current = resizeObserver;
+    }
   }, []);
   
   // Panning & dragging states

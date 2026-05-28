@@ -142,6 +142,11 @@ export default function HousekeepingDashboardClient({
   const isRtl = locale === "ar";
   const dateLocale = isRtl ? ar : enUS;
 
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Tabs state: "queue" or "map"
   const [activeTab, setActiveTab] = useState<"queue" | "map">("queue");
 
@@ -199,7 +204,9 @@ export default function HousekeepingDashboardClient({
     const inProgressCount = tasks.filter((task) => task.status === "in_progress").length;
 
     // 4. Overdue (waiting > 2 hours) Count
-    // To ensure hook purity, we use a fixed reference time or pass it in if needed
+    // Code Review Fix: Use stable reference and only initialize on client to prevent hydration mismatch
+    if (!mounted) return { avgMinutes, bedsCleanedTodayCount, inProgressCount, overdueCount: 0 };
+
     const now = new Date();
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     const overdueCount = tasks.filter(
@@ -212,7 +219,7 @@ export default function HousekeepingDashboardClient({
       inProgressCount,
       overdueCount
     };
-  }, [tasks, completedTasks]);
+  }, [tasks, completedTasks, mounted]);
 
   // Filters tasks
   const filteredTasks = useMemo(() => {
