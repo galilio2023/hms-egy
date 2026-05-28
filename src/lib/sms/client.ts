@@ -8,6 +8,7 @@
 
 import { db } from "@/lib/db";
 import { sentReminders } from "@db/schema/system";
+import { hospitalSettings } from "@db/schema/core";
 import { eq, and, sql } from "drizzle-orm";
 import { MAX_DAILY_SMS_PER_PATIENT } from "@/lib/utils/constants";
 
@@ -141,7 +142,7 @@ export async function sendResilientClinicalAlert(payload: OutboundMessagePayload
   // 2. Resilient Channel Routing
   for (const channel of channelPriority) {
     if (channel === "whatsapp") {
-      const waResult = await sendWhatsAppMessage(formattedPhone, messageText, payload.whatsappTemplate);
+      const waResult = await sendWhatsAppMessage(hospitalId, formattedPhone, messageText, payload.whatsappTemplate);
       if (waResult.success) {
         await logSentReminder(payload, "whatsapp", true, waResult.providerUsed);
         return waResult;
@@ -297,6 +298,7 @@ async function sendVictoryLinkSms(phone: string, text: string): Promise<SendResu
  * Out-of-band WhatsApp Business API Client
  */
 async function sendWhatsAppMessage(
+  hospitalId: string,
   phone: string,
   text: string,
   template?: { name: string; languageCode: string; parameters: string[] }
@@ -312,8 +314,31 @@ async function sendWhatsAppMessage(
 
   // Strict template validator for Meta Business API template-matching constraints
   if (template) {
-    const APPROVED_TEMPLATES = ["mews_critical_alert"];
-    if (!APPROVED_TEMPLATES.includes(template.name)) {
+    // Code Review Fix: Move APPROVED_TEMPLATES to DB-backed hospital_settings
+    let approvedTemplates: string[] = ["mews_critical_alert"];
+    
+    try {
+      const settings = await db
+        .select({ approvedWhatsappTemplates: hospitalSettings.approvedWhatsappTemplates })
+        .from(hospitalSettings)
+        .where(eq(hospitalSettings.hospitalId, hospitalId))
+        .limit(1)
+        .then(res => res[0]);
+
+      if (settings?.approvedWhatsappTemplates && settings.approvedWhatsappTemplates.length > 0) {
+        approvedTemplates = settings.approvedWhatsappTemplates;
+      } else if (process.env.APPROVED_WHATSAPP_TEMPLATES) {
+        // Fallback to Env if DB settings are empty
+        approvedTemplates = process.env.APPROVED_WHATSAPP_TEMPLATES.split(",").map((t) => t.trim());
+      }
+    } catch (dbErr) {
+      console.warn("[WHATSAPP VALIDATOR] Failed to fetch hospital settings, falling back to defaults:", dbErr);
+      if (process.env.APPROVED_WHATSAPP_TEMPLATES) {
+        approvedTemplates = process.env.APPROVED_WHATSAPP_TEMPLATES.split(",").map((t) => t.trim());
+      }
+    }
+
+    if (!approvedTemplates.includes(template.name)) {
       return {
         success: false,
         channel: "whatsapp",

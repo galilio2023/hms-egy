@@ -125,8 +125,9 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
 
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     // Set internal resolution matching devicePixelRatio for clinical-grade sharpness
-    const displayWidth = canvas.clientWidth || 640;
-    const displayHeight = canvas.clientHeight || 360;
+    // Code Review Fix: Use explicit default dimensions or check clientWidth/Height to prevent zero-dimension anomalies
+    const displayWidth = (canvas.clientWidth > 0) ? canvas.clientWidth : 640;
+    const displayHeight = (canvas.clientHeight > 0) ? canvas.clientHeight : 360;
     const targetWidth = Math.round(displayWidth * dpr);
     const targetHeight = Math.round(displayHeight * dpr);
     

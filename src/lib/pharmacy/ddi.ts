@@ -61,7 +61,8 @@ export async function checkDrugInteractions(
   if (allIdentifiers.length >= 2) {
     const lowerIdentifiers = allIdentifiers.map(n => n.toLowerCase());
 
-    // Optimization: First attempt an exact case-insensitive match for generic names (Fast Path)
+    // Code Review Optimization: Instead of complex AND/OR chains in SQL which bypass indices,
+    // we fetch all interactions involving any of the prescribed drugs and resolve pairs in-memory.
     interface InteractionMatch {
       drug1Name: string;
       drug2Name: string;
@@ -74,7 +75,8 @@ export async function checkDrugInteractions(
       clinicalEffectEn: string | null;
     }
 
-    const fastPathMatches: InteractionMatch[] = await tx
+    // Single pass query for ANY interactions involving these drugs
+    const allRelevantInteractions: InteractionMatch[] = await tx
       .select({
         drug1Name: medicationInteractions.drug1Name,
         drug2Name: medicationInteractions.drug2Name,
@@ -89,34 +91,41 @@ export async function checkDrugInteractions(
       .from(medicationInteractions)
       .where(
         or(
-          // Brand name exact match
-          and(
-            inArray(sql`lower(${medicationInteractions.drug1Name})`, lowerIdentifiers),
-            inArray(sql`lower(${medicationInteractions.drug2Name})`, lowerIdentifiers)
-          ),
-          // Generic name exact match
-          and(
-            inArray(sql`lower(${medicationInteractions.drug1Generic})`, lowerIdentifiers),
-            inArray(sql`lower(${medicationInteractions.drug2Generic})`, lowerIdentifiers)
-          )
+          inArray(sql`lower(${medicationInteractions.drug1Name})`, lowerIdentifiers),
+          inArray(sql`lower(${medicationInteractions.drug2Name})`, lowerIdentifiers),
+          inArray(sql`lower(${medicationInteractions.drug1Generic})`, lowerIdentifiers),
+          inArray(sql`lower(${medicationInteractions.drug2Generic})`, lowerIdentifiers)
         )
       );
 
-    // Track which identifiers were resolved via fast path
+    // Resolve pairs in-memory using O(1) Set lookup
+    const idSet = new Set(lowerIdentifiers);
     const resolvedIds = new Set<string>();
-    fastPathMatches.forEach((match) => {
-      resolvedIds.add(match.drug1Generic?.toLowerCase() || match.drug1Name.toLowerCase());
-      resolvedIds.add(match.drug2Generic?.toLowerCase() || match.drug2Name.toLowerCase());
-      
-      interactions.push({
-        drug1: match.drug1Name,
-        drug2: match.drug2Name,
-        severity: match.severity as Interaction['severity'],
-        mechanismAr: match.mechanismAr || undefined,
-        mechanismEn: match.mechanismEn || undefined,
-        effectAr: match.clinicalEffectAr || undefined,
-        effectEn: match.clinicalEffectEn || undefined,
-      });
+
+    allRelevantInteractions.forEach((match) => {
+      const d1Name = match.drug1Name.toLowerCase();
+      const d2Name = match.drug2Name.toLowerCase();
+      const d1Gen = match.drug1Generic?.toLowerCase();
+      const d2Gen = match.drug2Generic?.toLowerCase();
+
+      // An interaction is a match ONLY if BOTH participants are in our prescription list
+      const d1Matches = idSet.has(d1Name) || (d1Gen && idSet.has(d1Gen));
+      const d2Matches = idSet.has(d2Name) || (d2Gen && idSet.has(d2Gen));
+
+      if (d1Matches && d2Matches) {
+        resolvedIds.add(d1Gen || d1Name);
+        resolvedIds.add(d2Gen || d2Name);
+        
+        interactions.push({
+          drug1: match.drug1Name,
+          drug2: match.drug2Name,
+          severity: match.severity as Interaction['severity'],
+          mechanismAr: match.mechanismAr || undefined,
+          mechanismEn: match.mechanismEn || undefined,
+          effectAr: match.clinicalEffectAr || undefined,
+          effectEn: match.clinicalEffectEn || undefined,
+        });
+      }
     });
 
     // 2. Fuzzy Path: Resolve unresolved identifiers to canonical generics first

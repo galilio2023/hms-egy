@@ -833,6 +833,43 @@ export interface AmbientScribeResult {
 }
 
 /**
+ * Sanitizes sensitive personal patient identifiers (PII) from conversational
+ * transcripts to comply with Egyptian Data Protection Law No. 151 of 2020 cross-border sovereignty.
+ * Scrubs explicit National IDs, phone numbers, and common name prefixes.
+ */
+export function anonymizePatientData(text: string): string {
+  let sanitized = text;
+
+  // 1. Scrub 14-digit Egyptian National ID patterns (Precise match for 2nd/3rd/4th century births)
+  sanitized = sanitized.replace(/\b[234]\d{13}\b/g, "[NATIONAL_ID]");
+
+  // 2. Scrub phone numbers (international, Egyptian mobile blocks, 10-11 digits)
+  // Target: +20..., 010..., 011..., 012..., 015..., 00201...
+  sanitized = sanitized.replace(/\b(?:\+?20|0)?1[0125]\d{8}\b/g, "[PHONE_NUMBER]");
+  sanitized = sanitized.replace(/\b00201[0125]\d{8}\b/g, "[PHONE_NUMBER]");
+
+  // 3. Scrub common name prefixes/names in Egyptian contexts (Arabic & English)
+  // Captures "المريض علي", "يا علي", "أستاذ أحمد", "Mr. Ahmed", "Patient Sarah"
+  const namePrefixesAr = ["المريض", "أستاذ", "أستاذة", "دكتور", "دكتورة", "يا"];
+  const namePrefixesEn = ["Patient", "Mr.", "Mrs.", "Ms.", "Dr.", "A/O"];
+  
+  const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "g");
+  const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "g");
+  
+  sanitized = sanitized.replace(prefixPatternAr, (match) => {
+    const parts = match.split(/\s+/);
+    return `${parts[0]} [PATIENT_NAME]`;
+  });
+
+  sanitized = sanitized.replace(prefixPatternEn, (match) => {
+    const parts = match.split(/\s+/);
+    return `${parts[0]} [PATIENT_NAME]`;
+  });
+
+  return sanitized;
+}
+
+/**
  * Ambient AI Scribe consultation parser Server Action.
  * Uses Claude AI tool-calling to extract clinical structures, falling back
  * to a rule-based localized medical NLP engine if API key is missing.
@@ -850,119 +887,135 @@ export async function parseAmbientConsultationAction(
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
+  const useLocalLlm = process.env.USE_LOCAL_LLM === "true";
+  const localLlmUrl = process.env.LOCAL_LLM_URL || "http://localhost:8000/v1/chat/completions";
 
-  // 1. Live Claude Structured Extraction if API Key is configured
-  if (apiKey) {
+  const safeTranscript = anonymizePatientData(transcript);
+
+  // 1. AI Scribe Extraction (Priority: Local LLM -> Anthropic Claude -> Rule Engine)
+  if (useLocalLlm || apiKey) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10s SLA timeout
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s SLA timeout for clinical AI
 
     try {
       const prompt = `You are a clinical EMR scribe inside an Egyptian hospital.
-Analyze the following bilingual (Egyptian Arabic colloquial + English medical jargon) consultation transcript between doctor and patient.
-Extract the clinical context and structure it into formal clinical entries. 
-Execute the 'provide_ambient_scribe_results' tool with your structured extraction.
+  Analyze the following bilingual (Egyptian Arabic colloquial + English medical jargon) consultation transcript between doctor and patient.
+  Extract the clinical context and structure it into formal clinical entries.
+  Structure your extraction into a JSON object with: symptoms, diagnosis, soapNotes, and optional vitals (bpSystolic, bpDiastolic, heartRate, temperature, oxygenSaturation).
 
-Transcript: "${transcript}"`;
+  Transcript: "${safeTranscript}"`;
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: "claude-3-5-haiku-20241022",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }],
-          tools: [
-            {
-              name: "provide_ambient_scribe_results",
-              description: "Provides structured clinical data extracted from consultation note.",
-              input_schema: {
-                type: "object",
-                properties: {
-                  symptoms: { type: "string", description: "Subjective patient complaints." },
-                  diagnosis: { type: "string", description: "Formal medical diagnosis." },
-                  soapNotes: { type: "string", description: "Objective clinical findings and management plan." },
-                  bpSystolic: { type: "string", description: "Systolic blood pressure value." },
-                  bpDiastolic: { type: "string", description: "Diastolic blood pressure value." },
-                  heartRate: { type: "string", description: "Heart rate bpm." },
-                  temperature: { type: "string", description: "Body temperature in Celsius." },
-                  oxygenSaturation: { type: "string", description: "SpO2 percentage." }
-                },
-                required: ["symptoms", "diagnosis", "soapNotes"]
+      let data: AmbientScribeResult | null = null;
+
+      if (useLocalLlm) {
+        // Self-Hosted Fallback: Comply with Egypt Law No. 151 of 2020 by keeping data within local sovereign infrastructure
+        const response = await fetch(localLlmUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: "llama-3-8b-instruct",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" }
+          }),
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          const content = resJson.choices?.[0]?.message?.content;
+          if (content) {
+            const parsed = JSON.parse(content);
+            data = {
+              symptoms: parsed.symptoms,
+              diagnosis: parsed.diagnosis,
+              soapNotes: parsed.soapNotes,
+              vitals: {
+                bpSystolic: parsed.bpSystolic,
+                bpDiastolic: parsed.bpDiastolic,
+                heartRate: parsed.heartRate,
+                temperature: parsed.temperature,
+                oxygenSaturation: parsed.oxygenSaturation,
               }
-            }
-          ],
-          tool_choice: { type: "tool", name: "provide_ambient_scribe_results" }
-        })
-      });
-
-      clearTimeout(timeout);
-
-      if (response.ok) {
-        const resJson = await response.json();
-
-        // Defensive guard rails to prevent runtime crashes if API errors or unexpected JSON are returned
-        if (!resJson || !Array.isArray(resJson.content)) {
-          throw new Error("Invalid response structure from Anthropic API.");
+            };
+          }
         }
-        
-        interface ClaudeToolUse {
-          type: "tool_use";
-          name: string;
-          input: {
-            symptoms: string;
-            diagnosis: string;
-            soapNotes: string;
-            bpSystolic?: string;
-            bpDiastolic?: string;
-            heartRate?: string;
-            temperature?: string;
-            oxygenSaturation?: string;
-          };
-          [key: string]: unknown;
-        }
+      } else if (apiKey) {
+        // External Anthropic Call (Requires strict PII sanitization performed above)
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: "claude-3-5-haiku-20241022",
+            max_tokens: 1000,
+            messages: [{ role: "user", content: prompt }],
+            tools: [
+              {
+                name: "provide_ambient_scribe_results",
+                description: "Provides structured clinical data extracted from consultation note.",
+                input_schema: {
+                  type: "object",
+                  properties: {
+                    symptoms: { type: "string", description: "Subjective patient complaints." },
+                    diagnosis: { type: "string", description: "Formal medical diagnosis." },
+                    soapNotes: { type: "string", description: "Objective clinical findings and management plan." },
+                    bpSystolic: { type: "string", description: "Systolic blood pressure value." },
+                    bpDiastolic: { type: "string", description: "Diastolic blood pressure value." },
+                    heartRate: { type: "string", description: "Heart rate bpm." },
+                    temperature: { type: "string", description: "Body temperature in Celsius." },
+                    oxygenSaturation: { type: "string", description: "SpO2 percentage." }
+                  },
+                  required: ["symptoms", "diagnosis", "soapNotes"]
+                }
+              }
+            ],
+            tool_choice: { type: "tool", name: "provide_ambient_scribe_results" }
+          })
+        });
 
-        interface ClaudeMessageContent {
-          type: "text" | "tool_use";
-          [key: string]: unknown;
-        }
-
-        const toolUse = (resJson.content as ClaudeMessageContent[]).find(
-          (c): c is ClaudeToolUse => c.type === "tool_use" && c.name === "provide_ambient_scribe_results"
-        );
-        if (toolUse) {
-          const input = toolUse.input;
-          return {
-            success: true,
-            data: {
+        if (response.ok) {
+          const resJson = await response.json();
+          interface ClaudeToolUse {
+            type: string;
+            name: string;
+            input: any;
+          }
+          const toolUse = resJson.content?.find((c: ClaudeToolUse) => c.type === "tool_use" && c.name === "provide_ambient_scribe_results");
+          if (toolUse) {
+            const input = toolUse.input;
+            data = {
               symptoms: input.symptoms,
               diagnosis: input.diagnosis,
               soapNotes: input.soapNotes,
               vitals: {
-                bpSystolic: input.bpSystolic || undefined,
-                bpDiastolic: input.bpDiastolic || undefined,
-                heartRate: input.heartRate || undefined,
-                temperature: input.temperature || undefined,
-                oxygenSaturation: input.oxygenSaturation || undefined,
+                bpSystolic: input.bpSystolic,
+                bpDiastolic: input.bpDiastolic,
+                heartRate: input.heartRate,
+                temperature: input.temperature,
+                oxygenSaturation: input.oxygenSaturation,
               }
-            }
-          };
+            };
+          }
         }
       }
+
+      clearTimeout(timeout);
+      if (data) return { success: true, data };
+
     } catch (apiErr) {
       clearTimeout(timeout);
-      console.warn("[AMBIENT SCRIBE] Live AI call failed, falling back to clinical rule-engine:", apiErr);
+      console.warn("[AMBIENT SCRIBE] AI call failed, falling back to clinical rule-engine:", apiErr);
     }
   }
 
   // 2. Local Rule-Based Medical NLP Engine Fallback
   // Parsers specifically coded for common Egyptian medical keywords & numbers
   try {
-    const text = latinizeNumerals(transcript.toLowerCase());
+    const text = latinizeNumerals(safeTranscript.toLowerCase());
     
     // Default mock structures
     let symptoms = "Patient presented with general symptoms.";

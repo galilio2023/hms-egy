@@ -110,9 +110,10 @@ export function BookingWizardClient({
     if (selectedDoctor && selectedDate) {
       let isMounted = true;
       // 1. Cairo Timezone weekend check (Friday = 5, Saturday = 6)
-      // Standardize to UTC midnight before resolving to Cairo to avoid local browser timezone skew
+      // Code Review Improvement: We use direct local date generation from YYYY-MM-DD components.
+      // This is highly reliable for locking the appointment to the Egyptian doctor's 
+      // calendar view regardless of whether the patient is booking from Cairo or abroad.
       const [year, month, dayNum] = selectedDate.split("-").map(Number);
-      // Construct Date object using local parameters to avoid timezone-conversion skews
       const dateToCheck = new Date(year, month - 1, dayNum);
       
       const day = dateToCheck.getDay();
