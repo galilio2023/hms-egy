@@ -173,9 +173,7 @@ export function SurgicalScheduleClient({
   }, [selectedDate]);
 
   useEffect(() => {
-    // Defer async loading to avoid synchronous setState in effect body
-    const timer = setTimeout(() => loadScheduleData(), 0);
-    return () => clearTimeout(timer);
+    loadScheduleData();
   }, [loadScheduleData]);
 
   useEffect(() => {

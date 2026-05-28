@@ -163,9 +163,8 @@ export function AppointmentSchedulerClient({
 
   // Load slots for the waiting list scheduling wizard
   useEffect(() => {
+    let isMounted = true;
     if (scheduleDoctorId && scheduleDate) {
-      let isMounted = true;
-      
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingSlots(true);
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -181,13 +180,13 @@ export function AppointmentSchedulerClient({
           setLoadingSlots(false);
         }
       });
-      return () => { 
-        isMounted = false; 
-      };
     } else {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setAvailableSlots([]);
     }
+    return () => {
+      isMounted = false;
+    };
   }, [scheduleDoctorId, scheduleDate]);
 
   // Handle status update
