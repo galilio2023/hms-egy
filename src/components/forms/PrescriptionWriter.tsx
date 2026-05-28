@@ -157,14 +157,14 @@ export function PrescriptionWriter({ patientId, onSuccess }: PrescriptionWriterP
     setItems(newItems);
   };
 
-  const updateItem = (index: number, field: keyof PrescriptionItem, value: any) => {
+  const updateItem = (index: number, field: keyof PrescriptionItem, value: string | number) => {
     const newItems = [...items];
-    let sanitizedValue = value;
+    let sanitizedValue: string | number = value;
     if (field === "durationDays") {
       // Allow empty string for natural typing experience
-      sanitizedValue = value === "" ? "" : (isNaN(parseInt(value)) ? 1 : parseInt(value));
+      sanitizedValue = value === "" ? "" : (isNaN(parseInt(String(value))) ? 1 : parseInt(String(value)));
     }
-    newItems[index] = { ...newItems[index], [field]: sanitizedValue };
+    newItems[index] = { ...newItems[index], [field]: sanitizedValue } as PrescriptionItem;
     setItems(newItems);
   };
 

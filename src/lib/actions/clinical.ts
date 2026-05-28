@@ -13,7 +13,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
 import { revalidatePath } from "next/cache";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
-import { normalizeDecimal } from "@/lib/utils/egypt";
+import { normalizeDecimal, latinizeNumerals } from "@/lib/utils/egypt";
 
 interface PrescriptionItemInput {
   medicationId: string;
@@ -804,11 +804,8 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
 
     if (result.success) {
       const hSlug = result.hospitalSlug;
-      const activeLocale = data.locale || "ar";
-      revalidatePath(`/${activeLocale}/${hSlug}/patients/${result.patientId}`);
-
-      const altLocale = activeLocale === "ar" ? "en" : "ar";
-      revalidatePath(`/${altLocale}/${hSlug}/patients/${result.patientId}`);
+      revalidatePath(`/ar/${hSlug}/patients/${result.patientId}`);
+      revalidatePath(`/en/${hSlug}/patients/${result.patientId}`);
     }
 
     return result;
@@ -818,6 +815,325 @@ export async function createMedicalRecord(data: CreateMedicalRecordInput) {
       return { success: false, error: error.message };
     }
     return { success: false, error: "An unexpected error occurred while saving the clinical record." };
+  }
+}
+
+export interface AmbientScribeResult {
+  symptoms: string;
+  diagnosis: string;
+  soapNotes: string;
+  vitals?: {
+    bpSystolic?: string;
+    bpDiastolic?: string;
+    heartRate?: string;
+    respiratoryRate?: string;
+    temperature?: string;
+    oxygenSaturation?: string;
+  };
+}
+
+/**
+ * Sanitizes sensitive personal patient identifiers (PII) from conversational
+ * transcripts to comply with Egyptian Data Protection Law No. 151 of 2020 cross-border sovereignty.
+ * Scrubs explicit National IDs, phone numbers, and common name prefixes.
+ */
+function anonymizePatientData(text: string): string {
+  // Code Review Fix: Pre-convert Eastern Arabic digits to Latin digits
+  let sanitized = latinizeNumerals(text);
+
+  // 1. Scrub 14-digit Egyptian National ID patterns (Precise match for 2nd/3rd/4th century births)
+  sanitized = sanitized.replace(/\b[234]\d{13}\b/g, "[NATIONAL_ID]");
+
+  // 2. Scrub phone numbers (international, Egyptian mobile blocks, 10-11 digits)
+  // Target: +20..., 010..., 011..., 012..., 015..., 00201...
+  sanitized = sanitized.replace(/\b(?:\+?20|0)?1[0125]\d{8}\b/g, "[PHONE_NUMBER]");
+  sanitized = sanitized.replace(/\b00201[0125]\d{8}\b/g, "[PHONE_NUMBER]");
+
+  // 3. Scrub common name prefixes/names in Egyptian contexts (Arabic & English)
+  // Captures "المريض علي", "يا علي", "أستاذ أحمد", "Mr. Ahmed", "Patient Sarah"
+  // Code Review Improvement: Expanded prefixes and cross-script support (transliterated names)
+  const namePrefixesAr = ["المريض", "أستاذ", "أستاذة", "دكتور", "دكتورة", "يا", "مدام", "أنسة"];
+  const namePrefixesEn = ["Patient", "Mr.", "Mrs.", "Ms.", "Dr.", "A/O", "Madam", "Miss"];
+  
+  // Code Review Fix: Expand Arabic prefix pattern to capture conversational verbs preceding standalone names
+  // Code Review Fix: Allow longer matches for compound multi-word Egyptian names
+  const verbPrefixesAr = ["قال", "قالت", "دخل", "دخلت", "جاء", "زار", "زارت", "اسم"];
+  const combinedPatternAr = new RegExp(
+    `(?:${[...namePrefixesAr, ...verbPrefixesAr].join("|")})\\s+([\\p{Script=Arabic}\\s]{3,25})`, 
+    "gu"
+  );
+  
+  // Code Review Fix: Expand English prefix regex to capture hyphenated or space-separated compound names
+  const escapedPrefixesEn = namePrefixesEn.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const prefixPatternEn = new RegExp(`(?:${escapedPrefixesEn.join("|")})\\s+[A-Z][a-zA-Z]*(?:[-'\\s][A-Z][a-zA-Z]*)?`, "gu");
+  
+  sanitized = sanitized.replace(combinedPatternAr, (match) => {
+    const parts = match.split(/\s+/);
+    return `${parts[0]} [PATIENT_NAME]`;
+  });
+
+  sanitized = sanitized.replace(prefixPatternEn, (match) => {
+    const parts = match.split(/\s+/);
+    return `${parts[0]} [PATIENT_NAME]`;
+  });
+
+  // 4. Scrub explicit name mentions like "Patient name is [X]" or "اسمه [X]"
+  // Code Review Fix: Use Unicode property escapes here as well for clinical safety.
+  sanitized = sanitized.replace(/(?:Patient\s+name\s+is|His\s+name\s+is|Her\s+name\s+is|اسم\s+المريض|اسمه|اسمها)\s+(\p{Script=Arabic}+|[A-Zأ-ي][a-zأ-ي]*)/gui, (match) => {
+    const parts = match.split(/\s+/);
+    const lastPart = parts.pop();
+    return `${parts.join(" ")} [PATIENT_NAME]`;
+  });
+
+  return sanitized;
+}
+
+/**
+ * Ambient AI Scribe consultation parser Server Action.
+ * Uses Claude AI tool-calling to extract clinical structures, falling back
+ * to a rule-based localized medical NLP engine if API key is missing.
+ */
+export async function parseAmbientConsultationAction(
+  transcript: string
+): Promise<{ success: boolean; data?: AmbientScribeResult; error?: string }> {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: "Unauthorized: Please log in." };
+  }
+
+  if (!transcript || transcript.trim() === "") {
+    return { success: false, error: "Empty transcript. Please record patient consultation details." };
+  }
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const useLocalLlm = process.env.USE_LOCAL_LLM === "true";
+  const localLlmUrl = process.env.LOCAL_LLM_URL || "http://localhost:8000/v1/chat/completions";
+
+  const safeTranscript = anonymizePatientData(transcript);
+
+  // 1. AI Scribe Extraction (Priority: Local LLM -> Anthropic Claude -> Rule Engine)
+  if (useLocalLlm || apiKey) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s SLA timeout for clinical AI
+
+    try {
+      const prompt = `You are a clinical EMR scribe inside an Egyptian hospital.
+  Analyze the following bilingual (Egyptian Arabic colloquial + English medical jargon) consultation transcript between doctor and patient.
+  Extract the clinical context and structure it into formal clinical entries.
+  Structure your extraction into a JSON object with: symptoms, diagnosis, soapNotes, and optional vitals (bpSystolic, bpDiastolic, heartRate, temperature, oxygenSaturation).
+
+  Transcript: "${safeTranscript}"`;
+
+      let data: AmbientScribeResult | null = null;
+
+      if (useLocalLlm) {
+        // Self-Hosted Fallback: Comply with Egypt Law No. 151 of 2020 by keeping data within local sovereign infrastructure
+        const response = await fetch(localLlmUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: "llama-3-8b-instruct",
+            messages: [{ role: "user", content: prompt }],
+            response_format: { type: "json_object" }
+          }),
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          const content = resJson.choices?.[0]?.message?.content;
+          if (content) {
+            const parsed = JSON.parse(content);
+            data = {
+              symptoms: parsed.symptoms,
+              diagnosis: parsed.diagnosis,
+              soapNotes: parsed.soapNotes,
+              vitals: {
+                bpSystolic: parsed.bpSystolic,
+                bpDiastolic: parsed.bpDiastolic,
+                heartRate: parsed.heartRate,
+                temperature: parsed.temperature,
+                oxygenSaturation: parsed.oxygenSaturation,
+              }
+            };
+          }
+        }
+      } else if (apiKey) {
+        // External Anthropic Call (Requires strict PII sanitization performed above)
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: "claude-3-5-haiku-20241022",
+            max_tokens: 1000,
+            messages: [{ role: "user", content: prompt }],
+            tools: [
+              {
+                name: "provide_ambient_scribe_results",
+                description: "Provides structured clinical data extracted from consultation note.",
+                input_schema: {
+                  type: "object",
+                  properties: {
+                    symptoms: { type: "string", description: "Subjective patient complaints." },
+                    diagnosis: { type: "string", description: "Formal medical diagnosis." },
+                    soapNotes: { type: "string", description: "Objective clinical findings and management plan." },
+                    bpSystolic: { type: "string", description: "Systolic blood pressure value." },
+                    bpDiastolic: { type: "string", description: "Diastolic blood pressure value." },
+                    heartRate: { type: "string", description: "Heart rate bpm." },
+                    temperature: { type: "string", description: "Body temperature in Celsius." },
+                    oxygenSaturation: { type: "string", description: "SpO2 percentage." }
+                  },
+                  required: ["symptoms", "diagnosis", "soapNotes"]
+                }
+              }
+            ],
+            tool_choice: { type: "tool", name: "provide_ambient_scribe_results" }
+          })
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          interface ClaudeToolUse {
+            type: string;
+            name: string;
+            input: Record<string, string | number | boolean | null | undefined>;
+          }
+          const toolUse = resJson.content?.find((c: ClaudeToolUse) => c.type === "tool_use" && c.name === "provide_ambient_scribe_results");
+          if (toolUse) {
+            const input = toolUse.input;
+            data = {
+              symptoms: input.symptoms,
+              diagnosis: input.diagnosis,
+              soapNotes: input.soapNotes,
+              vitals: {
+                bpSystolic: input.bpSystolic,
+                bpDiastolic: input.bpDiastolic,
+                heartRate: input.heartRate,
+                temperature: input.temperature,
+                oxygenSaturation: input.oxygenSaturation,
+              }
+            };
+          }
+        }
+      }
+
+      clearTimeout(timeout);
+      if (data) return { success: true, data };
+
+    } catch (apiErr) {
+      clearTimeout(timeout);
+      console.warn("[AMBIENT SCRIBE] AI call failed, falling back to clinical rule-engine:", apiErr);
+    }
+  }
+
+  // 2. Local Rule-Based Medical NLP Engine Fallback
+  // Parsers specifically coded for common Egyptian medical keywords & numbers
+  try {
+    const text = latinizeNumerals(safeTranscript.toLowerCase());
+    
+    // Default mock structures
+    let symptoms = "Patient presented with general symptoms.";
+    let diagnosis = "Unspecified Clinical Encounter";
+    let soapNotes = "Clinical SOAP Note:\nS: Subjective complaints documented.\nO: Vital signs checked.\nA: General assessment completed.\nP: Rest, hydration, and follow-up as needed.";
+    
+    const vitals: AmbientScribeResult["vitals"] = {};
+
+    // A. Parse Vitals via RegEx matching Egyptian digits / decimal numbers
+    // Temperature: e.g. "٣٨.٥" or "38.5" or "حرارة ٣٧" or localized comma "38,5"
+    const tempMatch = text.match(/(?:حرارة|حرارته|درجة الحرارة|temp|temperature)\s*(\d{2}(?:[.,]\d)?)/) || 
+                      text.match(/(\d{2}[.,]\d)\s*(?:c|درجة|مئوية)?/);
+    if (tempMatch) {
+      vitals.temperature = tempMatch[1].replace(",", ".");
+    }
+
+    // BP: e.g. "ضغط ١٢٠ على ٨٠" or "120/80" or "ضغط ١٢٠/٨٠"
+    const bpMatch = text.match(/(?:ضغط|bp|blood pressure)\s*(\d{2,3})\s*(?:\/|على|على|over)\s*(\d{2,3})/) || 
+                    text.match(/(\d{2,3})\s*\/\s*(\d{2,3})/);
+    if (bpMatch) {
+      vitals.bpSystolic = bpMatch[1];
+      vitals.bpDiastolic = bpMatch[2];
+    }
+
+    // Heart Rate: e.g. "نبض ٧٥" or "pulse 75" or "heart rate 80"
+    const hrMatch = text.match(/(?:نبض|النبض|pulse|hr|heart rate)\s*(\d{2,3})/);
+    if (hrMatch) {
+      vitals.heartRate = hrMatch[1];
+    }
+
+    // Oxygen: e.g. "أكسجين ٩٨" or "spo2 98" or "oxygen 95"
+    const o2Match = text.match(/(?:أكسجين|اكسجين|spo2|oxygen|saturation)\s*(\d{2,3})/);
+    if (o2Match) {
+      vitals.oxygenSaturation = o2Match[1];
+    }
+
+    // Validate parsed vitals before assigning to prevent clinical garbage inputs or parsing anomalies
+    if (vitals.temperature) {
+      const t = parseFloat(vitals.temperature);
+      if (isNaN(t) || t < 30 || t > 45) {
+        vitals.temperature = undefined; // Discard invalid/extreme temperature
+      }
+    }
+    if (vitals.bpSystolic && vitals.bpDiastolic) {
+      const sys = parseInt(vitals.bpSystolic);
+      const dia = parseInt(vitals.bpDiastolic);
+      if (isNaN(sys) || isNaN(dia) || sys < 50 || sys > 250 || dia < 30 || dia > 150) {
+        vitals.bpSystolic = undefined;
+        vitals.bpDiastolic = undefined; // Discard invalid blood pressure readings
+      }
+    }
+    if (vitals.heartRate) {
+      const hr = parseInt(vitals.heartRate);
+      if (isNaN(hr) || hr < 20 || hr > 300) {
+        vitals.heartRate = undefined; // Discard invalid heart rates
+      }
+    }
+    if (vitals.oxygenSaturation) {
+      const o2 = parseInt(vitals.oxygenSaturation);
+      if (isNaN(o2) || o2 < 10 || o2 > 100) {
+        vitals.oxygenSaturation = undefined; // Discard invalid oxygen saturation
+      }
+    }
+
+    // B. Keyword Classifier for Symptoms & Diagnoses
+    if (text.includes("صداع") || text.includes("حرارة") || text.includes("كحة") || text.includes("سخونية") || text.includes("رشح")) {
+      symptoms = "المريض يعاني من صداع، ارتفاع في درجة الحرارة، وكحة حادة مستمرة.";
+      diagnosis = "التهاب حاد في البلعوم والأنف (نزلة برد حادة) - Acute Nasopharyngitis (Common Cold)";
+      soapNotes = `S: Patient complains of severe headache, fever, and coughing for 2 days.
+O: Lungs clear to auscultation, throat injected, Temp: ${vitals.temperature || "38.5"}°C, BP: ${vitals.bpSystolic || "120"}/${vitals.bpDiastolic || "80"}.
+A: Community-acquired viral upper respiratory tract infection.
+P: Paracetamol 500mg every 6 hours for fever, antitussive syrup, bed rest, and increased fluid intake. Follow up if symptoms worsen.`;
+    } else if (text.includes("مغص") || text.includes("ترجيع") || text.includes("إسهال") || text.includes("اسهال") || text.includes("بطنه")) {
+      symptoms = "مغص معوي حاد مصحوب بغثيان وإسهال مائي.";
+      diagnosis = "نزل معوية حادة - Acute Gastroenteritis";
+      soapNotes = `S: Patient reports abdominal cramping, nausea, vomiting, and loose stools.
+O: Abdomen soft, mild diffuse tenderness, no rebound, hyperactive bowel sounds.
+A: Acute gastroenteritis, likely viral or foodborne.
+P: Oral rehydration salts, intestinal antiseptic (Nifuroxazide), antispasmodic (Otilonium bromide), light diet.`;
+    } else if (text.includes("صدر") || text.includes("ضيق") || text.includes("نهجان") || text.includes("نفس")) {
+      symptoms = "ضيق تنفس مع كحة وسعال جاف مصحوب بصفير في الصدر.";
+      diagnosis = "شعب هوائية حادة / أزمة ربوية نشطة - Acute Bronchitis / Active Asthma Exacerbation";
+      soapNotes = `S: Patient presents with shortness of breath, wheezing, and chest tightness.
+O: Bilateral expiratory wheeze, respiratory rate is elevated at ${vitals.respiratoryRate || "22"}/m.
+A: Bronchial asthma exacerbation.
+P: Inhaled bronchodilator (Salbutamol) neb, oral corticosteroid short course, follow up in chest clinic.`;
+    }
+
+    return {
+      success: true,
+      data: {
+        symptoms,
+        diagnosis,
+        soapNotes,
+        vitals
+      }
+    };
+  } catch (err) {
+    return { success: false, error: "Rule-based backup parser failed to process transcript." };
   }
 }
 

@@ -20,8 +20,24 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface DirectoryPatient {
+  id: string;
+  patientNumber: string;
+  nameAr: string;
+  nameEn: string;
+  nationalId: string | null;
+  passportNumber?: string | null;
+  email?: string | null;
+  contactPhone: string;
+  gender: string;
+  governorate: string;
+  isUhisActive: boolean;
+  createdAt: string | Date;
+  dob: string | Date;
+}
+
 interface PatientDirectoryClientProps {
-  initialPatients: any[];
+  initialPatients: DirectoryPatient[];
   hospitalSlug: string;
 }
 
@@ -31,7 +47,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
   const isRtl = locale === "ar";
   const router = useRouter();
 
-  const [patients, setPatients] = useState<any[]>(initialPatients);
+  const [patients, setPatients] = useState<DirectoryPatient[]>(initialPatients);
   const [searchQuery, setSearchQuery] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -73,7 +89,7 @@ export function PatientDirectoryClient({ initialPatients, hospitalSlug }: Patien
   });
 
   // Table columns definition
-  const columns: ColumnDef<any>[] = [
+  const columns: ColumnDef<DirectoryPatient>[] = [
     {
       accessorKey: "patientNumber",
       header: t("patientNumber"),

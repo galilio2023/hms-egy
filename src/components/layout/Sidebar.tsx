@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/routing";
 import { useSession, signOut } from "@/lib/auth/client";
 import { useParams } from "next/navigation";
+import { purgeSyncEngineKey } from "@/lib/offline/sync-engine";
 import { 
   LayoutDashboard, 
   Users, 
@@ -28,7 +29,8 @@ import {
   ChevronRight,
   Menu,
   HeartPulse,
-  ShieldCheck
+  ShieldCheck,
+  type LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,7 +39,7 @@ import { SparklesText } from "@/components/magicui/SparklesText";
 interface SidebarItem {
   key: string;
   href: string;
-  icon: React.ComponentType<any>;
+  icon: LucideIcon;
   roles?: string[];
   subItems?: SidebarItem[];
 }
@@ -58,10 +60,10 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
 
   const user = session?.user;
-  const userRole = (user as any)?.role || "DOCTOR";
+  const userRole = (user as Record<string, unknown> & { role?: string })?.role || "DOCTOR";
   const params = useParams();
   const urlHospitalSlug = params?.hospitalSlug as string | undefined;
-  const hospitalSlug = urlHospitalSlug || (session?.session as any)?.activeHospitalId || (user as any)?.hospitalId || "system-wide";
+  const hospitalSlug = urlHospitalSlug || (session?.session as Record<string, unknown> & { activeHospitalId?: string })?.activeHospitalId || (user as Record<string, unknown> & { hospitalId?: string })?.hospitalId || "system-wide";
 
   // Navigation schema configured for HMS Egypt modules
   const navItems: SidebarItem[] = [
@@ -218,6 +220,7 @@ export function Sidebar({ isMobileOpen, setIsMobileOpen }: SidebarProps = {}) {
   };
 
   const handleLogout = async () => {
+    purgeSyncEngineKey();
     await signOut();
     router.push("/login");
   };

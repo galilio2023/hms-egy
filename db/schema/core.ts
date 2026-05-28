@@ -60,6 +60,9 @@ export const hospitalSettings = pgTable("hospital_settings", {
   etaClientSecret: text("eta_client_secret"), // To be encrypted at rest
   etaTaxpayerActivityCode: varchar("eta_taxpayer_activity_code", { length: 20 }).default("8610"), // ISIC code for Human Health
 
+  // WhatsApp & Communication Settings (Code Review Improvement)
+  approvedWhatsappTemplates: text("approved_whatsapp_templates").array(), // List of Meta-approved templates per hospital
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {

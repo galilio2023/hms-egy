@@ -129,7 +129,7 @@ export interface ETASubmissionResponse {
     error: {
       code: string;
       message: string;
-      details?: any;
+      details?: unknown;
     };
   }>;
 }
@@ -140,3 +140,45 @@ export interface ETATokenResponse {
   token_type: string;
   scope: string;
 }
+
+export interface ETASeller {
+  type: string; // "B" for Business
+  id: string; // Taxpayer ID
+  name: string;
+  address: {
+    country: string;
+    governate: string;
+    regionCity: string;
+    street: string;
+    buildingNumber: string;
+    branchID: string;
+  };
+  deviceSerialNumber: string;
+  syndicateLicenseNumber?: string; // Specific medical licensing identification
+}
+
+export interface ETABuyer {
+  type: string; // "P" for Citizen/Person, "F" for Foreigner
+  id?: string; // 14-digit National ID or Passport
+  name: string;
+}
+
+export interface ETAReceipt {
+  receiptNumber: string;
+  uuid: string;
+  previousReceiptUUID?: string; // Cryptographic hash-chaining reference
+  dateTimeIssued: string;
+  receiptType: string; // "S" for Sale, "R" for Return
+  receiptVersion: string; // "1.0" or "2.0"
+  seller: ETASeller;
+  buyer: ETABuyer;
+  posSerialNumber: string; // Mandatory POS machine registration number
+  taxpayerActivityCode: string;
+  invoiceLines: ETAInvoiceLine[];
+  totalSalesAmount: number;
+  totalDiscountAmount: number;
+  totalNetAmount: number;
+  taxTotals: ETATaxTotal[];
+  totalAmount: number;
+}
+

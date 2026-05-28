@@ -22,6 +22,7 @@ import {
   Image as ImageIcon
 } from "lucide-react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { DicomViewer } from "@/components/ui/DicomViewer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -85,7 +86,7 @@ export function RadiologyQueueClient({ orders: initialOrders, hospitalSlug }: Ra
   const [validationError, setValidationError] = useState("");
 
   // Helper: calculate age
-  const getAge = (dobString: any) => {
+  const getAge = (dobString: string | Date | null | undefined) => {
     if (!dobString) return 0;
     const birthDate = new Date(dobString);
     const today = new Date();
@@ -98,7 +99,7 @@ export function RadiologyQueueClient({ orders: initialOrders, hospitalSlug }: Ra
   };
 
   // Helper: format date
-  const formatDate = (date: any) => {
+  const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return "";
     const d = new Date(date);
     return d.toLocaleDateString(isRtl ? "ar-EG" : "en-US", {
@@ -854,29 +855,36 @@ export function RadiologyQueueClient({ orders: initialOrders, hospitalSlug }: Ra
                   </div>
                 </div>
 
-                {/* Scan Image Link */}
+                {/* Scan Image / PACS DICOM Viewport */}
                 {selectedOrder.imageUrl && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <h4 className="text-xs font-black text-foreground/80 uppercase border-b border-border/40 pb-1.5 flex items-center gap-1.5">
                       <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>{isRtl ? "صورة الأشعة المرفقة" : "Scan Image Attachment"}</span>
+                      <span>{isRtl ? "مستعرض الصور التشخيصية (DICOM Viewer)" : "Diagnostic PACS Viewport (DICOM)"}</span>
                     </h4>
-                    <div className="p-4 rounded-xl border border-border/30 bg-muted/10 flex items-center justify-between gap-4">
+                    
+                    <DicomViewer 
+                      imageUrl={selectedOrder.imageUrl}
+                      procedureName={isRtl ? selectedOrder.procedureNameAr : selectedOrder.procedureNameEn}
+                      isRtl={isRtl}
+                    />
+
+                    <div className="p-3 rounded-lg border border-border/30 bg-muted/10 flex items-center justify-between gap-4 mt-2">
                       <div className="flex items-center gap-2">
-                        <ImageIcon className="h-5 w-5 text-accent" />
+                        <ImageIcon className="h-4 w-4 text-accent" />
                         <div className="flex flex-col text-start">
-                          <span className="text-xs font-bold text-foreground">PACS / Diagnostic Image</span>
-                          <span className="text-[10px] text-muted-foreground truncate max-w-[240px]">{selectedOrder.imageUrl}</span>
+                          <span className="text-[10px] font-bold text-foreground">Raw Medical Scan Image URL</span>
+                          <span className="text-[9px] text-muted-foreground truncate max-w-[240px] font-mono">{selectedOrder.imageUrl}</span>
                         </div>
                       </div>
                       <a 
                         href={selectedOrder.imageUrl} 
                         target="_blank" 
                         rel="noreferrer"
-                        className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-background px-3 text-xs font-bold text-foreground hover:bg-muted/80 transition-colors gap-1 shadow-2xs shrink-0"
+                        className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 text-[10px] font-bold text-foreground hover:bg-muted/80 transition-colors gap-1 shadow-2xs shrink-0"
                       >
-                        <span>{isRtl ? "فتح الصورة" : "Open Scan"}</span>
-                        <ExternalLink className="h-3 w-3" />
+                        <span>{isRtl ? "تحميل الملف" : "Download file"}</span>
+                        <ExternalLink className="h-2.5 w-2.5" />
                       </a>
                     </div>
                   </div>

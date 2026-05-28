@@ -10,6 +10,7 @@ import { and, eq, ne, gte, lte, or, sql } from "drizzle-orm";
 import { surgicalSchema, type SurgicalSchema } from "@/lib/validations/surgical.schema";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
+import { type User } from "@/types/auth-api.types";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { revalidatePath } from "next/cache";
 import { toCairoTime } from "@/lib/utils/egypt";
@@ -148,7 +149,7 @@ export async function getOrSchedule(date: Date | string, targetHospitalId?: stri
         cases,
       };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[SURGICAL_ACTION] getOrSchedule failed:", error);
     return { success: false, error: "فشل استرداد جدول غرف العمليات والكتل الزمنية." };
   }
@@ -174,7 +175,7 @@ export async function createSurgicalCase(
     ? targetHospitalId
     : (session.activeHospitalId || session.user.hospitalId);
 
-  const isAuthorized = hasPermission(session.user as any, "surgical:create", {
+  const isAuthorized = hasPermission(session.user as unknown as User, "surgical:create", {
     hospitalId: effectiveHospitalId,
   });
 
@@ -387,8 +388,8 @@ export async function createSurgicalCase(
           procedureName: validatedData.procedureNameEn,
           procedureNameAr: validatedData.procedureNameAr,
           cptCode: validatedData.cptCode || null,
-          anesthesiaType: validatedData.anesthesiaType as any,
-          asaClass: (validatedData.asaClass as any) || "ASA_I",
+          anesthesiaType: validatedData.anesthesiaType as "general" | "regional" | "local" | "sedation" | "spinal" | "epidural",
+          asaClass: (validatedData.asaClass?.toLowerCase() as "asa_1" | "asa_2" | "asa_3" | "asa_4" | "asa_5" | "asa_e") || "asa_1",
           scheduledDate,
           scheduledStartTime: startTime,
           estimatedDurationMinutes: duration,
@@ -412,11 +413,12 @@ export async function createSurgicalCase(
       return { success: true, surgicalCaseId: newCase.id, caseNumber };
     });
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[SURGICAL_ACTION] createSurgicalCase failed:", error);
     if (error instanceof AppError) {
       return { success: false, error: error.message };
     }
-    return { success: false, error: "حدث خطأ غير متوقع أثناء جدولة الحالة الجراحية. يرجى المحاولة لاحقاً." };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: "حدث خطأ غير متوقع أثناء جدولة الحالة الجراحية. يرجى المحاولة لاحقاً: " + message };
   }
 }

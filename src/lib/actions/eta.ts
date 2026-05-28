@@ -76,9 +76,10 @@ export async function submitInvoiceToETA(invoiceId: string) {
 
     let etaDoc;
     try {
-      etaDoc = transformInvoiceToETADocument(invoice as any);
-    } catch (err: any) {
-      return { success: false, error: err.message };
+      etaDoc = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { success: false, error: message };
     }
     
     const response = await etaClient.submitDocuments([etaDoc], creds);
@@ -112,9 +113,10 @@ export async function submitInvoiceToETA(invoiceId: string) {
     }
 
     return { success: false, error: "Unknown error from ETA" };
-  } catch (error: any) {
+  } catch (error) {
     console.error("ETA Submission Error:", error);
-    return { success: false, error: error.message || "Failed to submit to ETA" };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message || "Failed to submit to ETA" };
   }
 }
 
@@ -168,7 +170,7 @@ export async function checkETAStatus(invoiceId: string) {
       clientSecret: decryptedSecret,
     };
 
-    const details = await etaClient.getDocument(invoice.etaUuid, creds);
+    const details = await etaClient.getDocument(invoice.etaUuid, creds) as { status: string };
     
     await db.update(invoices)
       .set({
@@ -179,7 +181,8 @@ export async function checkETAStatus(invoiceId: string) {
 
     revalidatePath("/billing");
     return { success: true, data: details.status };
-  } catch (error: any) {
-    return { success: false, error: error.message || "Failed to check ETA status" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message || "Failed to check ETA status" };
   }
 }

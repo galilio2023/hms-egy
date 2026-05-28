@@ -47,11 +47,12 @@ export async function startShift(payload: {
       revalidatePath(`/[locale]/(dashboard)/${payload.hospitalSlug}/nursing`, "page");
       return { success: true, shiftId: record.id };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Start Shift Error:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: error.message || "Failed to start shift.",
+      error: message || "Failed to start shift.",
     };
   }
 }
@@ -91,11 +92,12 @@ export async function endShift(payload: {
       revalidatePath(`/[locale]/(dashboard)/${payload.hospitalSlug}/nursing`, "page");
       return { success: true };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("End Shift Error:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: error.message || "Failed to end shift.",
+      error: message || "Failed to end shift.",
     };
   }
 }
@@ -134,11 +136,12 @@ export async function createHandoverNote(payload: {
       revalidatePath(`/[locale]/(dashboard)/${payload.hospitalSlug}/nursing`, "page");
       return { success: true, noteId: record.id };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Handover Note Error:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: error.message || "Failed to create handover note.",
+      error: message || "Failed to create handover note.",
     };
   }
 }
@@ -176,13 +179,36 @@ export async function acknowledgeHandoverNote(payload: {
       revalidatePath(`/[locale]/(dashboard)/${payload.hospitalSlug}/nursing`, "page");
       return { success: true };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Acknowledge Note Error:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: error.message || "Failed to acknowledge note.",
+      error: message || "Failed to acknowledge note.",
     };
   }
+}
+
+interface NursingAssessmentData {
+  primaryComplaint?: string;
+  historyOfPresentIllness?: string;
+  pastMedicalHistory?: string;
+  surgicalHistory?: string;
+  allergies?: string;
+  medications?: string;
+  familyHistory?: string;
+  socialHistory?: string;
+  physicalExam?: {
+    general?: string;
+    respiratory?: string;
+    cardiovascular?: string;
+    gastrointestinal?: string;
+    neurological?: string;
+    musculoskeletal?: string;
+    integumentary?: string;
+  };
+  plan?: string;
+  [key: string]: unknown;
 }
 
 export async function createNursingAssessment(payload: {
@@ -190,7 +216,7 @@ export async function createNursingAssessment(payload: {
   patientId: string;
   admissionId?: string;
   type: string;
-  data: any;
+  data: NursingAssessmentData;
   notes?: string;
   hospitalSlug: string;
 }) {
@@ -227,11 +253,12 @@ export async function createNursingAssessment(payload: {
 
       return { success: true, recordId: record.id };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Assessment Record Error:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: error.message || "Failed to record nursing assessment.",
+      error: message || "Failed to record nursing assessment.",
     };
   }
 }
@@ -288,11 +315,12 @@ export async function recordMedicationAdministration(payload: RecordAdminPayload
 
       return { success: true, recordId: record.id };
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("MAR Record Error:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: error.message || "Failed to record medication administration.",
+      error: message || "Failed to record medication administration.",
     };
   }
 }

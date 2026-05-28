@@ -25,8 +25,8 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
-  const user = session?.user;
-  const userRole = (user as any)?.role || "DOCTOR";
+  const user = session?.user as unknown as import("@/types/auth-api.types").User;
+  const userRole = user?.role || "DOCTOR";
   const hospitalName = isRtl ? "مستشفى مصر التخصصي" : "Egypt Specialist Hospital";
 
   // Prevent hydration mismatch for client-only components

@@ -94,8 +94,9 @@ export async function runDdiCheck(patientId: string, itemInputs: PrescriptionIte
 
       return { success: true, data: results };
     });
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 
@@ -208,8 +209,9 @@ export async function createPrescription(payload: {
 
       return { success: true, rxId: newRx.id };
     });
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 
@@ -249,8 +251,9 @@ export async function searchMedications(query: string) {
 
       return { success: true, data: results };
     });
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 
@@ -312,8 +315,9 @@ export async function adjustStock(payload: {
 
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/pharmacy/inventory`, "layout");
     return result;
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 
@@ -350,8 +354,9 @@ export async function getMedicationHistory(medicationId: string) {
 
       return { success: true, data: history };
     });
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 
@@ -412,8 +417,9 @@ export async function searchActivePrescriptions(query: string) {
 
       return { success: true, data: results };
     });
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 
@@ -486,8 +492,9 @@ export async function getPrescriptionForDispensing(id: string) {
 
       return { success: true, data: { ...rx, items } };
     });
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message };
   }
 }
 
@@ -641,9 +648,10 @@ export async function dispensePrescription(
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/pharmacy`, "layout");
     revalidatePath(`/[locale]/(dashboard)/[hospitalSlug]/pharmacy/dispense`, "layout");
     return result;
-  } catch (error: any) {
-    console.error("[DISPENSE_PHARMACY_ERROR]", error);
-    return { success: false, error: error.message || "Failed to dispense" };
+  } catch (error) {
+    console.error("[PHARMACY_ACTION_ERROR]", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: message || "Operation failed" };
   }
 }
 

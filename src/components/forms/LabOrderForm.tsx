@@ -214,7 +214,7 @@ export function LabOrderForm({ patientId, onSuccess }: LabOrderFormProps) {
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ps-1">
                 {t("priority")}
               </label>
-              <Select value={priority} onValueChange={(val: any) => setPriority(val)}>
+              <Select value={priority} onValueChange={(val) => setPriority(val as "routine" | "urgent" | "stat")}>
                 <SelectTrigger className="h-11 rounded-xl border-slate-200 dark:border-slate-800">
                   <SelectValue placeholder="Select Priority" />
                 </SelectTrigger>

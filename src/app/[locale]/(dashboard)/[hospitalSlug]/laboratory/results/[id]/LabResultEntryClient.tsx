@@ -39,10 +39,17 @@ interface LabItem {
   normalRange: string | null;
 }
 
+interface LabOrder {
+  id: string;
+  clinicalNotes: string | null;
+  doctorNameAr: string;
+  doctorNameEn: string;
+}
+
 interface LabResultEntryClientProps {
   locale: string;
   hospitalSlug: string;
-  order: any;
+  order: LabOrder;
   items: LabItem[];
 }
 
@@ -66,8 +73,8 @@ export default function LabResultEntryClient({
     }))
   );
 
-  const updateItem = (itemId: string, field: string, value: any) => {
-    let finalValue = value;
+  const updateItem = (itemId: string, field: "resultValue" | "isCritical" | "notes", value: string | boolean) => {
+    let finalValue: string | boolean = value;
     if (field === "resultValue" && typeof value === "string") {
       finalValue = latinizeNumerals(value);
     }

@@ -101,7 +101,6 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
     };
   }, [query]);
 
-  // Execute the fuzzy search locally when debounced query updates
   useEffect(() => {
     if (!fuse || !debouncedQuery.trim()) {
       setResults([]);
@@ -109,6 +108,7 @@ export function Icd10SearchPicker({ selectedCodes, onChange, locale = "ar" }: Ic
     }
 
     const searchResults = fuse.search(debouncedQuery).slice(0, 15).map(r => r.item);
+    
     setResults(searchResults);
   }, [debouncedQuery, fuse]);
 

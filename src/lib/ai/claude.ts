@@ -130,8 +130,15 @@ Analyze the provided clinical context and execute the 'provide_clinical_analysis
 
     const data = await response.json();
     
+    interface AnthropicContentBlock {
+      type: string;
+      name?: string;
+      input?: unknown;
+      text?: string;
+    }
+
     // Extract tool use from response (Anthropic Tool Use API)
-    const toolUse = data.content.find((c: any) => c.type === "tool_use" && c.name === "provide_clinical_analysis");
+    const toolUse = data.content.find((c: AnthropicContentBlock) => c.type === "tool_use" && c.name === "provide_clinical_analysis");
     
     if (!toolUse) {
       throw new Error("Claude failed to execute the safety analysis tool.");

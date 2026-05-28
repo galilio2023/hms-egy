@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Icd10SearchPicker } from "./Icd10SearchPicker";
-import { createMedicalRecord } from "@/lib/actions/clinical";
+import { createMedicalRecord, parseAmbientConsultationAction } from "@/lib/actions/clinical";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { ORDER_SETS } from "@/lib/clinical/order-sets";
 import { 
   Stethoscope, 
@@ -31,7 +33,13 @@ import {
   FolderHeart,
   CheckSquare,
   Square,
-  ChevronDown
+  ChevronDown,
+  Sparkles,
+  Mic,
+  MicOff,
+  StopCircle,
+  RefreshCw,
+  Play
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { safeParseInt } from "@/lib/utils/formatting";
@@ -63,6 +71,12 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
   const [diagnosis, setDiagnosis] = useState("");
   const [soapNotes, setSoapNotes] = useState("");
   const [icdCodes, setIcdCodes] = useState<string[]>([]);
+  
+  // AI Scribe States
+  const [isScribeOpen, setIsScribeOpen] = useState(false);
+  const [scribeTranscript, setScribeTranscript] = useState("");
+  const [isScribeProcessing, setIsScribeProcessing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   // 2. Vitals Flowsheet States
   const [bpSystolic, setBpSystolic] = useState("");
@@ -249,6 +263,31 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
             <Card className="border border-border/40 bg-card rounded-3xl shadow-md overflow-hidden relative">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent" />
               <CardContent className="p-6 sm:p-8 space-y-6">
+                
+                {/* AI Ambient Scribe Quick Action Banner */}
+                <div className="p-4 rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+                      <Sparkles className="h-5 w-5 animate-pulse" />
+                    </div>
+                    <div className="flex flex-col text-start">
+                      <span className="text-xs font-bold text-foreground">{isRtl ? "المساعد الطبي الذكي (Ambient AI Scribe)" : "Ambient AI EMR Scribe"}</span>
+                      <span className="text-[10px] text-muted-foreground font-semibold">
+                        {isRtl 
+                          ? "سجل الحوار الطبي السريري ثنائي اللغة ودع الذكاء الاصطناعي يملأ الملف تلقائياً." 
+                          : "Listen to the consultation and auto-populate SOAP notes, diagnosis & vitals."}
+                      </span>
+                    </div>
+                  </div>
+                  <Button 
+                    type="button"
+                    onClick={() => setIsScribeOpen(true)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs py-1.5 h-9 font-bold flex items-center gap-1.5 shrink-0"
+                  >
+                    <Mic className="h-4 w-4" />
+                    <span>{isRtl ? "تفعيل الإملاء الذكي" : "Activate Scribe"}</span>
+                  </Button>
+                </div>
                 
                 {/* A. Encounter Type Selection */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
@@ -811,6 +850,182 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
 
         </form>
       )}
+
+      {/* 7. AI Ambient Scribe Interactive Workspace Overlay */}
+      <Dialog open={isScribeOpen} onOpenChange={setIsScribeOpen}>
+        <DialogContent className="max-w-xl bg-slate-950 border border-slate-800 shadow-2xl rounded-2xl p-0 overflow-hidden text-slate-200" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader onClose={() => setIsScribeOpen(false)} className="px-6 py-4 border-b border-slate-850">
+            <DialogTitle className="flex items-center gap-2 text-slate-100">
+              <Sparkles className="h-5 w-5 text-indigo-500 animate-pulse" />
+              <span>{isRtl ? "مساعد الإملاء الذكي EMR Scribe" : "Ambient AI EMR Scribe Workspace"}</span>
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {isRtl ? "حول المحادثة السريرية ثنائية اللغة مباشرة إلى مدخلات طبية منظمة." : "Convert bilingual patient-doctor audio/consultation transcript into EMR records."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            {/* Presets Selection */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">{isRtl ? "تلقيم عينة استشارة طبية سريعة" : "Feed Sample Medical Consultation Preset"}</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  {
+                    id: "flu",
+                    label: isRtl ? "نزلة برد (Flu/Cold)" : "Flu/Fever Symptoms",
+                    text: "المريض بيشتكي من صداع وارتفاع في الحرارة بقاله يومين، وقست الحرارة لقيتها ٣٨.٥ والنبض ٨٥، وشخصته نزلة برد حادة، وكتبتله بنادول ٥٠٠ مجم كل ٦ ساعات وراحة ٣ أيام"
+                  },
+                  {
+                    id: "gastro",
+                    label: isRtl ? "نزلة معوية (Gastro)" : "Abdominal Pain/Gastro",
+                    text: "وجع مغص معوي شديد وترجيع وإسهال مائي من الصبح، الضغط ١١٠ على ٧٠ ونبض ٨٠ والحرارة طبيعية ٣٧، مشخص بنزلة معوية"
+                  },
+                  {
+                    id: "asthma",
+                    label: isRtl ? "أزمة ربو (Asthma)" : "Bronchial Asthma",
+                    text: "نهجان وصعوبة تنفس مع كحة وسعال جاف بصفير في صدره، وقسنا التنفس لقيناه ٢٤ في الدقيقة والنبض ٩٥، مشخص أزمة ربوية نشطة"
+                  }
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setScribeTranscript(p.text);
+                      toast.info(isRtl ? "تم تلقيم نموذج الاستشارة!" : "Sample preset loaded!");
+                    }}
+                    className="py-2 px-3 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-[11px] font-bold text-slate-300 transition-colors text-start"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Simulated Audio Telemetry Scribe */}
+            <div className="p-5 rounded-2xl border border-slate-800 bg-black/60 space-y-4 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-[9px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border border-amber-500/20">
+                  {isRtl ? "وضع محاكاة الميكروفون - العرض التجريبي فقط" : "Simulation Mode - Demo Sandbox Only"}
+                </div>
+                {isRecording ? (
+                  <div className="flex items-center gap-1 h-8">
+                    {[1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2, 1].map((h, i) => (
+                      <span 
+                        key={i} 
+                        style={{ height: `${h * 4}px` }}
+                        className="w-1 rounded-full bg-indigo-500 animate-pulse" 
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-8 flex items-center justify-center text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                    {isRtl ? "الميكروفون متوقف" : "Microphone Idle"}
+                  </div>
+                )}
+
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (isRecording) {
+                      setIsRecording(false);
+                      toast.success(isRtl ? "تم إيقاف التسجيل!" : "Recording stopped!");
+                    } else {
+                      setIsRecording(true);
+                      toast.info(isRtl ? "جاري التسجيل الطبي..." : "Listening to consultation...");
+                    }
+                  }}
+                  className={cn(
+                    "h-12 w-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-lg",
+                    isRecording 
+                      ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse" 
+                      : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                  )}
+                >
+                  {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                </Button>
+                
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  {isRecording ? (isRtl ? "جاري الاستماع للعيادة..." : "Listening...") : (isRtl ? "انقر للبدء" : "Click to Speak")}
+                </span>
+              </div>
+            </div>
+
+            {/* Transcript Textarea */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">{isRtl ? "نص الاستشارة الطبية (عربي / إنجليزي)" : "Consultation Transcript (Colloquial Arabic / English)"}</label>
+              <Textarea
+                placeholder={isRtl ? "اكتب تفاصيل الاستشارة يدوياً أو استخدم عينة من النماذج أعلاه..." : "Write consultation text or speak to transcribe..."}
+                value={scribeTranscript}
+                onChange={(e) => setScribeTranscript(e.target.value)}
+                rows={4}
+                className="bg-slate-900 border-slate-800 text-slate-200 text-xs font-semibold focus:ring-indigo-500 focus:border-indigo-500 rounded-xl font-sans"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-3">
+            <Button
+              type="button"
+              disabled={isScribeProcessing}
+              onClick={async () => {
+                if (!scribeTranscript.trim()) {
+                  toast.error(isRtl ? "الرجاء إدخال نص الاستشارة أولاً." : "Please enter a consultation transcript.");
+                  return;
+                }
+                setIsScribeProcessing(true);
+                try {
+                  const res = await parseAmbientConsultationAction(scribeTranscript);
+                  if (res.success && res.data) {
+                    setSymptoms(res.data.symptoms);
+                    setDiagnosis(res.data.diagnosis);
+                    setSoapNotes(res.data.soapNotes);
+                    
+                    if (res.data.vitals) {
+                      const v = res.data.vitals;
+                      if (v.bpSystolic) setBpSystolic(v.bpSystolic);
+                      if (v.bpDiastolic) setBpDiastolic(v.bpDiastolic);
+                      if (v.heartRate) setHeartRate(v.heartRate);
+                      if (v.temperature) setTemperature(v.temperature);
+                      if (v.oxygenSaturation) setOxygenSaturation(v.oxygenSaturation);
+                    }
+                    
+                    toast.success(isRtl ? "تم معالجة الاستشارة بنجاح وتعبئة الملف!" : "Consultation parsed & fields auto-populated!");
+                    setIsScribeOpen(false);
+                    setScribeTranscript("");
+                  } else {
+                    toast.error(res.error || "Failed to process EMR transcription.");
+                  }
+                } catch (err) {
+                  toast.error("Unexpected error during ambient processing.");
+                } finally {
+                  setIsScribeProcessing(false);
+                }
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold px-6 shadow-lg shadow-indigo-600/20 cursor-pointer"
+            >
+              {isScribeProcessing ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin me-1.5" />
+                  <span>{isRtl ? "جاري معالجة الطبي..." : "Analyzing clinical data..."}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5 me-1.5" />
+                  <span>{isRtl ? "تحليل الذكاء الاصطناعي وتعبئة النموذج" : "Process & Populate Form"}</span>
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsScribeOpen(false)}
+              className="border-slate-800 text-slate-300 hover:bg-slate-900 rounded-xl text-xs font-bold"
+            >
+              {isRtl ? "إغلاق" : "Close"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

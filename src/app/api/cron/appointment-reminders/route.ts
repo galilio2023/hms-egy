@@ -145,8 +145,8 @@ export async function GET(req: NextRequest) {
 
       const apps = [...tomorrowApps, ...todayApps];
 
-      const remindersToInsert: any[] = [];
-      const appRemindersMap: Record<string, { type: "24h_reminder" | "2h_reminder", app: any }> = {};
+      const remindersToInsert: (typeof sentReminders.$inferInsert)[] = [];
+      const appRemindersMap: Record<string, { type: "24h_reminder" | "2h_reminder", app: (typeof apps)[number] }> = {};
 
       for (const app of apps) {
         const appDate = app.scheduledDate instanceof Date ? app.scheduledDate : new Date(app.scheduledDate);
@@ -196,7 +196,7 @@ export async function GET(req: NextRequest) {
 
       let remindersSent = 0;
       let duplicatesSkipped = 0;
-      let insertedLogs: any[] = [];
+      let insertedLogs: (typeof sentReminders.$inferSelect)[] = [];
 
       if (remindersToInsert.length > 0) {
         insertedLogs = await tx
@@ -239,10 +239,10 @@ export async function GET(req: NextRequest) {
       message: "Appointment reminders cron executed successfully.",
       stats: results,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ [CRON_APPOINTMENT_REMINDERS_ERROR]:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Internal Server Error" },
+      { success: false, error: error instanceof Error ? error.message : "Internal Server Error" },
       { status: 500 }
     );
   }

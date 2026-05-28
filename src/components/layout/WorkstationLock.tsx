@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Unlock, UserMinus, ShieldAlert, Loader2, KeyRound } from "lucide-react";
 import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
+import { type User } from "@/types/auth-api.types";
+import { purgeSyncEngineKey } from "@/lib/offline/sync-engine";
 
 export default function WorkstationLock() {
   const { isLocked, unlockStation } = useWorkstation();
@@ -19,7 +21,7 @@ export default function WorkstationLock() {
   const [error, setError] = useState<string | null>(null);
 
   const isRtl = locale === "ar";
-  const user = sessionData?.user as any;
+  const user = sessionData?.user as unknown as User;
 
   // Securely enforce password renewal for sessions marked as expired
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function WorkstationLock() {
 
   const handleSwitchUser = async () => {
     try {
+      purgeSyncEngineKey();
       await signOut();
       localStorage.removeItem("workstation_locked");
       window.location.href = `/${locale}/login`; // Force redirect and reload state

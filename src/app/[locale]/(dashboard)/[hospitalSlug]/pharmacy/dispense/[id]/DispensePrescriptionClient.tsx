@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/dialog";
 
 // We import Html5Qrcode dynamically to avoid server-side window undefined error
-let Html5Qrcode: any = null;
+let Html5Qrcode: typeof import("html5-qrcode").Html5Qrcode | null = null;
 if (typeof window !== "undefined") {
   import("html5-qrcode").then((mod) => {
     Html5Qrcode = mod.Html5Qrcode;
@@ -62,7 +62,7 @@ interface MedicationItem {
   price: string | number;
 }
 
-interface PrescriptionDetails {
+export interface PrescriptionDetails {
   id: string;
   createdAt: string | Date;
   status: string;
@@ -116,20 +116,27 @@ export default function DispensePrescriptionClient({
   const [manualBarcode, setManualBarcode] = useState("");
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const qrScannerRef = useRef<any>(null);
+  const qrScannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Auto-focus barcode input
+  // Auto-focus barcode input and cleanup audio context on unmount to prevent sound pipeline memory leaks
   useEffect(() => {
     if (barcodeInputRef.current) {
       barcodeInputRef.current.focus();
     }
+    return () => {
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        audioCtxRef.current.close().catch((err) =>
+          console.error("[SCANNER FEEDBACK] Failed to close AudioContext on unmount:", err)
+        );
+      }
+    };
   }, []);
 
   // Initialize audio context on first interaction
   const initAudio = () => {
     if (typeof window !== "undefined" && !audioCtxRef.current) {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioContextClass) {
         audioCtxRef.current = new AudioContextClass();
       }
@@ -249,7 +256,7 @@ export default function DispensePrescriptionClient({
   // Initialize and close camera scanner
   useEffect(() => {
     let isMounted = true;
-    let html5QrCode: any = null;
+    let html5QrCode: import("html5-qrcode").Html5Qrcode | null = null;
 
     if (isCameraOpen) {
       const startScanner = async () => {
@@ -303,7 +310,7 @@ export default function DispensePrescriptionClient({
           .then(() => {
             qrScannerRef.current = null;
           })
-          .catch((err: any) => console.error("Scanner stop error:", err));
+          .catch((err) => console.error("Scanner stop error:", err));
       }
     };
   }, [isCameraOpen, isRtl]);

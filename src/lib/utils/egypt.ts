@@ -81,9 +81,19 @@ export function validateNationalId(nid: string): boolean {
   if (centuryCode !== 2 && centuryCode !== 3 && centuryCode !== 4) return false;
 
   const century = centuryCode === 2 ? 1900 : centuryCode === 3 ? 2000 : 2100;
-  const year = parseInt(nid.substring(1, 3)) + century;
-  const month = parseInt(nid.substring(3, 5)) - 1; // JS months are 0-indexed
-  const day = parseInt(nid.substring(5, 7));
+  
+  // Extract date components: YY MM DD
+  const yearPart = parseInt(nid.substring(1, 3));
+  const monthPart = parseInt(nid.substring(3, 5));
+  const dayPart = parseInt(nid.substring(5, 7));
+
+  // Explicit range checks for months and days to catch malformed IDs early
+  if (monthPart < 1 || monthPart > 12) return false;
+  if (dayPart < 1 || dayPart > 31) return false;
+
+  const year = yearPart + century;
+  const month = monthPart - 1; // JS months are 0-indexed
+  const day = dayPart;
 
   const dob = new Date(Date.UTC(year, month, day));
   if (dob.getUTCFullYear() !== year || dob.getUTCMonth() !== month || dob.getUTCDate() !== day) {

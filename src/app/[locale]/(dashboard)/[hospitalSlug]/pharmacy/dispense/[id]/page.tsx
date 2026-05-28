@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getPrescriptionForDispensing } from "@/lib/actions/pharmacy";
 import { getTranslations } from "next-intl/server";
-import DispensePrescriptionClient from "./DispensePrescriptionClient";
+import DispensePrescriptionClient, { PrescriptionDetails } from "./DispensePrescriptionClient";
 
 export async function generateMetadata({
   params,
@@ -52,7 +52,7 @@ export default async function PrescriptionDispensePage({
     notFound();
   }
 
-  const prescription = (res as any).data;
+  const prescription = res.data as unknown as PrescriptionDetails;
 
   return (
     <DispensePrescriptionClient 

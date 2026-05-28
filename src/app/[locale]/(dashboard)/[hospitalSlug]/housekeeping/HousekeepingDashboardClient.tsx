@@ -112,6 +112,9 @@ interface CompletedTaskMetric {
   completedAt: Date | null;
 }
 
+type HousekeepingTaskType = "post_discharge" | "routine" | "pre_admission" | "deep_clean" | "isolation_terminal";
+type HousekeepingTaskPriority = "routine" | "urgent";
+
 interface HousekeepingDashboardClientProps {
   locale: string;
   hospitalSlug: string;
@@ -139,6 +142,11 @@ export default function HousekeepingDashboardClient({
   const isRtl = locale === "ar";
   const dateLocale = isRtl ? ar : enUS;
 
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Tabs state: "queue" or "map"
   const [activeTab, setActiveTab] = useState<"queue" | "map">("queue");
 
@@ -159,9 +167,17 @@ export default function HousekeepingDashboardClient({
   // Manual Task Creation Dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedBedId, setSelectedBedId] = useState<string>("");
-  const [selectedType, setSelectedType] = useState<"post_discharge" | "routine" | "pre_admission" | "deep_clean" | "isolation_terminal">("routine");
-  const [selectedPriority, setSelectedPriority] = useState<"routine" | "urgent">("routine");
+  const [selectedType, setSelectedType] = useState<HousekeepingTaskType>("routine");
+  const [selectedPriority, setSelectedPriority] = useState<HousekeepingTaskPriority>("routine");
   const [taskNotes, setTaskNotes] = useState("");
+
+  const handleTypeChange = (val: string) => {
+    setSelectedType(val as HousekeepingTaskType);
+  };
+
+  const handlePriorityChange = (val: string) => {
+    setSelectedPriority(val as HousekeepingTaskPriority);
+  };
 
   const isSupervisor = ["SUPER_ADMIN", "ADMIN", "NURSE", "OR_NURSE"].includes(currentUserRole);
 
@@ -188,7 +204,11 @@ export default function HousekeepingDashboardClient({
     const inProgressCount = tasks.filter((task) => task.status === "in_progress").length;
 
     // 4. Overdue (waiting > 2 hours) Count
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    // Code Review Fix: Use stable reference and only initialize on client to prevent hydration mismatch
+    if (!mounted) return { avgMinutes, bedsCleanedTodayCount, inProgressCount, overdueCount: 0 };
+
+    const now = new Date();
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     const overdueCount = tasks.filter(
       (task) => task.status === "pending" && new Date(task.requestedAt) < twoHoursAgo
     ).length;
@@ -199,7 +219,7 @@ export default function HousekeepingDashboardClient({
       inProgressCount,
       overdueCount
     };
-  }, [tasks, completedTasks]);
+  }, [tasks, completedTasks, mounted]);
 
   // Filters tasks
   const filteredTasks = useMemo(() => {
@@ -252,8 +272,8 @@ export default function HousekeepingDashboardClient({
         const errorMessage = "error" in res ? res.error : t("assignError");
         toast.error(errorMessage);
       }
-    } catch (e: any) {
-      toast.error(e.message || "Error");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
     } finally {
       setActionLoading(null);
     }
@@ -269,8 +289,8 @@ export default function HousekeepingDashboardClient({
         const errorMessage = "error" in res ? res.error : t("assignError");
         toast.error(errorMessage);
       }
-    } catch (e: any) {
-      toast.error(e.message || "Error");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
     } finally {
       setActionLoading(null);
     }
@@ -286,8 +306,8 @@ export default function HousekeepingDashboardClient({
         const errorMessage = "error" in res ? res.error : t("startError");
         toast.error(errorMessage);
       }
-    } catch (e: any) {
-      toast.error(e.message || "Error");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
     } finally {
       setActionLoading(null);
     }
@@ -414,8 +434,8 @@ export default function HousekeepingDashboardClient({
         const errorMessage = "error" in res ? res.error : t("completeError");
         toast.error(errorMessage);
       }
-    } catch (e: any) {
-      toast.error(e.message || "Error");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
     } finally {
       setActionLoading(null);
       setActiveTaskId(null);
@@ -447,8 +467,8 @@ export default function HousekeepingDashboardClient({
         const errorMessage = "error" in res ? res.error : (isRtl ? "فشل إنشاء المهمة." : "Failed to create task.");
         toast.error(errorMessage);
       }
-    } catch (e: any) {
-      toast.error(e.message || "Error");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error");
     } finally {
       setActionLoading(null);
     }
@@ -1019,7 +1039,7 @@ export default function HousekeepingDashboardClient({
               <label className="text-xs font-black text-foreground">{t("taskType")}</label>
               <Select 
                 value={selectedType} 
-                onValueChange={(val: any) => setSelectedType(val)}
+                onValueChange={handleTypeChange}
               >
                 <SelectTrigger className="w-full text-xs">
                   <SelectValue />
@@ -1039,7 +1059,7 @@ export default function HousekeepingDashboardClient({
               <label className="text-xs font-black text-foreground">{t("priority")}</label>
               <Select 
                 value={selectedPriority} 
-                onValueChange={(val: any) => setSelectedPriority(val)}
+                onValueChange={handlePriorityChange}
               >
                 <SelectTrigger className="w-full text-xs">
                   <SelectValue />

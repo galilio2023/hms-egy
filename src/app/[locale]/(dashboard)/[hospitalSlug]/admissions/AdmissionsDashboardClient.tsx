@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { safeParseInt } from "@/lib/utils/formatting";
+import { calculateMEWS } from "@/lib/clinical/mews";
 import {
   Bed as BedIcon,
   Plus,
@@ -144,12 +145,34 @@ export default function AdmissionsDashboardClient({
   const t = useTranslations("admissions");
   const router = useRouter();
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // State managers
   const [isAdmitOpen, setIsAdmitOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
   // Selection states
   const [selectedBed, setSelectedBed] = useState<BedDataRow | null>(null);
+  
+  // Memoize MEWS score calculations for the selected patient's vitals history to prevent redundant calculations on every render pass
+  const memoizedMewsHistory = useMemo(() => {
+    const patientId = selectedBed?.patientId;
+    if (!patientId) return {};
+    const patientVitals = vitalsHistory[patientId] || [];
+    const results: Record<string, ReturnType<typeof calculateMEWS>> = {};
+    for (const v of patientVitals) {
+      results[v.id] = calculateMEWS({
+        systolicBp: v.bloodPressureSystolic,
+        heartRate: v.heartRate,
+        respiratoryRate: v.respiratoryRate,
+        temperature: v.temperature,
+      });
+    }
+    return results;
+  }, [selectedBed?.patientId, vitalsHistory]);
   
   // New Admission Dialog fields
   const [patientQuery, setPatientQuery] = useState("");
@@ -181,11 +204,6 @@ export default function AdmissionsDashboardClient({
   const [summaryAr, setSummaryAr] = useState("");
   const [summaryEn, setSummaryEn] = useState("");
   const [isDischarging, setIsDischarging] = useState(false);
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const isRtl = locale === "ar";
 
@@ -391,7 +409,7 @@ export default function AdmissionsDashboardClient({
       toast.warning(t("bedUnavailable"));
     }  };
 
-  // Format date helper - uses mounted check to prevent hydration mismatch between server/client timezones
+  // Format date helper
   const formatDate = (date: Date | string | null) => {
     if (!date || !mounted) return "";
     const d = new Date(date);
@@ -1048,41 +1066,56 @@ export default function AdmissionsDashboardClient({
                         <th className="p-3 text-center">{isRtl ? "التنفس" : "RR"}</th>
                         <th className="p-3 text-center">{isRtl ? "درجة الحرارة" : "Temp"}</th>
                         <th className="p-3 text-center">{isRtl ? "الأكسجين" : "SpO2"}</th>
+                        <th className="p-3 text-center">{isRtl ? "تقييم MEWS" : "MEWS Score"}</th>
                         <th className="p-3 text-center">{isRtl ? "الوزن/الطول" : "Wt/Ht"}</th>
                         <th className="p-3 text-start hidden sm:table-cell">{isRtl ? "بواسطة" : "Staff Member"}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/40">
-                      {vitalsHistory[selectedBed.patientId].map((v) => (
-                        <tr key={v.id} className="hover:bg-muted/40 transition-colors">
-                          <td className="p-3 font-semibold text-muted-foreground whitespace-nowrap">
-                            {formatDate(v.recordedAt)}
-                          </td>
-                          <td className="p-3 text-center font-bold text-foreground">
-                            {v.bloodPressureSystolic && v.bloodPressureDiastolic 
-                              ? `${v.bloodPressureSystolic}/${v.bloodPressureDiastolic}`
-                              : "—"}
-                          </td>
-                          <td className="p-3 text-center font-bold text-blue-600 dark:text-blue-400">
-                            {v.heartRate ? `${v.heartRate} bpm` : "—"}
-                          </td>
-                          <td className="p-3 text-center text-foreground/90">
-                            {v.respiratoryRate ? `${v.respiratoryRate}/m` : "—"}
-                          </td>
-                          <td className="p-3 text-center font-bold text-amber-600 dark:text-amber-400">
-                            {v.temperature ? `${v.temperature}°C` : "—"}
-                          </td>
-                          <td className="p-3 text-center font-black text-emerald-600 dark:text-emerald-400">
-                            {v.oxygenSaturation ? `${v.oxygenSaturation}%` : "—"}
-                          </td>
-                          <td className="p-3 text-center text-muted-foreground whitespace-nowrap">
-                            {v.weightKg ? `${v.weightKg}kg` : "—"} / {v.heightCm ? `${v.heightCm}cm` : "—"}
-                          </td>
-                          <td className="p-3 text-start text-muted-foreground/80 truncate hidden sm:table-cell max-w-[120px]">
-                            {isRtl ? v.recorderNameAr : v.recorderNameEn}
-                          </td>
-                        </tr>
-                      ))}
+                      {(selectedBed ? vitalsHistory[selectedBed.patientId] || [] : []).map((v) => {
+                        const mews = memoizedMewsHistory[v.id] || { 
+                          score: "—", 
+                          badgeStyle: "text-muted-foreground", 
+                          labelAr: "غير محدد", 
+                          labelEn: "N/A" 
+                        };
+
+                        return (
+                          <tr key={v.id} className="hover:bg-muted/40 transition-colors">
+                            <td className="p-3 font-semibold text-muted-foreground whitespace-nowrap">
+                              {formatDate(v.recordedAt)}
+                            </td>
+                            <td className="p-3 text-center font-bold text-foreground">
+                              {v.bloodPressureSystolic && v.bloodPressureDiastolic 
+                                ? `${v.bloodPressureSystolic}/${v.bloodPressureDiastolic}`
+                                : "—"}
+                            </td>
+                            <td className="p-3 text-center font-bold text-blue-600 dark:text-blue-400">
+                              {v.heartRate ? `${v.heartRate} bpm` : "—"}
+                            </td>
+                            <td className="p-3 text-center text-foreground/90">
+                              {v.respiratoryRate ? `${v.respiratoryRate}/m` : "—"}
+                            </td>
+                            <td className="p-3 text-center font-bold text-amber-600 dark:text-amber-400">
+                              {v.temperature ? `${v.temperature}°C` : "—"}
+                            </td>
+                            <td className="p-3 text-center font-black text-emerald-600 dark:text-emerald-400">
+                              {v.oxygenSaturation ? `${v.oxygenSaturation}%` : "—"}
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className={cn("px-2.5 py-0.5 text-[10px] font-bold rounded-full border shadow-sm", mews.badgeStyle)} dir="ltr">
+                                {mews.score} {isRtl ? `\u200F(${mews.labelAr})` : `\u200E(${mews.labelEn})`}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center text-muted-foreground whitespace-nowrap">
+                              {v.weightKg ? `${v.weightKg}kg` : "—"} / {v.heightCm ? `${v.heightCm}cm` : "—"}
+                            </td>
+                            <td className="p-3 text-start text-muted-foreground/80 truncate hidden sm:table-cell max-w-[120px]">
+                              {isRtl ? v.recorderNameAr : v.recorderNameEn}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
