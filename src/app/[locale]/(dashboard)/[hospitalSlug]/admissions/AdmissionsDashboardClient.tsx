@@ -145,6 +145,14 @@ export default function AdmissionsDashboardClient({
   const t = useTranslations("admissions");
   const router = useRouter();
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   // State managers
   const [isAdmitOpen, setIsAdmitOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -389,7 +397,7 @@ export default function AdmissionsDashboardClient({
 
   // Format date helper
   const formatDate = (date: Date | string | null) => {
-    if (!date) return "";
+    if (!date || !mounted) return "";
     const d = new Date(date);
     return d.toLocaleString(isRtl ? "ar-EG" : "en-US", {
       month: "short",

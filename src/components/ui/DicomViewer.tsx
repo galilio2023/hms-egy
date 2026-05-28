@@ -41,6 +41,28 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   const [currentSlice, setCurrentSlice] = useState(1);
   const totalSlices = 16; // Simulated CT/MRI series slices count
   
+  // Panning & dragging states
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging) return;
+    setPan({
+      x: e.clientX - dragStart.current.x,
+      y: e.clientY - dragStart.current.y,
+    });
+  };
+
+  const handleMouseUpOrLeave = () => {
+    setIsDragging(false);
+  };
+
   // Image element loading reference
   const [imageLoaded, setImageLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -110,8 +132,8 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     // Calculate draw dimensions matching zoom
     const drawWidth = canvas.width * zoom;
     const drawHeight = canvas.height * zoom;
-    const offsetX = (canvas.width - drawWidth) / 2;
-    const offsetY = (canvas.height - drawHeight) / 2;
+    const offsetX = (canvas.width - drawWidth) / 2 + pan.x;
+    const offsetY = (canvas.height - drawHeight) / 2 + pan.y;
 
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
@@ -154,7 +176,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     ctx.fillText(isFrontal ? "I" : "P", canvas.width / 2 - 5, canvas.height - 30);
     ctx.fillText("L", canvas.width - 35, canvas.height - 30);
 
-  }, [imageLoaded, zoom, brightness, contrast, currentSlice, isRtl]);
+  }, [imageLoaded, zoom, brightness, contrast, currentSlice, isRtl, procedureName, pan]);
 
   // Reset viewport handlers
   const handleReset = () => {
@@ -162,6 +184,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     setBrightness(100);
     setContrast(100);
     setCurrentSlice(1);
+    setPan({ x: 0, y: 0 });
   };
 
   return (
@@ -197,7 +220,11 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
             ref={canvasRef} 
             width={640} 
             height={360} 
-            className="w-full h-full object-contain cursor-crosshair"
+            className="w-full h-full object-contain cursor-move"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUpOrLeave}
+            onMouseLeave={handleMouseUpOrLeave}
           />
         )}
 

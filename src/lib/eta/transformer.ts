@@ -254,6 +254,9 @@ export function transformInvoiceToETAReceipt(
   const totalAmount = totalNetAmount.plus(taxTotals.reduce((sum, tax) => sum.plus(tax.amount), new Big(0))).round(5);
 
   // 3. Generate Cryptographically chained UUID
+  // NOTE: For official Egyptian Tax Authority (ETA) production submission, receipt signatures
+  // must be generated using an authorized physical Hardware Security Module (HSM) or POS USB token
+  // (e.g., A-Trust / Egypt Trust). The SHA-256 hashing below is a sandbox-compliant simulation.
   const rawHashInput = `${invoice.invoiceNumber}|${invoice.createdAt.toISOString()}|${totalAmount.toFixed(5)}|${totalNetAmount.toFixed(5)}|${posSerialNumber}`;
   const receiptUuid = createHash("sha256").update(rawHashInput).digest("hex");
 

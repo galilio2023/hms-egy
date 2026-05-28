@@ -35,6 +35,11 @@ export interface OutboundMessagePayload {
   entityType: "appointment" | "invoice" | "clinical_alert" | "system";
   entityId: string; // UUID of related admission, lab order, or appointment
   channelPriority?: ("whatsapp" | "sms")[];
+  whatsappTemplate?: {
+    name: string;
+    languageCode: string;
+    parameters: string[];
+  };
 }
 
 export interface SendResult {
@@ -134,7 +139,7 @@ export async function sendResilientClinicalAlert(payload: OutboundMessagePayload
   // 2. Resilient Channel Routing
   for (const channel of channelPriority) {
     if (channel === "whatsapp") {
-      const waResult = await sendWhatsAppMessage(formattedPhone, messageText);
+      const waResult = await sendWhatsAppMessage(formattedPhone, messageText, payload.whatsappTemplate);
       if (waResult.success) {
         await logSentReminder(payload, "whatsapp", true, waResult.providerUsed);
         return waResult;
@@ -289,7 +294,11 @@ async function sendVictoryLinkSms(phone: string, text: string): Promise<SendResu
 /**
  * Out-of-band WhatsApp Business API Client
  */
-async function sendWhatsAppMessage(phone: string, text: string): Promise<SendResult> {
+async function sendWhatsAppMessage(
+  phone: string,
+  text: string,
+  template?: { name: string; languageCode: string; parameters: string[] }
+): Promise<SendResult> {
   if (!WHATSAPP_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
     // If not configured, immediately return failure to let the system trigger SMS failover
     return {
@@ -305,20 +314,41 @@ async function sendWhatsAppMessage(phone: string, text: string): Promise<SendRes
   try {
     const url = `${WHATSAPP_API_URL}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
     
-    // We send a text-based alert (requires templates for official business, but handles text for sandbox/pre-approved conversations)
+    const requestBody = template
+      ? {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: phone,
+          type: "template",
+          template: {
+            name: template.name,
+            language: { code: template.languageCode },
+            components: [
+              {
+                type: "body",
+                parameters: template.parameters.map((param) => ({
+                  type: "text",
+                  text: param,
+                })),
+              },
+            ],
+          },
+        }
+      : {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: phone,
+          type: "text",
+          text: { body: text },
+        };
+
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${WHATSAPP_TOKEN}`,
       },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: phone,
-        type: "text",
-        text: { body: text },
-      }),
+      body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
 
