@@ -92,6 +92,7 @@ export const admissions = pgTable("admissions", {
   dischargeDate: timestamp("discharge_date"),
   reason: text("reason").notNull(),
   status: varchar("status", { length: 50 }).default("active").notNull(), // active, discharged, transferred
+  version: integer("version").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
@@ -155,6 +156,7 @@ export const vitalsFlowsheet = pgTable("vitals_flowsheet", {
   oxygenSaturation: integer("oxygen_saturation"), // percentage
   weightKg: decimal("weight_kg", { precision: 5, scale: 2 }), // e.g. 72.50
   heightCm: integer("height_cm"),
+  version: integer("version").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {

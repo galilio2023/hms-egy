@@ -3,6 +3,7 @@ import { pgTable, text, uuid, timestamp, boolean, varchar, index, uniqueIndex, i
 import { hospitals, staff } from "./core";
 import { patients } from "./patients";
 import { admissions } from "./clinical";
+import { invoiceItems } from "./billing";
 
 export const medications = pgTable("medications", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -81,6 +82,9 @@ export const stockTransactions = pgTable("stock_transactions", {
   quantity: integer("quantity").notNull(), // positive for additions, negative for dispensations
   notes: text("notes"),
   performedBy: uuid("performed_by").references(() => staff.id, { onDelete: "set null" }),
+  patientId: uuid("patient_id").references(() => patients.id, { onDelete: "cascade" }),
+  admissionId: uuid("admission_id").references(() => admissions.id, { onDelete: "set null" }),
+  invoiceItemId: uuid("invoice_item_id").references(() => invoiceItems.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {

@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, varchar, index, unique , pgPolicy} from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, varchar, index, unique , pgPolicy, integer} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { hospitals } from "./core";
 import { genderEnum } from "./enums";
@@ -26,6 +26,7 @@ export const patients = pgTable("patients", {
   allergies: text("allergies").array().default(sql`'{}'::text[]`).notNull(),
   chronicConditions: text("chronic_conditions").array().default(sql`'{}'::text[]`).notNull(),
   bloodType: varchar("blood_type", { length: 5 }), // A+, B-, etc.
+  version: integer("version").default(1).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {

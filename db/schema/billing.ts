@@ -21,6 +21,7 @@ export const invoices = pgTable("invoices", {
   // ETA E-invoicing fields
   etaUuid: varchar("eta_uuid", { length: 100 }),
   etaStatus: varchar("eta_status", { length: 50 }), // submitted, valid, invalid, cancelled
+  etaSyncStatus: varchar("eta_sync_status", { length: 20 }).default("pending").notNull(), // pending, synced, failed, rejected
   etaSubmissionId: varchar("eta_submission_id", { length: 100 }),
   etaLongId: varchar("eta_long_id", { length: 255 }),
   etaInternalId: varchar("eta_internal_id", { length: 100 }),
@@ -33,6 +34,8 @@ export const invoices = pgTable("invoices", {
     hospitalPatIdx: index("inv_hospital_patient_idx").on(table.hospitalId, table.patientId),
     hospitalInvoiceNumberUnique: unique("inv_hospital_number_unique").on(table.hospitalId, table.invoiceNumber),
     archivingIdx: index("inv_archiving_idx").on(table.hospitalId, table.isArchived, table.createdAt),
+    etaUuidIdx: index("inv_eta_uuid_idx").on(table.etaUuid),
+    etaSyncStatusIdx: index("inv_eta_sync_status_idx").on(table.hospitalId, table.etaSyncStatus),
   };
 }).enableRLS();
 

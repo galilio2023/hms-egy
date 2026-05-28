@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useActionState, useOptimistic, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
@@ -144,6 +144,7 @@ export default function AdmissionsDashboardClient({
 }: AdmissionsDashboardClientProps) {
   const t = useTranslations("admissions");
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -154,8 +155,70 @@ export default function AdmissionsDashboardClient({
   const [isAdmitOpen, setIsAdmitOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
-  // Selection states
+  // Selection states with Optimistic UI
+  const [optimisticBeds, setOptimisticBeds] = useOptimistic(
+    bedsData,
+    (state, updatedBed: { id: string; status: BedDataRow["status"]; patientNameAr?: string; patientNameEn?: string }) =>
+      state.map(b => b.bedId === updatedBed.id ? {
+        ...b,
+        status: updatedBed.status,
+        patientNameAr: updatedBed.patientNameAr ?? b.patientNameAr,
+        patientNameEn: updatedBed.patientNameEn ?? b.patientNameEn
+      } : b)
+  );
+
   const [selectedBed, setSelectedBed] = useState<BedDataRow | null>(null);
+
+  // useActionState for Admitting Patient
+  const [admitState, admitFormAction, isAdmitting] = useActionState(
+    async (_prevState: { error: string | null; success: boolean }, formData: FormData) => {
+      const payload = {
+        patientId: formData.get("patientId") as string,
+        bedId: formData.get("bedId") as string,
+        admittingDoctorId: formData.get("admittingDoctorId") as string,
+        admissionReason: formData.get("admissionReason") as string,
+      };
+
+      const res = await admitPatient(payload);
+      if (res.success) {
+        toast.success(t("admissionSuccess"));
+        setIsAdmitOpen(false);
+        router.refresh();
+        return { success: true, error: null };
+      } else {
+        const error = (res as { error?: string }).error || "Unknown error occurred.";
+        toast.error(error);
+        return { error, success: false };
+      }
+    },
+    { error: null, success: false }
+  );
+
+  // useActionState for Discharging Patient
+  const [dischargeState, dischargeFormAction, isDischarging] = useActionState(
+    async (_prevState: { error: string | null; success: boolean }, formData: FormData) => {
+      const payload = {
+        admissionId: formData.get("admissionId") as string,
+        dischargeCondition: formData.get("dischargeCondition") as "stable" | "improved" | "referred" | "deceased",
+        followUpInstructions: formData.get("followUpInstructions") as string,
+        summaryAr: formData.get("summaryAr") as string,
+        summaryEn: formData.get("summaryEn") as string,
+      };
+
+      const res = await dischargePatient(payload);
+      if (res.success) {
+        toast.success(t("dischargeSuccess"));
+        setIsDrawerOpen(false);
+        router.refresh();
+        return { success: true, error: null };
+      } else {
+        const error = (res as { error?: string }).error || "Unknown error occurred.";
+        toast.error(error);
+        return { error, success: false };
+      }
+    },
+    { error: null, success: false }
+  );
   
   // Memoize MEWS score calculations for the selected patient's vitals history to prevent redundant calculations on every render pass
   const memoizedMewsHistory = useMemo(() => {
@@ -182,7 +245,6 @@ export default function AdmissionsDashboardClient({
   const [admittingDoctorId, setAdmittingDoctorId] = useState("");
   const [admissionReason, setAdmissionReason] = useState("");
   const [targetBedId, setTargetBedId] = useState("");
-  const [isAdmitting, setIsAdmitting] = useState(false);
 
   // Vitals Flowshet Record states
   const [isVitalsFormExpanded, setIsVitalsOpen] = useState(false);
@@ -203,20 +265,19 @@ export default function AdmissionsDashboardClient({
   const [followUpInstructions, setFollowUpInstructions] = useState("");
   const [summaryAr, setSummaryAr] = useState("");
   const [summaryEn, setSummaryEn] = useState("");
-  const [isDischarging, setIsDischarging] = useState(false);
 
   const isRtl = locale === "ar";
 
-  // Compute metrics dynamically from the static dataset passed from the server
-  const totalBeds = bedsData.length;
-  const occupiedBeds = bedsData.filter((b) => b.status === "occupied").length;
-  const availableBeds = bedsData.filter((b) => b.status === "available").length;
-  const pendingCleaningBeds = bedsData.filter((b) => b.status === "pending_cleaning").length;
+  // Compute metrics dynamically from the optimistic dataset
+  const totalBeds = optimisticBeds.length;
+  const occupiedBeds = optimisticBeds.filter((b) => b.status === "occupied").length;
+  const availableBeds = optimisticBeds.filter((b) => b.status === "available").length;
+  const pendingCleaningBeds = optimisticBeds.filter((b) => b.status === "pending_cleaning").length;
   const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
 
-  // Group beds by roomId
+  // Group beds by roomId using optimistic data
   const roomsWithBedsMap = rooms.map((room) => {
-    const roomBeds = bedsData.filter((b) => b.roomId === room.id);
+    const roomBeds = optimisticBeds.filter((b) => b.roomId === room.id);
     return {
       ...room,
       beds: roomBeds,
@@ -258,54 +319,30 @@ export default function AdmissionsDashboardClient({
     return () => clearTimeout(delayDebounceFn);
   }, [patientQuery, handleSearchPatients]);
 
-  // Admit patient handler
-  const handleAdmitPatient = async () => {
+  // Admit patient handler with Optimistic UI
+  const handleAdmitPatient = () => {
     const bedIdToAdmit = targetBedId || selectedBed?.bedId;
-    if (!selectedPatient) {
-      toast.error(isRtl ? "يرجى تحديد مريض أولاً" : "Please select a patient first.");
-      return;
-    }
-    if (!bedIdToAdmit) {
-      toast.error(isRtl ? "يرجى اختيار السرير" : "Please select a bed.");
-      return;
-    }
-    if (!admittingDoctorId) {
-      toast.error(isRtl ? "يرجى اختيار الطبيب المعالج" : "Please select admitting physician.");
-      return;
-    }
-    if (!admissionReason.trim()) {
-      toast.error(isRtl ? "يرجى توضيح سبب الدخول" : "Please enter the reason for admission.");
+    if (!selectedPatient || !bedIdToAdmit || !admittingDoctorId || !admissionReason.trim()) {
+      toast.error(isRtl ? "يرجى إكمال جميع الحقول" : "Please complete all fields.");
       return;
     }
 
-    setIsAdmitting(true);
-    try {
-      const res = await admitPatient({
-        patientId: selectedPatient.id,
-        bedId: bedIdToAdmit,
-        admittingDoctorId,
-        admissionReason,
-      });
+    setOptimisticBeds({
+      id: bedIdToAdmit,
+      status: "occupied",
+      patientNameAr: selectedPatient.nameAr,
+      patientNameEn: selectedPatient.nameEn
+    });
 
-      if (res.success) {
-        toast.success(t("admissionSuccess"));
-        setIsAdmitOpen(false);
-        // Reset inputs
-        setSelectedPatient(null);
-        setAdmittingDoctorId("");
-        setAdmissionReason("");
-        setPatientQuery("");
-        setTargetBedId("");
-        // Reload page to reflect live changes
-        router.refresh();
-      } else {
-        toast.error((res as { error?: string }).error || "Unknown error occurred.");
-      }
-    } catch (err: unknown) {
-      toast.error("Error admitting patient: " + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setIsAdmitting(false);
-    }
+    const formData = new FormData();
+    formData.append("patientId", selectedPatient.id);
+    formData.append("bedId", bedIdToAdmit);
+    formData.append("admittingDoctorId", admittingDoctorId);
+    formData.append("admissionReason", admissionReason);
+
+    startTransition(() => {
+      admitFormAction(formData);
+    });
   };
 
   // Record vitals handler
@@ -353,46 +390,25 @@ export default function AdmissionsDashboardClient({
     }
   };
 
-  // Discharge patient handler
-  const handleDischargePatient = async () => {
-    if (!selectedBed || !selectedBed.admissionId) return;
-    if (!summaryAr.trim() || !summaryEn.trim()) {
-      toast.error(
-        isRtl 
-          ? "يرجى كتابة التلخيص الطبي باللغتين العربية والإنجليزية لضمان الالتزام بمعايير وزارة الصحة." 
-          : "Please write the medical summary in both Arabic and English to comply with MOH requirements."
-      );
+  // Discharge patient handler with Optimistic UI
+  const handleDischargePatient = () => {
+    if (!selectedBed || !selectedBed.admissionId || !summaryAr.trim() || !summaryEn.trim()) {
+      toast.error(isRtl ? "يرجى إكمال التلخيص الطبي" : "Please complete medical summary.");
       return;
     }
 
-    setIsDischarging(true);
-    try {
-      const res = await dischargePatient({
-        admissionId: selectedBed.admissionId,
-        dischargeCondition,
-        followUpInstructions,
-        summaryAr,
-        summaryEn,
-      });
+    setOptimisticBeds({ id: selectedBed.bedId, status: "pending_cleaning" });
 
-      if (res.success) {
-        toast.success(t("dischargeSuccess"));
-        setIsDrawerOpen(false);
-        // Clear values
-        setSummaryAr("");
-        setSummaryEn("");
-        setFollowUpInstructions("");
-        setDischargeCondition("stable");
-        // Live updates
-        router.refresh();
-      } else {
-        toast.error((res as { error?: string }).error || "Unknown error occurred.");
-      }
-    } catch (err: unknown) {
-      toast.error("Failed to discharge patient: " + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setIsDischarging(false);
-    }
+    const formData = new FormData();
+    formData.append("admissionId", selectedBed.admissionId);
+    formData.append("dischargeCondition", dischargeCondition);
+    formData.append("followUpInstructions", followUpInstructions);
+    formData.append("summaryAr", summaryAr);
+    formData.append("summaryEn", summaryEn);
+
+    startTransition(() => {
+      dischargeFormAction(formData);
+    });
   };
 
   // Open Bed admission shortcut
@@ -434,7 +450,7 @@ export default function AdmissionsDashboardClient({
   };
 
   // Filter list of available beds for select dropdown
-  const availableBedsList = bedsData.filter((b) => b.status === "available");
+  const availableBedsList = optimisticBeds.filter((b) => b.status === "available");
 
   return (
     <div className="max-w-7xl mx-auto space-y-8" dir={isRtl ? "rtl" : "ltr"}>

@@ -6,7 +6,9 @@ import { beds, admissions, dischargeSummaries, vitalsFlowsheet, rooms } from "@d
 import { housekeepingTasks } from "@db/schema/housekeeping";
 import { staff } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
-import { eq, and, isNull } from "drizzle-orm";
+import { backgroundJobs } from "@db/schema/system";
+import { stockTransactions } from "@db/schema/pharmacy";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
@@ -188,6 +190,28 @@ export async function dischargePatient(payload: DischargePatientPayload) {
         throw new AppError(ErrorCode.VALIDATION_ERROR, "This admission record is already closed.");
       }
 
+      // 1.5 Safety Audit: Block discharge if there are unbilled pharmacy items
+      const unbilledItems = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(stockTransactions)
+        .where(
+          and(
+            eq(stockTransactions.hospitalId, hospitalId),
+            // Strictly check for this admission's dispensed items
+            eq(stockTransactions.admissionId, payload.admissionId),
+            eq(stockTransactions.type, "dispense"),
+            isNull(stockTransactions.invoiceItemId)
+          )
+        )
+        .then(res => res[0].count);
+
+      if (unbilledItems > 0) {
+        throw new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          `Discharge Blocked: There are ${unbilledItems} unbilled pharmacy items for this patient. Please finalize the pharmacy invoice before discharging.`
+        );
+      }
+
       const dischargingDoctorId = currentStaff?.id || admission.admittingDoctorId;
 
       // 2. Insert Discharge Summary
@@ -343,12 +367,39 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
 
       // 2. Proactively trigger out-of-band alerts asynchronously in the background using Next.js 15 after() API
       if (mews.score >= 5) {
+        // A. Queue the job in the database first to ensure survivability
+        const [job] = await db.insert(backgroundJobs).values({
+          hospitalId,
+          jobType: "critical_mews_alert",
+          payload: {
+            patientId: payload.patientId,
+            vitalId: result.vitalId,
+            mewsScore: mews.score,
+          },
+          status: "pending",
+        }).returning();
+
         after(() => {
           withTenantContext(hospitalId, async (tx) => {
             try {
+              await tx.update(backgroundJobs)
+                .set({ status: "processing", attempts: sql`${backgroundJobs.attempts} + 1`, updatedAt: new Date() })
+                .where(eq(backgroundJobs.id, job.id));
+
               await dispatchCriticalAlerts(hospitalId, payload.patientId, result.vitalId!, mews.score, tx);
+
+              await tx.update(backgroundJobs)
+                .set({ status: "completed", updatedAt: new Date() })
+                .where(eq(backgroundJobs.id, job.id));
             } catch (err) {
               console.error("[CRITICAL ALERT GATEWAY] Asynchronous alert dispatch failed:", err);
+              await tx.update(backgroundJobs)
+                .set({
+                  status: "failed",
+                  lastError: err instanceof Error ? err.message : String(err),
+                  updatedAt: new Date()
+                })
+                .where(eq(backgroundJobs.id, job.id));
             }
           }).catch((err) => console.error("[TENANT CONTEXT] Failed to establish background context for alerts:", err));
         });

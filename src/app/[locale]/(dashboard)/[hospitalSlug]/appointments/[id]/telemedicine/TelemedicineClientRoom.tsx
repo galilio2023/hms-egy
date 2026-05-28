@@ -665,7 +665,7 @@ ${plan}
                       </div>
 
                       {/* Items List */}
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pe-1 scrollbar-thin">
                         {protocolSubTab === "medications" && activeSet.medications.map((item, idx) => (
                           <div
                             key={idx}

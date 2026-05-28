@@ -261,7 +261,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
           {/* Main Clinical SOAP Section */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="border border-border/40 bg-card rounded-3xl shadow-md overflow-hidden relative">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent" />
+              <div className="absolute top-0 inset-inline-0 h-1 bg-gradient-to-r from-primary to-accent" />
               <CardContent className="p-6 sm:p-8 space-y-6">
                 
                 {/* AI Ambient Scribe Quick Action Banner */}
@@ -381,7 +381,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
 
             {/* F. Clinical Order Sets Application Workstation */}
             <Card className="border border-border/40 bg-card rounded-3xl shadow-md overflow-hidden relative">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+              <div className="absolute top-0 inset-inline-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
               <CardContent className="p-6 sm:p-8 space-y-6">
                 <div className="flex items-center gap-2.5">
                   <FolderHeart className="w-5 h-5 text-indigo-500 shrink-0" />
@@ -398,7 +398,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
                     <select
                       value={selectedOrderSetId}
                       onChange={(e) => handleOrderSetChange(e.target.value)}
-                      className="h-11 w-full bg-background border border-border/40 hover:border-border/80 focus:border-indigo-500/50 text-xs font-bold rounded-xl px-4 outline-none transition-all appearance-none cursor-pointer text-start pr-10"
+                      className="h-11 w-full bg-background border border-border/40 hover:border-border/80 focus:border-indigo-500/50 text-xs font-bold rounded-xl px-4 outline-none transition-all appearance-none cursor-pointer text-start pe-10"
                     >
                       <option value="none">{t("none")}</option>
                       {ORDER_SETS.map((os) => (
@@ -408,8 +408,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
                       ))}
                     </select>
                     <div className={cn(
-                      "absolute inset-y-0 flex items-center px-3 pointer-events-none text-muted-foreground",
-                      isRtl ? "left-0" : "right-0"
+                      "absolute inset-y-0 inset-inline-end-0 flex items-center px-3 pointer-events-none text-muted-foreground"
                     )}>
                       <ChevronDown className="w-4 h-4" />
                     </div>
