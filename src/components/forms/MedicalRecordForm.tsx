@@ -99,6 +99,21 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
   const [checkedRadiology, setCheckedRadiology] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState<"medications" | "labs" | "radiology">("medications");
 
+  // Code Review Polish: Ref for AudioContext to prevent micro-leaks on shared terminals
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Ensure AudioContext is closed on unmount to prevent sound channel exhaustion
+  React.useEffect(() => {
+    const currentAudioCtx = audioCtxRef.current;
+    return () => {
+      if (currentAudioCtx && currentAudioCtx.state !== "closed") {
+        currentAudioCtx.close().catch((err) => 
+          console.error("[SCRIBE AUDIO] Failed to close AudioContext on unmount:", err)
+        );
+      }
+    };
+  }, []);
+
   const handleOrderSetChange = (orderSetId: string) => {
     setSelectedOrderSetId(orderSetId);
     if (orderSetId === "none") {

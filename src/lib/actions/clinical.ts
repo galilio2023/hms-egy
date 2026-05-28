@@ -850,9 +850,11 @@ export function anonymizePatientData(text: string): string {
 
   // 3. Scrub common name prefixes/names in Egyptian contexts (Arabic & English)
   // Captures "المريض علي", "يا علي", "أستاذ أحمد", "Mr. Ahmed", "Patient Sarah"
-  const namePrefixesAr = ["المريض", "أستاذ", "أستاذة", "دكتور", "دكتورة", "يا"];
-  const namePrefixesEn = ["Patient", "Mr.", "Mrs.", "Ms.", "Dr.", "A/O"];
+  // Code Review Improvement: Expanded prefixes and cross-script support (transliterated names)
+  const namePrefixesAr = ["المريض", "أستاذ", "أستاذة", "دكتور", "دكتورة", "يا", "مدام", "أنسة"];
+  const namePrefixesEn = ["Patient", "Mr.", "Mrs.", "Ms.", "Dr.", "A/O", "Madam", "Miss"];
   
+  // Pattern to catch "[Prefix] [Name]" where Name starts with a capital or Arabic character
   const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "g");
   const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Zأ-ي][a-zأ-ي]*`, "g");
   
@@ -864,6 +866,13 @@ export function anonymizePatientData(text: string): string {
   sanitized = sanitized.replace(prefixPatternEn, (match) => {
     const parts = match.split(/\s+/);
     return `${parts[0]} [PATIENT_NAME]`;
+  });
+
+  // 4. Scrub explicit name mentions like "Patient name is [X]" or "اسمه [X]"
+  sanitized = sanitized.replace(/(?:Patient\s+name\s+is|His\s+name\s+is|Her\s+name\s+is|اسم\s+المريض|اسمه|اسمها)\s+[A-Zأ-ي][a-zأ-ي]*/gi, (match) => {
+    const parts = match.split(/\s+/);
+    const lastPart = parts.pop();
+    return `${parts.join(" ")} [PATIENT_NAME]`;
   });
 
   return sanitized;

@@ -4,6 +4,7 @@ import { hospitals, hospitalSettings } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
 import Big from "big.js";
 import { createHash } from "crypto";
+import { validateNationalId } from "@/lib/utils/egypt";
 
 export type InvoiceWithRelations = typeof invoices.$inferSelect & {
   items: (typeof invoiceItems.$inferSelect)[];
@@ -26,9 +27,9 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
   const isCitizen = !patient.passportNumber;
 
   if (totalAmountValue.gt(50000)) {
-    const isValidNationalID = /^[234]\d{13}$/.test(patient.nationalId || "");
+    const isValidNationalID = validateNationalId(patient.nationalId || "");
     if (isCitizen && !isValidNationalID) {
-      throw new Error("Egyptian regulations require a valid 14-digit National ID (starting with 2 or 3) for citizen invoices exceeding 50,000 EGP.");
+      throw new Error("Egyptian regulations require a valid 14-digit National ID (including valid birth date components) for citizen invoices exceeding 50,000 EGP.");
     }
     if (!isCitizen && !patient.passportNumber) {
       throw new Error("Foreign patients require a valid passport number for invoices exceeding 50,000 EGP.");
@@ -173,9 +174,9 @@ export function transformInvoiceToETAReceipt(
   const isCitizen = !patient.passportNumber;
 
   if (totalAmountValue.gt(50000)) {
-    const isValidNationalID = /^[234]\d{13}$/.test(patient.nationalId || "");
+    const isValidNationalID = validateNationalId(patient.nationalId || "");
     if (isCitizen && !isValidNationalID) {
-      throw new Error("Egyptian regulations require a valid 14-digit National ID (starting with 2 or 3) for citizen receipts exceeding 50,000 EGP.");
+      throw new Error("Egyptian regulations require a valid 14-digit National ID (including valid birth date components) for citizen receipts exceeding 50,000 EGP.");
     }
     if (!isCitizen && !patient.passportNumber) {
       throw new Error("Foreign patients require a valid passport number for receipts exceeding 50,000 EGP.");

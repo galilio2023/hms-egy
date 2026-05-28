@@ -41,6 +41,26 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   const [currentSlice, setCurrentSlice] = useState(1);
   const totalSlices = 16; // Simulated CT/MRI series slices count
   
+  // Layout states for responsive resizing
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  // Handle responsive resizing via ResizeObserver to prevent pixelation/distortion
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setDimensions({ width, height });
+        }
+      }
+    });
+    
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+  
   // Panning & dragging states
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -125,9 +145,9 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
 
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     // Set internal resolution matching devicePixelRatio for clinical-grade sharpness
-    // Code Review Fix: Use explicit default dimensions or check clientWidth/Height to prevent zero-dimension anomalies
-    const displayWidth = (canvas.clientWidth > 0) ? canvas.clientWidth : 640;
-    const displayHeight = (canvas.clientHeight > 0) ? canvas.clientHeight : 360;
+    // Code Review Fix: Use dimensions from ResizeObserver for reliable responsive layout
+    const displayWidth = dimensions.width || canvas.clientWidth || 640;
+    const displayHeight = dimensions.height || canvas.clientHeight || 360;
 
     // Code Review Fix: Defer drawing until layout stabilizes to avoid crashes or scaling anomalies
     if (displayWidth === 0 || displayHeight === 0) return;
@@ -212,7 +232,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     ctx.fillText(isFrontal ? "I" : "P", displayWidth / 2 - 5, displayHeight - 30);
     ctx.fillText("L", displayWidth - 35, displayHeight - 30);
 
-  }, [imageLoaded, zoom, currentSlice, isRtl, procedureName, pan]);
+  }, [imageLoaded, zoom, currentSlice, isRtl, procedureName, pan, dimensions]);
 
   // Reset viewport handlers
   const handleReset = () => {
