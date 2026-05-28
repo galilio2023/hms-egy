@@ -243,7 +243,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     ctx.fillText(isFrontal ? "I" : "P", displayWidth / 2 - 5, displayHeight - 30);
     ctx.fillText("L", displayWidth - 35, displayHeight - 30);
 
-  }, [imageLoaded, zoom, currentSlice, isRtl, procedureName, pan, dimensions]);
+  }, [imageLoaded, zoom, currentSlice, isRtl, procedureName, pan, dimensions.width, dimensions.height]);
 
   // Reset viewport handlers
   const handleReset = () => {

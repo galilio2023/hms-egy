@@ -1103,8 +1103,8 @@ export default function AdmissionsDashboardClient({
                               {v.oxygenSaturation ? `${v.oxygenSaturation}%` : "—"}
                             </td>
                             <td className="p-3 text-center">
-                              <span className={cn("px-2.5 py-0.5 text-[10px] font-bold rounded-full border shadow-sm", mews.badgeStyle)}>
-                                {mews.score} ({isRtl ? mews.labelAr : mews.labelEn})
+                              <span className={cn("px-2.5 py-0.5 text-[10px] font-bold rounded-full border shadow-sm", mews.badgeStyle)} dir="ltr">
+                                {mews.score} {isRtl ? `\u200F(${mews.labelAr})` : `\u200E(${mews.labelEn})`}
                               </span>
                             </td>
                             <td className="p-3 text-center text-muted-foreground whitespace-nowrap">

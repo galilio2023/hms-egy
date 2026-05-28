@@ -859,7 +859,8 @@ function anonymizePatientData(text: string): string {
   const prefixPatternAr = new RegExp(`(?:${namePrefixesAr.join("|")})\\s+(\\p{Script=Arabic}+(?:\\s+\\p{Script=Arabic}+)?)`, "gu");
   
   // Code Review Fix: Expand English prefix regex to capture hyphenated or space-separated compound names
-  const prefixPatternEn = new RegExp(`(?:${namePrefixesEn.join("|")})\\s+[A-Z][a-zA-Z]*(?:[-'\\s][A-Z][a-zA-Z]*)?`, "gu");
+  const escapedPrefixesEn = namePrefixesEn.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const prefixPatternEn = new RegExp(`(?:${escapedPrefixesEn.join("|")})\\s+[A-Z][a-zA-Z]*(?:[-'\\s][A-Z][a-zA-Z]*)?`, "gu");
   
   sanitized = sanitized.replace(prefixPatternAr, (match) => {
     const parts = match.split(/\s+/);
