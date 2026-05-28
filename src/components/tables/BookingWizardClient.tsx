@@ -83,10 +83,9 @@ export function BookingWizardClient({
   // Trigger patient lookup with 300ms debounce
   useEffect(() => {
     if (patientSearch.trim().length < 2) {
-      const timer = setTimeout(() => {
-        setPatientSearchResults([]);
-      }, 0);
-      return () => clearTimeout(timer);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPatientSearchResults([]);
+      return;
     }
 
     const timeoutId = setTimeout(() => {
@@ -120,44 +119,39 @@ export function BookingWizardClient({
       const day = cairoZoned.getDay();
       const isWeekend = day === 5 || day === 6;
 
-      const timer = setTimeout(() => {
-        if (isMounted) {
-          setIsWeekendWarning(isWeekend);
-          setQueueToWaitingList(false);
-        }
-      }, 0);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsWeekendWarning(isWeekend);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setQueueToWaitingList(false);
 
       // 2. Cairo Timezone holiday check
       const holidayInfo = isEgyptianPublicHoliday(dateToCheck);
       if (holidayInfo?.isHoliday) {
-        setTimeout(() => {
-          if (isMounted) {
-            setIsHolidayWarning(true);
-            setHolidayName((locale === "ar" ? holidayInfo.nameAr : holidayInfo.nameEn) || "");
-            setAvailableSlots([]);
-            setQueueToWaitingList(false);
-            setLoadingSlots(false);
-          }
-        }, 0);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsHolidayWarning(true);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setHolidayName((locale === "ar" ? holidayInfo.nameAr : holidayInfo.nameEn) || "");
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setAvailableSlots([]);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setQueueToWaitingList(false);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLoadingSlots(false);
         return () => {
           isMounted = false;
-          clearTimeout(timer);
         };
       } else {
-        setTimeout(() => {
-          if (isMounted) {
-            setIsHolidayWarning(false);
-            setHolidayName("");
-          }
-        }, 0);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setIsHolidayWarning(false);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setHolidayName("");
       }
 
-      const fetchTimer = setTimeout(() => {
-        if (isMounted) {
-          setLoadingSlots(true);
-          setSelectedSlot("");
-        }
-      }, 0);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoadingSlots(true);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedSlot("");
+
       getDoctorAvailability(selectedDoctor, selectedDate).then((res) => {
         if (isMounted) {
           if (res.success && "slots" in res) {
@@ -176,13 +170,10 @@ export function BookingWizardClient({
       });
       return () => { 
         isMounted = false; 
-        clearTimeout(timer);
-        clearTimeout(fetchTimer);
       };
     } else {
-      setTimeout(() => {
-        setAvailableSlots([]);
-      }, 0);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAvailableSlots([]);
     }
   }, [selectedDoctor, selectedDate, locale, slotAvailableWithWeekendRule]);
 

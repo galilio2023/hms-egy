@@ -157,24 +157,19 @@ export function AppointmentSchedulerClient({
   }, []);
 
   useEffect(() => {
-    // Defer async loading to avoid synchronous setState in effect body
-    const timer = setTimeout(() => loadWaitingList(), 0);
-    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadWaitingList();
   }, [loadWaitingList]);
 
   // Load slots for the waiting list scheduling wizard
   useEffect(() => {
     if (scheduleDoctorId && scheduleDate) {
-      // Use a local flag to prevent setState if component unmounts
       let isMounted = true;
       
-      // Defer loading state to avoid synchronous cascading renders
-      const timer = setTimeout(() => {
-        if (isMounted) {
-          setLoadingSlots(true);
-          setSelectedSlot("");
-        }
-      }, 0);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoadingSlots(true);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedSlot("");
 
       getDoctorAvailability(scheduleDoctorId, scheduleDate).then((res) => {
         if (isMounted) {
@@ -188,12 +183,10 @@ export function AppointmentSchedulerClient({
       });
       return () => { 
         isMounted = false; 
-        clearTimeout(timer);
       };
     } else {
-      setTimeout(() => {
-        setAvailableSlots([]);
-      }, 0);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAvailableSlots([]);
     }
   }, [scheduleDoctorId, scheduleDate]);
 

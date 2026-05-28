@@ -126,9 +126,6 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     // Clear viewport
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Apply clinical filters (CSS-like filter string inside Canvas context)
-    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
-
     const img = imageRef.current;
     
     // Calculate draw dimensions matching zoom
@@ -140,7 +137,6 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
 
     // Add calibration scale / caliper overlays (Standard diagnostic UI)
-    ctx.filter = "none";
     ctx.strokeStyle = "rgba(16, 185, 129, 0.6)"; // clinical emerald accent
     ctx.lineWidth = 1.5;
     
@@ -223,6 +219,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
             width={640} 
             height={360} 
             className="w-full h-full object-contain cursor-move"
+            style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)` }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUpOrLeave}
