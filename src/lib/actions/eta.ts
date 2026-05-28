@@ -2,13 +2,16 @@
 
 import { db } from "@/lib/db";
 import { invoices } from "@db/schema/billing";
-import { eq, and } from "drizzle-orm";
+import { backgroundJobs } from "@db/schema/system";
+import { eq, and, sql } from "drizzle-orm";
 import { etaClient } from "@/lib/eta/client";
 import { transformInvoiceToETADocument } from "@/lib/eta/transformer";
 import { authInstance } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { decryptField } from "@/lib/utils/security";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { withTenantContext } from "@/lib/db/tenant";
 
 /**
  * Server action to submit an invoice to the Egyptian Tax Authority.
@@ -82,42 +85,104 @@ export async function submitInvoiceToETA(invoiceId: string) {
       return { success: false, error: message };
     }
     
-    const response = await etaClient.submitDocuments([etaDoc], creds);
+    // 3. Queue Background Job for ETA Submission
+    const [job] = await db.insert(backgroundJobs).values({
+      hospitalId,
+      jobType: "eta_invoice_submission",
+      payload: { invoiceId },
+      status: "pending",
+    }).returning();
 
-    if (response.acceptedDocuments.length > 0) {
-      const accepted = response.acceptedDocuments[0];
-      await db.update(invoices)
-        .set({
-          etaUuid: accepted.uuid,
-          etaLongId: accepted.longId,
-          etaInternalId: accepted.internalId,
-          etaStatus: "submitted",
-          etaSubmissionId: response.submissionId,
-          updatedAt: new Date(),
-        })
-        .where(eq(invoices.id, invoiceId));
+    // Trigger immediate background processing
+    after(() => {
+      processETAJob(job.id, hospitalId).catch(err =>
+        console.error(`[ETA BACKGROUND] Failed to initiate job ${job.id}:`, err)
+      );
+    });
 
-      revalidatePath("/billing");
-      return { success: true, data: accepted };
-    } else if (response.rejectedDocuments.length > 0) {
-      const rejected = response.rejectedDocuments[0];
-      await db.update(invoices)
-        .set({
-          etaStatus: "invalid",
-          etaErrorMessage: rejected.error.message,
-          updatedAt: new Date(),
-        })
-        .where(eq(invoices.id, invoiceId));
-
-      return { success: false, error: `ETA Rejected: ${rejected.error.message}` };
-    }
-
-    return { success: false, error: "Unknown error from ETA" };
+    return { success: true, message: "Invoice queued for ETA submission." };
   } catch (error) {
     console.error("ETA Submission Error:", error);
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message || "Failed to submit to ETA" };
   }
+}
+
+/**
+ * Background processor for ETA jobs.
+ */
+async function processETAJob(jobId: string, hospitalId: string) {
+  return await withTenantContext(hospitalId, async (tx) => {
+    const [job] = await tx.select().from(backgroundJobs).where(eq(backgroundJobs.id, jobId)).limit(1);
+    if (!job || job.status === "completed") return;
+
+    const { invoiceId } = job.payload as { invoiceId: string };
+
+    try {
+      await tx.update(backgroundJobs)
+        .set({ status: "processing", attempts: sql`${backgroundJobs.attempts} + 1`, updatedAt: new Date() })
+        .where(eq(backgroundJobs.id, jobId));
+
+      const invoice = await tx.query.invoices.findFirst({
+        where: and(eq(invoices.id, invoiceId), eq(invoices.hospitalId, hospitalId)),
+        with: {
+          hospital: { with: { settings: true } },
+          patient: true,
+          items: true,
+        },
+      });
+
+      if (!invoice) throw new Error("Invoice not found during background process");
+
+      const settings = invoice.hospital.settings;
+      if (!settings?.etaClientId || !settings?.etaClientSecret) throw new Error("ETA credentials missing");
+
+      const decryptedSecret = decryptField(settings.etaClientSecret);
+      if (!decryptedSecret) throw new Error("Failed to decrypt ETA secret");
+
+      const creds = { clientId: settings.etaClientId, clientSecret: decryptedSecret };
+      const etaDoc = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+
+      const response = await etaClient.submitDocuments([etaDoc], creds);
+
+      if (response.acceptedDocuments.length > 0) {
+        const accepted = response.acceptedDocuments[0];
+        await tx.update(invoices)
+          .set({
+            etaUuid: accepted.uuid,
+            etaLongId: accepted.longId,
+            etaInternalId: accepted.internalId,
+            etaStatus: "submitted",
+            etaSyncStatus: "synced",
+            etaSubmissionId: response.submissionId,
+            updatedAt: new Date(),
+          })
+          .where(eq(invoices.id, invoiceId));
+
+        await tx.update(backgroundJobs)
+          .set({ status: "completed", updatedAt: new Date() })
+          .where(eq(backgroundJobs.id, jobId));
+      } else {
+        const errorMsg = response.rejectedDocuments[0]?.error?.message || "Unknown ETA rejection";
+        await tx.update(invoices)
+          .set({ etaStatus: "invalid", etaSyncStatus: "rejected", etaErrorMessage: errorMsg, updatedAt: new Date() })
+          .where(eq(invoices.id, invoiceId));
+
+        await tx.update(backgroundJobs)
+          .set({ status: "failed", lastError: errorMsg, updatedAt: new Date() })
+          .where(eq(backgroundJobs.id, jobId));
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await tx.update(backgroundJobs)
+        .set({ status: "failed", lastError: message, updatedAt: new Date() })
+        .where(eq(backgroundJobs.id, jobId));
+
+      await tx.update(invoices)
+        .set({ etaSyncStatus: "failed", etaErrorMessage: message, updatedAt: new Date() })
+        .where(eq(invoices.id, invoiceId));
+    }
+  });
 }
 
 export async function checkETAStatus(invoiceId: string) {

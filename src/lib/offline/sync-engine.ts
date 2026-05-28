@@ -13,6 +13,7 @@ export interface SyncOperation {
   entityId: string; // Target record UUID
   payload: Record<string, unknown>; // Raw JSON changes
   timestamp: number; // Client/Node write timestamp (ms)
+  version?: number; // Revision version for conflict detection
 }
 
 export interface SyncResult {
@@ -218,7 +219,9 @@ export class LocalSyncEngine {
   private inMemoryOutbox: SyncOperation[] = [];
   private isSyncing = false;
   private isOnline = true;
+  private isQuarantined = false;
   private onStatusChangeCallbacks: ((online: boolean) => void)[] = [];
+  private onQuarantineChangeCallbacks: ((quarantined: boolean) => void)[] = [];
   private initPromise: Promise<void> | null = null;
 
   constructor() {
@@ -262,6 +265,20 @@ export class LocalSyncEngine {
    */
   getConnectivity(): boolean {
     return this.isOnline;
+  }
+
+  /**
+   * Returns whether the sync engine is quarantined due to decryption failure.
+   */
+  getQuarantineStatus(): boolean {
+    return this.isQuarantined;
+  }
+
+  /**
+   * Registers a callback for quarantine status changes.
+   */
+  onQuarantineChange(callback: (quarantined: boolean) => void) {
+    this.onQuarantineChangeCallbacks.push(callback);
   }
 
   /**
@@ -346,15 +363,13 @@ export class LocalSyncEngine {
         if (cached) {
           const decrypted = await decryptPayload(cached, sessionSecret);
           this.inMemoryOutbox = JSON.parse(decrypted);
+          this.isQuarantined = false;
           console.log(`[EDGE CACHE] Restored ${this.inMemoryOutbox.length} pending operations from persistent store.`);
         }
       } catch (err) {
-        console.error("[EDGE CACHE] Key mismatch during decryption. Safely purging unreadable outbox payload to prevent disk blockages.", err);
-        try {
-          await idbStore.set("hms_egypt_edge_outbox", "");
-        } catch (dbErr) {
-          console.error("[EDGE CACHE] Failed to purge unreadable store:", dbErr);
-        }
+        console.error("[EDGE CACHE] Key mismatch during decryption. HALTING SYNC to prevent data loss. User must re-authenticate.", err);
+        this.isQuarantined = true;
+        this.onQuarantineChangeCallbacks.forEach(cb => cb(true));
       }
     }
   }
@@ -364,7 +379,10 @@ export class LocalSyncEngine {
    * Leverages Last-Write-Wins (LWW) conflict resolution logic based on timestamps.
    */
   async triggerSync(): Promise<SyncResult> {
-    if (this.isSyncing || this.inMemoryOutbox.length === 0 || !this.isOnline) {
+    if (this.isSyncing || this.inMemoryOutbox.length === 0 || !this.isOnline || this.isQuarantined) {
+      if (this.isQuarantined) {
+        console.warn("[EDGE SYNC] Sync is HALTED due to encryption quarantine. Resolve session key mismatch first.");
+      }
       return { syncedCount: 0, conflictsResolved: 0, failures: [] };
     }
 
@@ -422,7 +440,16 @@ export class LocalSyncEngine {
     if (hasConflict) {
       console.warn(`[EDGE SYNC] CONFLICT DETECTED on table [${op.tableName}] for Record: ${op.entityId}`);
       
-      // Last-Write-Wins (LWW) CRDT resolution: compare timestamps
+      // Simulate Cloud Record
+      const cloudRecord = { version: (op.version || 1) + 1 };
+
+      // Version-based Conflict Resolution
+      if (op.version !== undefined && op.version < cloudRecord.version) {
+        console.error(`[EDGE SYNC] [VERSION MISMATCH] Local version (${op.version}) is older than Cloud version (${cloudRecord.version}). HALTING sync for this record. Manual merge required.`);
+        throw new Error(`Version mismatch on ${op.tableName}:${op.entityId}. Local: ${op.version}, Cloud: ${cloudRecord.version}`);
+      }
+
+      // Fallback to Last-Write-Wins (LWW) if no versioning is available
       const cloudRecordTimestamp = Date.now() - 5000; // Cloud write occurred 5s ago
       
       if (op.timestamp > cloudRecordTimestamp) {

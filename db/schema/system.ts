@@ -145,3 +145,22 @@ export const tenantSequenceTracker = pgTable("tenant_sequence_tracker", {
     uniqueSequenceIdx: unique("tenant_seq_unique").on(table.hospitalId, table.sequenceName),
   };
 }).enableRLS();
+
+export const backgroundJobs = pgTable("background_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  jobType: varchar("job_type", { length: 100 }).notNull(), // critical_mews_alert, eta_receipt_logging, sms_broadcast
+  payload: jsonb("payload").notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, completed, failed
+  attempts: integer("attempts").default(0).notNull(),
+  maxAttempts: integer("max_attempts").default(3).notNull(),
+  lastError: text("last_error"),
+  runAt: timestamp("run_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", { for: "all", to: "public", using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)` }),
+    jobStatusIdx: index("job_status_idx").on(table.hospitalId, table.status, table.runAt),
+  };
+}).enableRLS();

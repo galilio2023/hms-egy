@@ -600,6 +600,8 @@ export async function dispensePrescription(
         await tx.insert(stockTransactions).values({
           hospitalId,
           medicationId: item.medicationId,
+          patientId: rx.patientId,
+          admissionId: rx.admissionId,
           type: "dispense",
           quantity: -item.quantity,
           notes: `Dispensed for prescription ${prescriptionId}`,

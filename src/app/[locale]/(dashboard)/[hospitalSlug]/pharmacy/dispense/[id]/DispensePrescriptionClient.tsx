@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useTransition } from "react";
+import React, { useState, useEffect, useRef, useTransition, useActionState, useOptimistic } from "react";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/layout/PageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,18 +98,54 @@ export default function DispensePrescriptionClient({
   const t = useTranslations("pharmacy");
   const isRtl = locale === "ar";
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
 
-  // Dispensing items state
+  // Dispensing items state with Optimistic UI
   const [items, setItems] = useState<
     (MedicationItem & { verified: boolean; qtyToDispense: number })[]
   >(
     prescription.items.map((item) => ({
       ...item,
       verified: false,
-      // Default dispense quantity is 1 or something reasonable
       qtyToDispense: item.stockCount > 0 ? 1 : 0,
     }))
+  );
+
+  const [optimisticItems, setOptimisticItems] = useOptimistic(
+    items,
+    (state, updatedItems: typeof items) => updatedItems
+  );
+
+  const [isPendingTransition, startTransition] = useTransition();
+
+  // useActionState for form handling (React 19)
+  const [state, formAction, isPending] = useActionState(
+    async (_prevState: { error: string | null; success: boolean }, _formData: FormData) => {
+      const verifiedItems = optimisticItems.filter((i) => i.verified && i.qtyToDispense > 0);
+
+      if (verifiedItems.length === 0) {
+        return { error: isRtl ? "الرجاء التحقق من دواء واحد على الأقل." : "Please verify at least one medication.", success: false };
+      }
+
+      const res = await dispensePrescription(
+        prescription.id,
+        verifiedItems.map((i) => ({
+          prescriptionItemId: i.id,
+          medicationId: i.medicationId,
+          quantity: i.qtyToDispense,
+        }))
+      );
+
+      if (res.success) {
+        toast.success(isRtl ? "تم صرف الأدوية بنجاح." : "Medication dispensed successfully.");
+        router.push(`/${hospitalSlug}/pharmacy`);
+        return { success: true, error: null };
+      } else {
+        const error = "error" in res ? String(res.error) : "Failed to dispense";
+        toast.error(error);
+        return { error, success: false };
+      }
+    },
+    { error: null, success: false }
   );
 
   // Scanner inputs
@@ -341,13 +377,13 @@ export default function DispensePrescriptionClient({
   };
 
   // Financial summary
-  const totalCost = items
+  const totalCost = optimisticItems
     .filter((i) => i.verified)
     .reduce((sum, item) => sum + Number(item.price) * item.qtyToDispense, 0);
 
-  // Submit dispensing
+  // Submit dispensing with Optimistic Update
   const handleDispenseSubmit = () => {
-    const verifiedItems = items.filter((i) => i.verified && i.qtyToDispense > 0);
+    const verifiedItems = optimisticItems.filter((i) => i.verified && i.qtyToDispense > 0);
 
     if (verifiedItems.length === 0) {
       toast.error(
@@ -358,22 +394,11 @@ export default function DispensePrescriptionClient({
       return;
     }
 
-    startTransition(async () => {
-      const res = await dispensePrescription(
-        prescription.id,
-        verifiedItems.map((i) => ({
-          prescriptionItemId: i.id,
-          medicationId: i.medicationId,
-          quantity: i.qtyToDispense,
-        }))
-      );
+    setOptimisticItems(optimisticItems.map(i => i.verified ? { ...i, status: "dispensed" } : i));
 
-      if (res.success) {
-        toast.success(isRtl ? "تم صرف الأدوية بنجاح وتحديث المخزون." : "Medication dispensed and stock updated successfully.");
-        router.push(`/${hospitalSlug}/pharmacy`);
-      } else {
-        toast.error("error" in res ? String(res.error) : "Failed to dispense");
-      }
+    const formData = new FormData();
+    startTransition(() => {
+      formAction(formData);
     });
   };
 
@@ -526,7 +551,7 @@ export default function DispensePrescriptionClient({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/10">
-                    {items.map((item) => {
+                    {optimisticItems.map((item) => {
                       const medName = isRtl ? item.medicationNameAr : item.medicationNameEn;
                       const hasLowStock = item.stockCount <= 0;
                       
@@ -699,13 +724,13 @@ export default function DispensePrescriptionClient({
                 <div className="flex justify-between">
                   <span>{isRtl ? "الوصفات المحققة:" : "Verified items:"}</span>
                   <span className="font-bold text-slate-800 dark:text-slate-100">
-                    {items.filter(i => i.verified).length} / {items.length}
+                    {optimisticItems.filter(i => i.verified).length} / {optimisticItems.length}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>{isRtl ? "إجمالي وحدات الصرف:" : "Total units dispensing:"}</span>
                   <span className="font-bold text-slate-800 dark:text-slate-100">
-                    {items.filter(i => i.verified).reduce((sum, item) => sum + item.qtyToDispense, 0)} {isRtl ? "وحدة" : "units"}
+                    {optimisticItems.filter(i => i.verified).reduce((sum, item) => sum + item.qtyToDispense, 0)} {isRtl ? "وحدة" : "units"}
                   </span>
                 </div>
                 <div className="border-t border-border/20 pt-2 flex justify-between items-center">
@@ -718,7 +743,7 @@ export default function DispensePrescriptionClient({
 
               <Button
                 onClick={handleDispenseSubmit}
-                disabled={isPending || items.filter((i) => i.verified && i.qtyToDispense > 0).length === 0}
+                disabled={isPending || optimisticItems.filter((i) => i.verified && i.qtyToDispense > 0).length === 0}
                 className="w-full h-12 rounded-xl font-black text-sm shadow-md hover:shadow-lg transition-all duration-300"
                 variant="accent"
               >

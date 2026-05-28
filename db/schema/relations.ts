@@ -9,7 +9,7 @@ import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "./labor
 import { radiologyOrders, radiologyReports } from "./radiology";
 import { invoices, invoiceItems, payments, insuranceClaims, onlinePayments, paymentReminders } from "./billing";
 import { surgicalCases, surgicalChecklistTemplates, surgicalChecklists, anesthesiaRecords } from "./surgical";
-import { notifications, documents, auditLogs, aiAuditLogs, sentReminders } from "./system";
+import { notifications, documents, auditLogs, aiAuditLogs, sentReminders, backgroundJobs } from "./system";
 
 // hospitals Relations
 export const hospitalsRelations = relations(hospitals, ({ one, many }) => ({
@@ -23,6 +23,7 @@ export const hospitalsRelations = relations(hospitals, ({ one, many }) => ({
   invoices: many(invoices),
   onlinePayments: many(onlinePayments),
   surgicalCases: many(surgicalCases),
+  backgroundJobs: many(backgroundJobs),
 }));
 
 // hospitalSettings Relations
@@ -256,6 +257,26 @@ export const medicationAdministrationRelations = relations(medicationAdministrat
   }),
 }));
 
+// stockTransactions Relations
+export const stockTransactionsRelations = relations(stockTransactions, ({ one }) => ({
+  hospital: one(hospitals, {
+    fields: [stockTransactions.hospitalId],
+    references: [hospitals.id],
+  }),
+  medication: one(medications, {
+    fields: [stockTransactions.medicationId],
+    references: [medications.id],
+  }),
+  performer: one(staff, {
+    fields: [stockTransactions.performedBy],
+    references: [staff.id],
+  }),
+  invoiceItem: one(invoiceItems, {
+    fields: [stockTransactions.invoiceItemId],
+    references: [invoiceItems.id],
+  }),
+}));
+
 // labOrders Relations
 export const labOrdersRelations = relations(labOrders, ({ one, many }) => ({
   patient: one(patients, {
@@ -325,11 +346,12 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
 }));
 
 // invoiceItems Relations
-export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+export const invoiceItemsRelations = relations(invoiceItems, ({ one, many }) => ({
   invoice: one(invoices, {
     fields: [invoiceItems.invoiceId],
     references: [invoices.id],
   }),
+  stockTransactions: many(stockTransactions),
 }));
 
 // onlinePayments Relations
@@ -377,6 +399,14 @@ export const shiftsRelations = relations(shifts, ({ one }) => ({
   department: one(departments, {
     fields: [shifts.departmentId],
     references: [departments.id],
+  }),
+}));
+
+// backgroundJobs Relations
+export const backgroundJobsRelations = relations(backgroundJobs, ({ one }) => ({
+  hospital: one(hospitals, {
+    fields: [backgroundJobs.hospitalId],
+    references: [hospitals.id],
   }),
 }));
 
