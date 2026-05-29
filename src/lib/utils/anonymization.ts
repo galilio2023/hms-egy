@@ -22,7 +22,7 @@ function makeArabicVariantPattern(token: string): string {
 
   return token
     .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape first to avoid escaping generated brackets
-    .replace(/[أإآاةهييى]/g, (match) => replacements[match]);
+    .replace(/[أإآاةهييى]/g, (match) => replacements[match] || match);
 }
 
 // Numeral Redaction Constants (Support Western, Eastern Arabic, and Persian digits)
@@ -92,6 +92,9 @@ const CLINICAL_CONTEXT_PATTERN_AR = CLINICAL_CONTEXT_TOKENS_AR.map(makeArabicVar
 const PROCLITICS_AR = "(?:[وفب]?(?:ال|لل)|[وفبل])";
 const STOP_PATTERN_AR = `(?:${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR}|${VARIANT_STOP_TOKENS_PATTERN_AR}|${CLINICAL_CONTEXT_PATTERN_AR}))`;
 
+// Pre-compiled regex for "Ali" bypass logic performance optimization
+const CLINICAL_BYPASS_RE = new RegExp(`^${PROCLITICS_AR}?(${CLINICAL_CONTEXT_PATTERN_AR})$`, "u");
+
 // Compound Name Logic: Match 1-5 tokens (Egyptian 5-part names), ensuring tokens aren't clinical stop-tokens.
 const NAME_TOKEN_AR = `(?!(?:${STOP_PATTERN_AR})(?:$|[\\s\\p{P}]))\\p{Script=Arabic}{2,}`;
 const COMPOUND_NAME_AR = `(?:${NAME_TOKEN_AR}(?:\\s+${NAME_TOKEN_AR}){0,5})`;
@@ -143,10 +146,7 @@ function shouldBypassAliRedaction(nameMatch: string, remainingText: string): boo
   const fullTextAfterName = (nameMatch + " " + remainingText).trim();
   const tokens = fullTextAfterName.split(/[\s\p{P}]+/u).slice(0, 7);
 
-  return tokens.some(token => {
-    const strippedToken = stripTashkeel(token);
-    return new RegExp(`^${PROCLITICS_AR}?(${CLINICAL_CONTEXT_PATTERN_AR})$`).test(strippedToken);
-  });
+  return tokens.some(token => CLINICAL_BYPASS_RE.test(stripTashkeel(token)));
 }
 
 /**
