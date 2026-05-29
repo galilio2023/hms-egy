@@ -17,6 +17,7 @@ export interface Dimensions {
  * - Backward compatible cleanup (React 18 & 19).
  * - Sub-pixel thrashing prevention using Math.floor.
  * - Equality checks using refs to prevent unnecessary re-renders.
+ * - Stable callback ref to prevent redundant observer re-bindings.
  *
  * @param debounceMs Delay in milliseconds for debouncing dimension updates.
  * @returns { ref, dimensions } A callback ref to attach to the element and the current dimensions.
@@ -26,6 +27,12 @@ export function useResizeObserver(debounceMs: number = 50) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
   const prevDimensionsRef = useRef<Dimensions>({ width: 0, height: 0 });
+
+  // Store debounceMs in a ref to keep the callback ref stable and prevent redundant re-bindings
+  const debounceMsRef = useRef(debounceMs);
+  useEffect(() => {
+    debounceMsRef.current = debounceMs;
+  }, [debounceMs]);
 
   // Centralized cleanup to support React 18 & 19 safely
   const cleanup = useCallback(() => {
@@ -65,14 +72,14 @@ export function useResizeObserver(debounceMs: number = 50) {
               prevDimensionsRef.current = { width, height };
               setDimensions({ width, height });
             }
-          }, debounceMs);
+          }, debounceMsRef.current);
         }
       });
 
       observer.observe(node);
       observerRef.current = observer;
     },
-    [debounceMs, cleanup]
+    [cleanup] // debounceMs removed from dependencies to ensure stability
   );
 
   // Guarantee cleanup on unmount
