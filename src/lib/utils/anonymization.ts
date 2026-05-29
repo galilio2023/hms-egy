@@ -3,16 +3,24 @@ import { latinizeNumerals } from "@/lib/utils/egypt";
 /**
  * Helper to create a regex-safe pattern that matches common Arabic orthographic variations
  * (Alif hamzas, Taa Marbuta/Haa, Yaa/Alef Maksura) without destructive normalization.
+ * Uses single-pass mapping to avoid corruption from sequential replacements.
  */
 function makeArabicVariantPattern(token: string): string {
+  const replacements: Record<string, string> = {
+    'أ': '[أإآا]', 'إ': '[أإآا]', 'آ': '[أإآا]', 'ا': '[أإآا]',
+    'ة': '[ةه]', 'ه': '[ةه]',
+    'ي': '[يى]', 'ى': '[يى]'
+  };
+
   return token
-    .replace(/[أإآا]/g, "[أإآا]")
-    .replace(/[ةه]/g, "[ةه]")
-    .replace(/[يى]/g, "[يى]");
+    .split('')
+    .map(char => replacements[char] || char)
+    .join('');
 }
 
 // 1. Arabic Prefix Dictionaries (Move to module scope for performance)
-const NAME_PREFIXES_AR = ["المريض", "المريضه", "استاذ", "استاذه", "دكتور", "دكتوره", "يا", "مدام", "انسه", "حاج", "حاجه", "عم", "بشمهندس", "باشمهندس", "باشا", "بيه"];
+// Note: Definite articles and prepositions (ال/لل) are handled via PROCLITICS_AR.
+const NAME_PREFIXES_AR = ["مريض", "مريضه", "استاذ", "استاذه", "دكتور", "دكتوره", "يا", "مدام", "انسه", "حاج", "حاجه", "عم", "بشمهندس", "باشمهندس", "باشا", "بيه"];
 const VERB_PREFIXES_AR = [
   "قال", "قالت", "دخل", "دخلت", "جاء", "زار", "زارت", "اسم",
   "كشف", "كشفت", "حضر", "حضرت", "خرج", "خرجت", "كلم", "كلمت",
@@ -25,24 +33,28 @@ const VARIANT_PREFIXES_PATTERN_AR = ALL_PREFIXES_AR.map(makeArabicVariantPattern
 
 // 2. Arabic Stop-Tokens (to prevent over-anonymization of clinical verbs/states)
 // Note: "على" is excluded because it collides with the common name "علي" (Ali) in many scripts.
+// Includes anatomical terms and clinical procedures to prevent destroying clinical history.
 const STOP_TOKENS_AR = [
   "اتحجز", "اتحول", "اتكتب", "اخد", "خد", "مات", "توفى", "تحسن", "ساءت",
-  "ضغط", "نبض", "حراره", "سكر", "عشان", "بس", "لما",
-  "انه", "انها", "تم", "يتم", "كان", "كانت", "في", "من", "الى", "مع", "بنا", "بواسطه"
+  "ضغط", "الضغط", "نبض", "النبض", "حراره", "الحراره", "سكر", "السكر",
+  "عشان", "بس", "لما", "انه", "انها", "تم", "يتم", "كان", "كانت",
+  "في", "من", "الى", "مع", "بنا", "بواسطه",
+  "الصدر", "البطن", "الظهر", "العين", "الراس", "المخ", "القلب", "الرحم", "الجلد",
+  "الاشعه", "الاشعة", "اشعه", "اشعة", "التحليل", "التحاليل", "العلاج", "الدواء", "الروشته", "الجرعه", "العينه"
 ].filter(t => t !== "على").sort((a, b) => b.length - a.length);
 
 const VARIANT_STOP_TOKENS_PATTERN_AR = STOP_TOKENS_AR.map(makeArabicVariantPattern).join("|");
 
-const PROCLITICS_AR = "(?:[وفب]ال?|[وفب]|ال)";
+// Proclitics: و, ف, ب, ل, وال, فال, بال, ال, لل
+const PROCLITICS_AR = "(?:[وفب]?(?:ال|لل)|[وفبل])";
 const STOP_PATTERN_AR = `(?:${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR}|${VARIANT_STOP_TOKENS_PATTERN_AR}))`;
 
-// Compound Name Logic: Match 1-4 tokens, ensuring tokens aren't clinical stop-tokens.
+// Compound Name Logic: Match 1-5 tokens (Egyptian 5-part names), ensuring tokens aren't clinical stop-tokens.
 const NAME_TOKEN_AR = `(?!(?:${STOP_PATTERN_AR})(?:$|[\\s\\p{P}]))\\p{Script=Arabic}{2,}`;
-const COMPOUND_NAME_AR = `(?:${NAME_TOKEN_AR}(?:\\s+${NAME_TOKEN_AR}){0,3})`;
+const COMPOUND_NAME_AR = `(?:${NAME_TOKEN_AR}(?:\\s+${NAME_TOKEN_AR}){0,5})`;
 
-// Fixed: Corrected capture group indices and ensured non-greedy multi-word matching
 const COMBINED_PATTERN_AR = new RegExp(
-  `((?:^|[\\s\\p{P}])(?:${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR}))(?=$|[\\s\\p{P}])\\s+)(${COMPOUND_NAME_AR})`,
+  `((?:^|[\\s\\p{P}])${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR})(?=$|[\\s\\p{P}])\\s+)(${COMPOUND_NAME_AR})(?=$|[\\s\\p{P}])`,
   "gu"
 );
 

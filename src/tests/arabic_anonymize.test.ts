@@ -49,6 +49,32 @@ describe('Arabic Anonymization Improvements', () => {
     expect(output).toContain('اشتكى [PATIENT_NAME] من صداع واتصل بالدكتور');
   });
 
+  it('should handle the "ل" and "لل" proclitics', () => {
+    const input = 'للمريض أحمد وللدكتورة سارة';
+    const output = anonymizePatientData(input);
+    expect(output).toContain('للمريض [PATIENT_NAME]');
+    expect(output).toContain('وللدكتورة [PATIENT_NAME]');
+  });
+
+  it('should support Egyptian 5-part names', () => {
+    const input = 'حضر المريض عبد الرحمن محمد علي حسن زكي اليوم';
+    const output = anonymizePatientData(input);
+    expect(output).toBe('حضر المريض [PATIENT_NAME] اليوم');
+  });
+
+  it('should NOT anonymize anatomical terms or procedures (Clinical Safety)', () => {
+    const tests = [
+      'كشف الصدر والبطن سليم',
+      'طلب أشعة على الصدر',
+      'تم تحليل العينة في المعمل',
+      'الجرعة المقررة من الدواء'
+    ];
+    tests.forEach(input => {
+      const output = anonymizePatientData(input);
+      expect(output).toBe(input); // Should remain unchanged
+    });
+  });
+
   it('should handle lowercase English names to prevent PII leakage', () => {
     const input = 'patient ahmad mohamed was here';
     const output = anonymizePatientData(input);
