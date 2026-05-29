@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { BorderBeam } from "@/components/magicui/BorderBeam";
 import { NumberTicker } from "@/components/magicui/NumberTicker";
 import { cn } from "@/lib/utils";
+import { initializeSyncEngineKey } from "@/lib/offline/sync-engine";
 
 export default function LoginPage() {
   const t = useTranslations();
@@ -48,6 +49,11 @@ export default function LoginPage() {
     startTransition(async () => {
       const result = await loginAction(null, formData);
       if (result.success) {
+        // Initialize the LSN sync engine key with the session ID immediately on login
+        if (result.sessionId) {
+          initializeSyncEngineKey(result.sessionId);
+        }
+
         toast.success(t("auth.loginSuccess"), {
           position: isRtl ? "bottom-left" : "bottom-right",
         });

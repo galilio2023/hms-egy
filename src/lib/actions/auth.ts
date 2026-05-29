@@ -12,7 +12,7 @@ import { authInstance } from "@/lib/auth";
 export async function loginAction(
   prevState: unknown,
   formData: FormData
-): Promise<{ success: boolean; error?: string; redirectTo?: string }> {
+): Promise<{ success: boolean; error?: string; redirectTo?: string; sessionId?: string }> {
   const startTime = Date.now();
   const email = formData.get("email")?.toString().trim().toLowerCase();
   const password = formData.get("password")?.toString();
@@ -67,10 +67,10 @@ export async function loginAction(
 
       // 4. Handle forced password change check
       if (result.user.isPasswordExpired) {
-        return { success: true, redirectTo: "/change-password" };
+        return { success: true, redirectTo: "/change-password", sessionId: result.session.id };
       }
 
-      return { success: true, redirectTo: "/" };
+      return { success: true, redirectTo: "/", sessionId: result.session.id };
 
     } catch (authError) {
       // 5. Track failed login attempt on credentials exception
