@@ -1,4 +1,4 @@
-import { toZonedTime } from "date-fns-tz";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
 export const GOVERNORATES: Record<string, { code: string; ar: string; en: string }> = {
   "01": { code: "01", ar: "القاهرة", en: "Cairo" },
@@ -152,7 +152,10 @@ export function formatPatientNumber(hospitalCode: string, year: number, seq: num
  * @param date - An absolute Date object or ISO string.
  */
 export function isWorkingDay(date: Date | string): boolean {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = typeof date === "string"
+    ? (date.includes("T") ? fromZonedTime(date, "Africa/Cairo") : fromZonedTime(`${date}T00:00:00`, "Africa/Cairo"))
+    : date;
+
   const zonedDate = toZonedTime(d, "Africa/Cairo");
   const day = zonedDate.getDay();
   return day !== 5 && day !== 6; // 5 = Friday, 6 = Saturday
@@ -290,7 +293,10 @@ export function getPublicHolidays(year: number) {
  * @param date - An absolute Date object or ISO string representing a point in time.
  */
 export function isEgyptianPublicHoliday(date: Date | string): { isHoliday: boolean; nameAr?: string; nameEn?: string } | null {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = typeof date === "string"
+    ? (date.includes("T") ? fromZonedTime(date, "Africa/Cairo") : fromZonedTime(`${date}T00:00:00`, "Africa/Cairo"))
+    : date;
+
   const zoned = toZonedTime(d, "Africa/Cairo");
   const year = zoned.getFullYear();
   const month = zoned.getMonth();
@@ -316,9 +322,14 @@ export function isEgyptianPublicHoliday(date: Date | string): { isHoliday: boole
 /**
  * Converts any date to Africa/Cairo timezone ensuring DST shifts are mitigated.
  * Useful for ensuring server-side cron jobs run at the correct local hour.
+ *
+ * If a string is provided without a timezone, it is assumed to be in Africa/Cairo.
  */
 export function toCairoTime(date: Date | string | number): Date {
-  return toZonedTime(new Date(date), "Africa/Cairo");
+  const d = typeof date === "string"
+    ? (date.includes("T") ? fromZonedTime(date, "Africa/Cairo") : fromZonedTime(`${date}T00:00:00`, "Africa/Cairo"))
+    : new Date(date);
+  return toZonedTime(d, "Africa/Cairo");
 }
 
 /**

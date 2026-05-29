@@ -20,16 +20,31 @@ describe('Egypt Timezone Utils', () => {
   });
 
   describe('isEgyptianPublicHoliday', () => {
-    it('should identify fixed holidays correctly', () => {
+    it('should identify fixed holidays correctly with metadata', () => {
       // Christmas Jan 7
       const christmas = fromZonedTime('2024-01-07 10:00:00', 'Africa/Cairo');
-      expect(isEgyptianPublicHoliday(christmas)?.isHoliday).toBe(true);
+      const res = isEgyptianPublicHoliday(christmas);
+      expect(res?.isHoliday).toBe(true);
+      expect(res?.nameAr).toBe("عيد الميلاد المجيد");
+      expect(res?.nameEn).toBe("Coptic Christmas Day");
     });
 
-    it('should identify shifting holidays correctly', () => {
+    it('should identify shifting holidays correctly with metadata', () => {
       // 2024 Sinai Liberation Day April 25
       const sinai = fromZonedTime('2024-04-25 00:00:00', 'Africa/Cairo');
-      expect(isEgyptianPublicHoliday(sinai)?.isHoliday).toBe(true);
+      const res = isEgyptianPublicHoliday(sinai);
+      expect(res?.isHoliday).toBe(true);
+      expect(res?.nameAr).toBe("عيد تحرير سيناء");
+      expect(res?.nameEn).toBe("Sinai Liberation Day");
+    });
+
+    it('should identify Eid Al-Fitr correctly', () => {
+      // 2024 Eid Al-Fitr starts April 9
+      const eid = "2024-04-09";
+      const res = isEgyptianPublicHoliday(eid);
+      expect(res?.isHoliday).toBe(true);
+      expect(res?.nameAr).toBe("عيد الفطر المبارك");
+      expect(res?.nameEn).toBe("Eid Al-Fitr");
     });
   });
 
@@ -42,13 +57,52 @@ describe('Egypt Timezone Utils', () => {
     });
   });
 
-  describe('Double Zoning Protection', () => {
+  describe('Double Zoning Protection & String Parsing', () => {
     it('isEgyptianPublicHoliday should work with absolute dates and string inputs', () => {
       const dateStr = '2024-04-25'; // Sinai Liberation Day
       const dateAbs = fromZonedTime(dateStr, 'Africa/Cairo');
 
       expect(isEgyptianPublicHoliday(dateAbs)?.isHoliday).toBe(true);
       expect(isEgyptianPublicHoliday(dateStr)?.isHoliday).toBe(true);
+    });
+
+    it('should interpret date-only strings as Cairo midnight', () => {
+      // 2024-05-03 is Friday.
+      // If parsed as UTC, 2024-05-03 00:00 UTC is 2024-05-03 03:00 Cairo (Friday)
+      // If parsed as local machine time (e.g. UTC-5), 2024-05-03 00:00 could be 2024-05-03 08:00 Cairo.
+      // The fix ensures it's always Cairo 00:00.
+      expect(isWorkingDay('2024-05-03')).toBe(false); // Friday
+      expect(isWorkingDay('2024-05-05')).toBe(true); // Sunday
+    });
+  });
+
+  describe('DST Transitions', () => {
+    it('should handle Spring Forward transition (April)', () => {
+      // In 2024, DST started on Friday, April 26 at 00:00 (clocks moved to 01:00)
+      // Thursday April 25 23:30 Cairo
+      const beforeDST = fromZonedTime('2024-04-25 23:30:00', 'Africa/Cairo');
+      // Friday April 26 01:30 Cairo
+      const afterDST = fromZonedTime('2024-04-26 01:30:00', 'Africa/Cairo');
+
+      expect(beforeDST.getTime()).toBeLessThan(afterDST.getTime());
+
+      // Check if they are correctly identified as different days in Cairo
+      expect(toCairoTime(beforeDST).getDate()).toBe(25);
+      expect(toCairoTime(afterDST).getDate()).toBe(26);
+    });
+
+    it('should handle Fall Back transition (October)', () => {
+      // In 2024, DST ends on Friday, October 31 at 00:00 (clocks moved back to 23:00 Thursday)
+      // Actually, usually it's last Thursday of October midnight.
+      // Let's check 2024-10-31 23:30 Cairo (DST)
+      // and 2024-11-01 00:30 Cairo (Standard)
+
+      const beforeDST = fromZonedTime('2024-10-31 23:30:00', 'Africa/Cairo');
+      const afterDST = fromZonedTime('2024-11-01 00:30:00', 'Africa/Cairo');
+
+      expect(beforeDST.getTime()).toBeLessThan(afterDST.getTime());
+      expect(toCairoTime(beforeDST).getDate()).toBe(31);
+      expect(toCairoTime(afterDST).getDate()).toBe(1);
     });
   });
 });
