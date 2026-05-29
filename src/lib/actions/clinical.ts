@@ -834,10 +834,56 @@ export interface AmbientScribeResult {
 
 /**
  * Sanitizes sensitive personal patient identifiers (PII) from conversational
- * transcripts to comply with Egyptian Data Protection Law No. 151 of 2020 cross-border sovereignty.
- * Scrubs explicit National IDs, phone numbers, and common name prefixes.
+ * transcripts or structured clinical data to comply with Egyptian Data Protection
+ * Law No. 151 of 2020 cross-border sovereignty.
+ *
+ * Logic:
+ * 1. Recursively traverses objects and arrays.
+ * 2. Pre-converts all Eastern Arabic/Persian digits to Western Latin digits (0-9).
+ * 3. Scrubs explicit 14-digit National IDs, 11-digit phone numbers, and common name prefixes.
  */
-function anonymizePatientData(text: string): string {
+export function anonymizePatientData(input: any, seen = new WeakSet()): any {
+  if (input === null || input === undefined) return input;
+
+  // Handle Objects and Arrays with circular reference protection
+  if (typeof input === "object") {
+    if (seen.has(input)) return "[CIRCULAR]";
+
+    // Preserve Date objects
+    if (input instanceof Date) return input;
+
+    // Preserve other specialized objects that shouldn't be traversed
+    if (input instanceof RegExp || input instanceof Blob || input instanceof File) return input;
+
+    seen.add(input);
+
+    if (Array.isArray(input)) {
+      return input.map(item => anonymizePatientData(item, seen));
+    }
+
+    // Handle Plain Objects
+    const sanitizedObj: Record<string, any> = {};
+    for (const [key, value] of Object.entries(input)) {
+      sanitizedObj[key] = anonymizePatientData(value, seen);
+    }
+    return sanitizedObj;
+  }
+
+  // Handle non-string primitives
+  if (typeof input !== "string") return input;
+
+  // Detect and handle embedded JSON strings to prevent "naive top-level conversion" corruption
+  if ((input.startsWith("{") && input.endsWith("}")) || (input.startsWith("[") && input.endsWith("]"))) {
+    try {
+      const parsed = JSON.parse(input);
+      return JSON.stringify(anonymizePatientData(parsed));
+    } catch (e) {
+      // Not valid JSON, proceed as normal string
+    }
+  }
+
+  let text = input;
+
   // Code Review Fix: Pre-convert Eastern Arabic digits to Latin digits
   let sanitized = latinizeNumerals(text);
 
