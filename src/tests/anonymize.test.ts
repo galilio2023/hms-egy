@@ -21,7 +21,7 @@ describe('Anonymization and Numeral Normalization', () => {
     it('should scrub 14-digit Egyptian National ID in Eastern Arabic digits', () => {
       const input = 'الرقم القومي للمريض هو ٢٩٠٠١٠١١٢٣٤٥٦٧';
       const output = anonymizePatientData(input);
-      expect(output).toBe('الرقم القومى للمرىض هو [NATIONAL_ID]');
+      expect(output).toBe('الرقم القومي للمريض هو [NATIONAL_ID]');
     });
 
     it('should scrub Egyptian phone numbers in mixed digits', () => {
