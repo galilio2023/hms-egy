@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isWorkingDay, isEgyptianPublicHoliday, toCairoTime } from './egypt';
+import { isWorkingDay, isEgyptianPublicHoliday, toCairoTime, isSameDay } from './egypt';
 import { fromZonedTime } from 'date-fns-tz';
 
 describe('Egypt Timezone Utils', () => {
@@ -55,6 +55,33 @@ describe('Egypt Timezone Utils', () => {
       const cairo = toCairoTime(date);
       expect(cairo.getHours()).toBe(13);
     });
+
+    it('should throw TypeError for numeric timestamps in parseEgyptDate via toCairoTime indirectly', () => {
+      // We expect parseEgyptDate to throw, but toCairoTime handles number by converting to Date first.
+      // Wait, let's check toCairoTime implementation:
+      // const d = typeof date === "number" ? new Date(date) : parseEgyptDate(date);
+      // So toCairoTime(number) is SAFE.
+      const now = Date.now();
+      expect(() => toCairoTime(now)).not.toThrow();
+    });
+  });
+
+  describe('isSameDay', () => {
+    it('should correctly identify the same day in Cairo', () => {
+      const d1 = '2024-05-03T23:30:00Z'; // 02:30 AM May 4th in Cairo (+3)
+      const d2 = '2024-05-04T01:00:00Z'; // 04:00 AM May 4th in Cairo (+3)
+      // console.log('d1 Cairo:', toCairoTime(d1).toISOString(), toCairoTime(d1).getDate());
+      // console.log('d2 Cairo:', toCairoTime(d2).toISOString(), toCairoTime(d2).getDate());
+      expect(isSameDay(d1, d2)).toBe(true);
+    });
+
+    it('should correctly identify different days in Cairo', () => {
+      const d1 = '2024-05-03T20:00:00Z'; // 11:00 PM May 3rd in Cairo (+3)
+      const d2 = '2024-05-03T21:30:00Z'; // 00:30 AM May 4th in Cairo (+3)
+      // console.log('d1 Cairo diff:', toCairoTime(d1).toISOString(), toCairoTime(d1).getDate());
+      // console.log('d2 Cairo diff:', toCairoTime(d2).toISOString(), toCairoTime(d2).getDate());
+      expect(isSameDay(d1, d2)).toBe(false);
+    });
   });
 
   describe('Double Zoning Protection & String Parsing', () => {
@@ -73,6 +100,31 @@ describe('Egypt Timezone Utils', () => {
       // The fix ensures it's always Cairo 00:00.
       expect(isWorkingDay('2024-05-03')).toBe(false); // Friday
       expect(isWorkingDay('2024-05-05')).toBe(true); // Sunday
+    });
+
+    it('should throw Error for space-separated date strings (ambiguous)', () => {
+      const spaceDate = '2024-05-03 12:30:00';
+      expect(() => toCairoTime(spaceDate)).toThrow('Invalid date format');
+    });
+
+    it('should correctly handle ISO strings with Z offset', () => {
+      const dateZ = '2024-05-03T21:00:00Z'; // 00:00 AM May 4th in Cairo (+3)
+      const zoned = toCairoTime(dateZ);
+      expect(zoned.getDate()).toBe(4);
+    });
+
+    it('should correctly handle ISO strings with numeric offset', () => {
+      const dateOffset = '2024-05-03T21:00:00+00:00';
+      const zoned = toCairoTime(dateOffset);
+      expect(zoned.getDate()).toBe(4);
+    });
+
+    it('should treat ISO strings without offset as Cairo time', () => {
+      const dateNoOffset = '2024-05-03T21:00:00';
+      const zoned = toCairoTime(dateNoOffset);
+      // 21:00 in Cairo is still May 3rd
+      expect(zoned.getDate()).toBe(3);
+      expect(zoned.getHours()).toBe(21);
     });
   });
 

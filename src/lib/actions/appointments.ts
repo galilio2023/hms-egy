@@ -11,7 +11,7 @@ import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { revalidatePath } from "next/cache";
-import { toCairoTime } from "@/lib/utils/egypt";
+import { toCairoTime, isSameDay } from "@/lib/utils/egypt";
 import { formatInTimeZone } from "date-fns-tz";
 
 import { type User } from "@/types/auth-api.types";
@@ -322,11 +322,12 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
           );
 
           // Standard buffer: Can only book future slots if target date is today
+          // Avoid double-zoning: isSameDay internally calls toCairoTime
           const nowCairo = toCairoTime(new Date());
-          const isSameDay = targetDateCairo.toDateString() === nowCairo.toDateString();
+          const isTargetToday = isSameDay(date, new Date());
 
           let isFuture = true;
-          if (isSameDay) {
+          if (isTargetToday) {
             const [sh, sm] = slotTime.split(":").map(Number);
             const slotDateTimeCairo = new Date(targetDateCairo);
             slotDateTimeCairo.setHours(sh, sm, 0, 0);

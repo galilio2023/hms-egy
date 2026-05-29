@@ -9,8 +9,9 @@ import { patientSchema, type PatientSchema } from "@/lib/validations/patient.sch
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
-import { formatPatientNumber, normalizeArabic } from "@/lib/utils/egypt";
+import { formatPatientNumber, normalizeArabic, toCairoTime } from "@/lib/utils/egypt";
 import { revalidatePath } from "next/cache";
+import { fromZonedTime } from "date-fns-tz";
 import { type User } from "@/types/auth-api.types";
 
 /**
@@ -106,9 +107,10 @@ export async function registerPatient(data: PatientSchema) {
         ? hospital.slug.toUpperCase().slice(0, 4)
         : "EGYP";
 
-      const currentYear = new Date().getFullYear();
-      const startOfYear = new Date(currentYear, 0, 1);
-      const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59);
+      const nowCairo = toCairoTime(new Date());
+      const currentYear = nowCairo.getFullYear();
+      const startOfYear = fromZonedTime(`${currentYear}-01-01T00:00:00`, "Africa/Cairo");
+      const endOfYear = fromZonedTime(`${currentYear}-12-31T23:59:59`, "Africa/Cairo");
 
       const [countResult] = await tx
         .select({ value: sql<number>`count(*)::int` })
