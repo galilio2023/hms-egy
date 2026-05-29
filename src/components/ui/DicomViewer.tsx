@@ -51,13 +51,20 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDragging(true);
-    dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    // When RTL, we track the initial pan relative to the flipped x-coordinate
+    dragStart.current = {
+      x: isRtl ? e.clientX + pan.x : e.clientX - pan.x,
+      y: e.clientY - pan.y
+    };
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDragging) return;
+
+    // Code Review Fix: Invert horizontal panning deltas in RTL mode
+    // to ensure intuitive mouse-follow interaction for Egyptian clinicians.
     setPan({
-      x: e.clientX - dragStart.current.x,
+      x: isRtl ? dragStart.current.x - e.clientX : e.clientX - dragStart.current.x,
       y: e.clientY - dragStart.current.y,
     });
   };
