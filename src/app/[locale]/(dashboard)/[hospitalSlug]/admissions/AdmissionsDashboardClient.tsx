@@ -1079,7 +1079,7 @@ export default function AdmissionsDashboardClient({
                       >
                         {isRecordingVitals ? (
                           <>
-                            <RefreshCw className="h-3 w-3 animate-spin me-1.5" />
+                            <RefreshCw className="h-3 w-3 animate-spin" />
                             {isRtl ? "حفظ القياسات..." : "Recording..."}
                           </>
                         ) : (

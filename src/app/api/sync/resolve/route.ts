@@ -15,9 +15,9 @@ const TABLE_MAP: Record<string, typeof patients | typeof admissions | typeof vit
  */
 function filterPayload(tableName: string, payload: Record<string, unknown>): Record<string, unknown> {
   const allowedFields: Record<string, string[]> = {
-    patients: ["nameAr", "nameEn", "nationalId", "passportNumber", "dob", "gender", "contactPhone", "address", "governorate", "bloodType"],
-    admissions: ["patientId", "bedId", "admittingDoctorId", "admissionDate", "reason", "status"],
-    vitals_flowsheet: ["patientId", "recordedBy", "recordedAt", "bloodPressureSystolic", "bloodPressureDiastolic", "heartRate", "respiratoryRate", "temperature", "oxygenSaturation", "weightKg", "heightCm"],
+    patients: ["hospitalId", "nameAr", "nameEn", "nationalId", "passportNumber", "dob", "gender", "contactPhone", "address", "governorate", "bloodType"],
+    admissions: ["hospitalId", "patientId", "bedId", "admittingDoctorId", "admissionDate", "reason", "status"],
+    vitals_flowsheet: ["hospitalId", "patientId", "recordedBy", "recordedAt", "bloodPressureSystolic", "bloodPressureDiastolic", "heartRate", "respiratoryRate", "temperature", "oxygenSaturation", "weightKg", "heightCm"],
   };
 
   const fields = allowedFields[tableName] || [];
@@ -55,13 +55,17 @@ export async function POST(req: NextRequest) {
 
     if (!currentRecord) {
       if (action === "INSERT") {
+        if (!sanitizedPayload.hospitalId) {
+          return NextResponse.json({ error: "hospitalId is required for new records" }, { status: 400 });
+        }
+
         await db.insert(table).values({
           ...sanitizedPayload,
           id: entityId,
           version: 1,
           createdAt: new Date(),
           updatedAt: new Date(),
-        });
+        } as any);
         return NextResponse.json({ status: "synced" });
       }
       return NextResponse.json({ error: "Record not found" }, { status: 404 });
