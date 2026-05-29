@@ -95,6 +95,8 @@ export const shiftAssignments = pgTable("shift_assignments", {
       using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)`
     }),
     hospitalShiftIdx: index("sa_hospital_shift_idx").on(table.hospitalId, table.shiftId),
-    activeAssignmentIdx: index("sa_active_idx").on(table.hospitalId, table.assignmentCode, table.releasedAt),
+    activeAssignmentIdx: index("sa_active_idx")
+      .on(table.hospitalId, table.assignmentCode)
+      .where(sql`released_at IS NULL`),
   };
 }).enableRLS();
