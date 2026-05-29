@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { patients } from "@db/schema/patients";
 import { admissions, vitalsFlowsheet } from "@db/schema/clinical";
 
