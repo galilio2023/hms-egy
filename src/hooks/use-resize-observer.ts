@@ -24,6 +24,7 @@ export interface Dimensions {
  */
 export function useResizeObserver(debounceMs: number = 50) {
   const [dimensions, setDimensions] = useState<Dimensions>({ width: 0, height: 0 });
+  const [isStabilized, setIsStabilized] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
   const prevDimensionsRef = useRef<Dimensions>({ width: 0, height: 0 });
@@ -75,6 +76,10 @@ export function useResizeObserver(debounceMs: number = 50) {
             ) {
               prevDimensionsRef.current = { width: roundedWidth, height: roundedHeight };
               setDimensions({ width: rawWidth, height: rawHeight });
+
+              if (roundedWidth > 0 && roundedHeight > 0) {
+                setIsStabilized(true);
+              }
             }
           }, debounceMsRef.current);
         }
@@ -91,5 +96,5 @@ export function useResizeObserver(debounceMs: number = 50) {
     return cleanup;
   }, [cleanup]);
 
-  return { ref, dimensions };
+  return { ref, dimensions, isStabilized };
 }
