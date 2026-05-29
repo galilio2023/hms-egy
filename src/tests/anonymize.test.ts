@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { anonymizePatientData } from '../lib/actions/clinical';
+import { anonymizePatientData } from '../lib/utils/anonymization';
 import { latinizeNumerals } from '../lib/utils/egypt';
 
 describe('Anonymization and Numeral Normalization', () => {
