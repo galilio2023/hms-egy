@@ -145,6 +145,54 @@ export function formatPatientNumber(hospitalCode: string, year: number, seq: num
   return `HMS-${hospitalCode}-${year}-${seq.toString().padStart(6, "0")}`;
 }
 
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Strictly parses a date or string into a Cairo-anchored Date object.
+ * Prevents execution-environment timezone leaks.
+ */
+function parseEgyptDate(date: Date | string): Date {
+  if (typeof date === "number") {
+    throw new TypeError("parseEgyptDate does not support numeric timestamps. Use toCairoTime(number) instead.");
+  }
+  if (typeof date !== "string") return date;
+
+  if (DATE_ONLY_REGEX.test(date)) {
+    return fromZonedTime(`${date}T00:00:00`, "Africa/Cairo");
+  }
+
+  // Strictly enforce ISO 8601 with "T"
+  if (!date.includes("T")) {
+    throw new Error(`Invalid date format: "${date}". Expected YYYY-MM-DD or ISO 8601 with "T".`);
+  }
+
+  // If it has a "T" but no timezone indicator (+, -, or Z), treat as Cairo time
+  const hasOffset = /[+-]\d{2}:?\d{2}$/.test(date) || date.endsWith("Z");
+  if (!hasOffset) {
+    return fromZonedTime(date, "Africa/Cairo");
+  }
+
+  // Has offset, new Date() is safe as it's an absolute point in time
+  const parsed = new Date(date);
+  if (isNaN(parsed.getTime())) {
+    throw new Error(`Invalid date: "${date}".`);
+  }
+  return parsed;
+}
+
+/**
+ * Checks if two dates represent the same calendar day in Egypt.
+ */
+export function isSameDay(date1: Date | string, date2: Date | string): boolean {
+  const d1 = toCairoTime(date1);
+  const d2 = toCairoTime(date2);
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate()
+  );
+}
+
 /**
  * Checks if a given date is a working day in Egypt (excludes Fridays and Saturdays).
  * Accounts for Africa/Cairo timezone.
@@ -152,11 +200,7 @@ export function formatPatientNumber(hospitalCode: string, year: number, seq: num
  * @param date - An absolute Date object or ISO string.
  */
 export function isWorkingDay(date: Date | string): boolean {
-  const d = typeof date === "string"
-    ? (date.includes("T") ? fromZonedTime(date, "Africa/Cairo") : fromZonedTime(`${date}T00:00:00`, "Africa/Cairo"))
-    : date;
-
-  const zonedDate = toZonedTime(d, "Africa/Cairo");
+  const zonedDate = toCairoTime(date);
   const day = zonedDate.getDay();
   return day !== 5 && day !== 6; // 5 = Friday, 6 = Saturday
 }
@@ -293,11 +337,7 @@ export function getPublicHolidays(year: number) {
  * @param date - An absolute Date object or ISO string representing a point in time.
  */
 export function isEgyptianPublicHoliday(date: Date | string): { isHoliday: boolean; nameAr?: string; nameEn?: string } | null {
-  const d = typeof date === "string"
-    ? (date.includes("T") ? fromZonedTime(date, "Africa/Cairo") : fromZonedTime(`${date}T00:00:00`, "Africa/Cairo"))
-    : date;
-
-  const zoned = toZonedTime(d, "Africa/Cairo");
+  const zoned = toCairoTime(date);
   const year = zoned.getFullYear();
   const month = zoned.getMonth();
   const day = zoned.getDate();
@@ -326,9 +366,7 @@ export function isEgyptianPublicHoliday(date: Date | string): { isHoliday: boole
  * If a string is provided without a timezone, it is assumed to be in Africa/Cairo.
  */
 export function toCairoTime(date: Date | string | number): Date {
-  const d = typeof date === "string"
-    ? (date.includes("T") ? fromZonedTime(date, "Africa/Cairo") : fromZonedTime(`${date}T00:00:00`, "Africa/Cairo"))
-    : new Date(date);
+  const d = typeof date === "number" ? new Date(date) : parseEgyptDate(date);
   return toZonedTime(d, "Africa/Cairo");
 }
 

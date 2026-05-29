@@ -140,7 +140,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
     },
     documentType: "I",
     documentTypeVersion: "1.0",
-    dateTimeIssued: formatInTimeZone(invoice.createdAt || new Date(), "Africa/Cairo", "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+    dateTimeIssued: formatInTimeZone(invoice.createdAt || new Date(), "Africa/Cairo", "yyyy-MM-dd'T'HH:mm:ssXXX"),
     taxpayerActivityCode: settings?.etaTaxpayerActivityCode || "8610",
     internalID: invoice.invoiceNumber,
     payment: {
@@ -275,7 +275,7 @@ export function transformInvoiceToETAReceipt(
     receiptNumber: invoice.invoiceNumber,
     uuid: receiptUuid,
     previousReceiptUUID: previousReceiptUUID || "0000000000000000000000000000000000000000000000000000000000000000",
-    dateTimeIssued: formatInTimeZone(invoice.createdAt || new Date(), "Africa/Cairo", "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+    dateTimeIssued: formatInTimeZone(invoice.createdAt || new Date(), "Africa/Cairo", "yyyy-MM-dd'T'HH:mm:ssXXX"),
     receiptType: "S",
     receiptVersion: "1.0",
     seller: {
