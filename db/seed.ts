@@ -85,6 +85,7 @@ async function seed() {
     // 2. Settings
     await db.insert(schema.hospitalSettings).values({
       hospitalId: hospital.id,
+      approvedWhatsappTemplates: ["mews_critical_alert"],
       isSurgicalEnabled: true,
       isTelemedicineEnabled: true,
       isPatientPortalEnabled: true,

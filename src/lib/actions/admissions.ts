@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
 import { beds, admissions, dischargeSummaries, vitalsFlowsheet, rooms } from "@db/schema/clinical";
 import { housekeepingTasks } from "@db/schema/housekeeping";
-import { staff } from "@db/schema/core";
+import { staff, hospitalSettings } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
 import { backgroundJobs } from "@db/schema/system";
 import { stockTransactions } from "@db/schema/pharmacy";
@@ -428,6 +428,16 @@ async function dispatchCriticalAlerts(
   tx: Parameters<Parameters<typeof withTenantContext>[1]>[0]
 ) {
   try {
+    // 0. Fetch hospital settings for WhatsApp template verification
+    const settings = await tx
+      .select({ approvedWhatsappTemplates: hospitalSettings.approvedWhatsappTemplates })
+      .from(hospitalSettings)
+      .where(eq(hospitalSettings.hospitalId, hospitalId))
+      .limit(1)
+      .then((res) => res[0]);
+
+    const isWhatsAppApproved = settings?.approvedWhatsappTemplates?.includes("mews_critical_alert");
+
     // A. Fetch Patient details using the provided transaction context
     const [patient] = await tx
       .select()
@@ -466,11 +476,22 @@ async function dispatchCriticalAlerts(
         reminderType: "critical_mews_alert",
         entityType: "clinical_alert",
         entityId: vitalId,
-        whatsappTemplate: {
-          name: "mews_critical_alert",
-          languageCode: "ar",
-          parameters: [patient.nameAr || patient.nameEn || "", String(mewsScore)],
-        },
+        // Only attempt WhatsApp if the template is approved for this hospital
+        channelPriority: isWhatsAppApproved ? ["whatsapp", "sms"] : ["sms"],
+        // Pass pre-fetched templates to avoid redundant DB lookup in sendWhatsAppMessage
+        approvedWhatsappTemplates: settings?.approvedWhatsappTemplates || [],
+        whatsappTemplate: isWhatsAppApproved
+          ? {
+              name: "mews_critical_alert",
+              languageCode: "ar",
+              parameters: [
+                patient.nameAr
+                  ? patient.nameAr
+                  : (patient.nameEn ? `\u200E${patient.nameEn}\u200F` : ""),
+                String(mewsScore)
+              ],
+            }
+          : undefined,
       });
     }
 
