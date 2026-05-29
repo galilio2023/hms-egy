@@ -424,48 +424,31 @@ export class LocalSyncEngine {
   }
 
   /**
-   * Sends individual operation log with simulated field merging (LWW CRDTs).
+   * Sends individual operation log to the central sync resolver.
+   * Replaced simulation with real fetch call as per Code Review.
    */
   private async syncIndividualOperation(op: SyncOperation, result: SyncResult): Promise<boolean> {
-    // In production, this hits Next.js Route '/api/sync/edge'
-    // Let's simulate a standard Server Response processing this
-    
-    // Simulate minor network round-trip delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const response = await fetch("/api/sync/resolve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(op),
+    });
 
-    // Simulate Conflict Detection
-    // Let's assume there is a 5% chance of a collision if same record was edited in the cloud
-    const hasConflict = Math.random() < 0.05;
-
-    if (hasConflict) {
-      console.warn(`[EDGE SYNC] CONFLICT DETECTED on table [${op.tableName}] for Record: ${op.entityId}`);
-      
-      // Simulate Cloud Record
-      const cloudRecord = { version: (op.version || 1) + 1 };
-
-      // Version-based Conflict Resolution
-      if (op.version !== undefined && op.version < cloudRecord.version) {
-        console.error(`[EDGE SYNC] [VERSION MISMATCH] Local version (${op.version}) is older than Cloud version (${cloudRecord.version}). HALTING sync for this record. Manual merge required.`);
-        throw new Error(`Version mismatch on ${op.tableName}:${op.entityId}. Local: ${op.version}, Cloud: ${cloudRecord.version}`);
-      }
-
-      // Fallback to Last-Write-Wins (LWW) if no versioning is available
-      const cloudRecordTimestamp = Date.now() - 5000; // Cloud write occurred 5s ago
-      
-      if (op.timestamp > cloudRecordTimestamp) {
-        // Local edge node wins because it has a newer timestamp
-        console.log(`[EDGE SYNC] [CRDT RESOLVED] Edge node write timestamp (${op.timestamp}) is newer than cloud (${cloudRecordTimestamp}). Local write wins.`);
-        result.conflictsResolved++;
-        return true; 
-      } else {
-        // Cloud wins, discard local changes to prevent state corruption
-        console.log(`[EDGE SYNC] [CRDT DISCARD] Cloud write is newer than local edge node. Discarding offline operation.`);
-        result.conflictsResolved++;
-        return true;
-      }
+    if (response.status === 200) {
+      return true; // Operation synced successfully
     }
 
-    return true; // Operation synced successfully
+    if (response.status === 409) {
+      const errorData = await response.json();
+      console.error(`[EDGE SYNC] [VERSION MISMATCH] ${errorData.message}. HALTING sync for this record.`);
+      
+      // Attempt Last-Write-Wins (LWW) Fallback logic if versioning isn't strictly blocking
+      // or if it was a newer local write that just needs manual resolution.
+      throw new Error(errorData.message || "Conflict detected");
+    }
+
+    const errorText = await response.text();
+    throw new Error(`Sync failed with status ${response.status}: ${errorText}`);
   }
 }
 

@@ -261,7 +261,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
           {/* Main Clinical SOAP Section */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="border border-border/40 bg-card rounded-3xl shadow-md overflow-hidden relative">
-              <div className="absolute top-0 inset-inline-0 h-1 bg-gradient-to-r from-primary to-accent" />
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-accent" />
               <CardContent className="p-6 sm:p-8 space-y-6">
                 
                 {/* AI Ambient Scribe Quick Action Banner */}
@@ -381,7 +381,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
 
             {/* F. Clinical Order Sets Application Workstation */}
             <Card className="border border-border/40 bg-card rounded-3xl shadow-md overflow-hidden relative">
-              <div className="absolute top-0 inset-inline-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
               <CardContent className="p-6 sm:p-8 space-y-6">
                 <div className="flex items-center gap-2.5">
                   <FolderHeart className="w-5 h-5 text-indigo-500 shrink-0" />
@@ -408,7 +408,7 @@ export function MedicalRecordForm({ patient, hospitalSlug }: MedicalRecordFormPr
                       ))}
                     </select>
                     <div className={cn(
-                      "absolute inset-y-0 inset-inline-end-0 flex items-center px-3 pointer-events-none text-muted-foreground"
+                      "absolute inset-y-0 end-0 flex items-center px-3 pointer-events-none text-muted-foreground"
                     )}>
                       <ChevronDown className="w-4 h-4" />
                     </div>

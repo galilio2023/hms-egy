@@ -59,7 +59,7 @@ export function PrintLabReport({
     >
       {/* ── HEADER AREA ────────────────────────── */}
       <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-6">
-        <div className={cn(isRtl ? "text-right" : "text-left")}>
+        <div className="text-start">
           <h2 className="text-xl font-black uppercase tracking-tight">{hospital.nameAr}</h2>
           <h3 className="text-sm font-bold text-slate-600">{hospital.nameEn}</h3>
           <p className="text-[10px] text-slate-500 font-bold mt-1">قسم التحاليل الطبية / Laboratory Department</p>
@@ -70,7 +70,7 @@ export function PrintLabReport({
           </div>
           <p className="text-[10px] font-mono font-bold tracking-widest uppercase">ISO 15189 ACCREDITED LABORATORY</p>
         </div>
-        <div className={cn(isRtl ? "text-left" : "text-right")} dir="ltr">
+        <div className="text-end" dir="ltr">
           <p className="text-xs font-mono font-bold">Report ID: {order.id.slice(0, 8).toUpperCase()}</p>
           <p className="text-[10px] text-slate-500">{format(new Date(), "PPpp", { locale: dateLocale })}</p>
         </div>

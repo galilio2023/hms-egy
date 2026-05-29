@@ -5,6 +5,7 @@ import { withTenantContext } from "@/lib/db/tenant";
 import { medications, prescriptions, prescriptionItems, stockTransactions } from "@db/schema/pharmacy";
 import { patients } from "@db/schema/patients";
 import { eq, and, or, ilike, sql, inArray, desc } from "drizzle-orm";
+import { admissions } from "@db/schema/clinical";
 import { auth } from "@/lib/auth";
 import { checkDrugInteractions } from "@/lib/pharmacy/ddi";
 import { getClaudeClinicalAnalysis } from "@/lib/ai/claude";
@@ -105,6 +106,7 @@ export async function runDdiCheck(patientId: string, itemInputs: PrescriptionIte
  */
 export async function createPrescription(payload: {
   patientId: string;
+  admissionId?: string;
   items: PrescriptionItemInput[];
   notes?: string;
   hasDdiOverride?: boolean;
@@ -122,7 +124,7 @@ export async function createPrescription(payload: {
       const medIds = payload.items.map(i => i.medicationId);
       if (medIds.length === 0) throw new Error("At least one medication is required");
 
-      const [medDetails, patient] = await Promise.all([
+      const [medDetails, patient, activeAdmission] = await Promise.all([
         tx
           .select({
             id: medications.id,
@@ -142,10 +144,25 @@ export async function createPrescription(payload: {
           .from(patients)
           .where(eq(patients.id, payload.patientId))
           .limit(1)
+          .then(res => res[0]),
+        tx
+          .select({ id: admissions.id })
+          .from(admissions)
+          .where(and(
+            eq(admissions.patientId, payload.patientId),
+            eq(admissions.hospitalId, hospitalId),
+            eq(admissions.status, "active")
+          ))
+          .limit(1)
           .then(res => res[0])
       ]);
 
       if (!patient) throw new Error("Patient not found");
+
+      // Safety Guardrail: admissionId must be present if patient is admitted
+      if (activeAdmission && !payload.admissionId) {
+        throw new Error("Clinical Safety Violation: Patient is currently ADMITTED. An active admissionId must be linked to this prescription for medical auditing.");
+      }
 
       // Verify all medications belong to this hospital context to prevent DDI bypass
       if (medDetails.length !== payload.items.length) {
@@ -175,6 +192,7 @@ export async function createPrescription(payload: {
           hospitalId,
           patientId: payload.patientId,
           doctorId: session.user.id,
+          admissionId: payload.admissionId || null,
           notes: payload.notes,
           hasDdiOverride: payload.hasDdiOverride || false,
           ddiOverrideReason: payload.ddiOverrideReason,
@@ -503,7 +521,8 @@ export async function getPrescriptionForDispensing(id: string) {
  */
 export async function dispensePrescription(
   prescriptionId: string,
-  items: { prescriptionItemId: string; medicationId: string; quantity: number }[]
+  items: { prescriptionItemId: string; medicationId: string; quantity: number }[],
+  admissionId?: string
 ) {
   const session = await auth();
   if (!session) return { success: false, error: "Unauthorized" };
@@ -531,6 +550,22 @@ export async function dispensePrescription(
       if (!rx) throw new Error("Prescription not found");
       if (rx.status === "completed") throw new Error("Prescription already fully completed");
       if (rx.status === "cancelled") throw new Error("Prescription is cancelled");
+
+      // Verify active admission context for inpatient dispensing
+      const activeAdmission = await tx
+        .select({ id: admissions.id })
+        .from(admissions)
+        .where(and(
+          eq(admissions.patientId, rx.patientId),
+          eq(admissions.hospitalId, hospitalId),
+          eq(admissions.status, "active")
+        ))
+        .limit(1)
+        .then(res => res[0]);
+
+      if (activeAdmission && !admissionId) {
+        throw new Error("Clinical Safety Violation: Patient is currently ADMITTED. Dispensing must be linked to an active admissionId.");
+      }
 
       // 2. Fetch the staff ID of the person dispensing
       const performer = await tx

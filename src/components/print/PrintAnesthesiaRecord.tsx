@@ -53,14 +53,14 @@ export function PrintAnesthesiaRecord({
     >
       {/* Header Area */}
       <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-6">
-        <div className="text-right">
+        <div className="text-start">
           <h2 className="text-md font-bold">مستشفى مصر التخصصي</h2>
           <p className="text-[10px] text-slate-500">قسم التخدير والرعاية المركزة</p>
         </div>
         <div className="text-center font-bold text-lg uppercase bg-slate-900 text-white px-4 py-1.5 rounded-md">
           سجل التخدير العملياتي / Intraoperative Anesthesia Record
         </div>
-        <div className="text-left" dir="ltr">
+        <div className="text-end" dir="ltr">
           <p className="text-xs font-mono font-bold">Case Ref: {caseNumber}</p>
           <p className="text-[10px] text-slate-500">Egypt Specialist Hospital</p>
         </div>
@@ -177,7 +177,7 @@ export function PrintAnesthesiaRecord({
           <p className="font-bold">طبيب التخدير المتابع / Attending Anesthesiologist:</p>
           <p className="text-slate-600 mt-1">د. {anesthesia.anesthesiologistName}</p>
         </div>
-        <div className="text-left" dir="ltr">
+        <div className="text-end" dir="ltr">
           <p className="font-bold">Signature / التوقيع الإلكتروني أو اليدوي:</p>
           <div className="h-10 w-48 border-b border-black/40 border-dotted mt-1" />
         </div>
