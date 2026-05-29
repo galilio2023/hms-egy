@@ -15,8 +15,8 @@ export interface Dimensions {
  * Features:
  * - Debounced updates to prevent layout thrashing and performance issues.
  * - Backward compatible cleanup (React 18 & 19).
- * - Sub-pixel thrashing prevention using Math.floor.
- * - Equality checks using refs to prevent unnecessary re-renders.
+ * - Precision state: Stores raw dimensions to prevent canvas blurriness.
+ * - Thrashing prevention: Only triggers updates when integer dimensions change.
  * - Stable callback ref to prevent redundant observer re-bindings.
  *
  * @param debounceMs Delay in milliseconds for debouncing dimension updates.
@@ -55,22 +55,26 @@ export function useResizeObserver(debounceMs: number = 50) {
       const observer = new ResizeObserver((entries) => {
         const entry = entries[0];
         if (entry) {
-          // Math.floor prevents sub-pixel layout thrashing on low-end hardware
-          const width = Math.floor(entry.contentRect.width);
-          const height = Math.floor(entry.contentRect.height);
+          // Use Math.floor only for the comparison to prevent layout thrashing
+          const roundedWidth = Math.floor(entry.contentRect.width);
+          const roundedHeight = Math.floor(entry.contentRect.height);
+
+          // Store raw dimensions to ensure sub-pixel precision for heavy canvases (preventing blur)
+          const rawWidth = entry.contentRect.width;
+          const rawHeight = entry.contentRect.height;
 
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
           }
 
           timeoutRef.current = setTimeout(() => {
-            // Strict equality check against ref to avoid state-update stale closures
+            // Only update state if the rounded integer dimensions have actually changed
             if (
-              prevDimensionsRef.current.width !== width ||
-              prevDimensionsRef.current.height !== height
+              prevDimensionsRef.current.width !== roundedWidth ||
+              prevDimensionsRef.current.height !== roundedHeight
             ) {
-              prevDimensionsRef.current = { width, height };
-              setDimensions({ width, height });
+              prevDimensionsRef.current = { width: roundedWidth, height: roundedHeight };
+              setDimensions({ width: rawWidth, height: rawHeight });
             }
           }, debounceMsRef.current);
         }

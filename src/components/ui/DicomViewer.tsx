@@ -288,11 +288,11 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
           <Button 
             size="icon" 
             variant="ghost" 
-            onClick={() => setCurrentSlice(prev => Math.max(1, prev - 1))}
-            disabled={currentSlice === 1}
+            onClick={() => setCurrentSlice(prev => isRtl ? Math.min(totalSlices, prev + 1) : Math.max(1, prev - 1))}
+            disabled={isRtl ? currentSlice === totalSlices : currentSlice === 1}
             className="h-6 w-6 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-full"
           >
-            <ChevronLeft className="h-4 w-4" />
+            {isRtl ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
           <span className="text-[10px] text-slate-200 font-mono select-none px-2">
             Slice {currentSlice} / {totalSlices}
@@ -300,11 +300,11 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
           <Button 
             size="icon" 
             variant="ghost" 
-            onClick={() => setCurrentSlice(prev => Math.min(totalSlices, prev + 1))}
-            disabled={currentSlice === totalSlices}
+            onClick={() => setCurrentSlice(prev => isRtl ? Math.max(1, prev - 1) : Math.min(totalSlices, prev + 1))}
+            disabled={isRtl ? currentSlice === 1 : currentSlice === totalSlices}
             className="h-6 w-6 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-full"
           >
-            <ChevronRight className="h-4 w-4" />
+            {isRtl ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         </div>
       </div>
