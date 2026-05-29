@@ -22,27 +22,40 @@ export async function POST(req: NextRequest) {
 
     // Fetch current server state
     const [currentRecord] = await db
-      .select({ version: table.version })
+      .select({
+        version: table.version,
+        updatedAt: table.updatedAt
+      })
       .from(table)
       .where(eq(table.id, entityId))
       .limit(1);
 
     if (!currentRecord) {
-      // If it's an INSERT and record doesn't exist, it's fine.
-      // But usually sync engine handles existing records.
       if (action === "INSERT") {
+        await db.insert(table).values({
+          ...payload,
+          id: entityId,
+          version: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
         return NextResponse.json({ status: "synced" });
       }
       return NextResponse.json({ error: "Record not found" }, { status: 404 });
     }
 
-    // Version-based Conflict Resolution
-    if (version !== undefined && version < currentRecord.version) {
+    // LWW (Last-Write-Wins) Conflict Resolution
+    // We compare timestamps to ensure the absolute latest clinical data wins,
+    // regardless of whether it arrived late due to offline survivability.
+    const clientTimestamp = op.timestamp;
+    const serverUpdatedAt = currentRecord.updatedAt ? new Date(currentRecord.updatedAt).getTime() : 0;
+
+    if (clientTimestamp < serverUpdatedAt) {
       return NextResponse.json({
-        status: "conflict",
-        serverVersion: currentRecord.version,
-        message: "Version mismatch: Local version is older than server version."
-      }, { status: 409 });
+        status: "ignored",
+        message: "Stale update: Server already has a newer revision of this record.",
+        serverVersion: currentRecord.version
+      }, { status: 200 }); // Return 200 so client clears it from outbox
     }
 
     // If no conflict, apply the database changes to prevent data loss

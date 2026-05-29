@@ -19,6 +19,7 @@ import { validateVitals } from "./clinical";
 import { normalizeDecimal } from "@/lib/utils/egypt";
 import { calculateMEWS } from "@/lib/clinical/mews";
 import { sendResilientClinicalAlert } from "@/lib/sms/client";
+import { edgeSyncEngine } from "@/lib/offline/sync-engine";
 
 interface AdmitPatientPayload {
   patientId: string;
@@ -356,6 +357,27 @@ export async function recordInpatientVitals(payload: RecordVitalsPayload) {
 
       return { success: true, vitalId: record.id };
     });
+
+    // Offline Survivability: Queue update to local outbox for LSN synchronization
+    // This ensures that even if the primary write succeeds, any subsequent offline
+    // modifications are tracked, or if the environment were purely offline,
+    // the UI would use this path exclusively.
+    if (typeof window !== "undefined") {
+      edgeSyncEngine.queueWrite({
+        tableName: "vitals_flowsheet",
+        action: "INSERT",
+        entityId: result.vitalId || Math.random().toString(36).substring(7),
+        payload: {
+          patientId: payload.patientId,
+          bloodPressureSystolic: payload.bloodPressureSystolic,
+          bloodPressureDiastolic: payload.bloodPressureDiastolic,
+          heartRate: payload.heartRate,
+          respiratoryRate: payload.respiratoryRate,
+          temperature: cleanTemperature,
+          oxygenSaturation: payload.oxygenSaturation,
+        }
+      }).catch(err => console.warn("[LSN] Failed to queue vital write:", err));
+    }
 
     if (result.success && result.vitalId) {
       // 1. Calculate MEWS dynamically

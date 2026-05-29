@@ -476,9 +476,9 @@ export default function AdmissionsDashboardClient({
           <Button
             onClick={() => router.refresh()}
             variant="outline"
-            className="rounded-xl border-border bg-card hover:bg-muted text-foreground shadow-sm"
+            className="rounded-xl border-border bg-card hover:bg-muted text-foreground shadow-sm gap-2"
           >
-            <RefreshCw className="h-4 w-4 text-muted-foreground me-2" />
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
             {isRtl ? "تحديث" : "Refresh"}
           </Button>
 
@@ -488,9 +488,9 @@ export default function AdmissionsDashboardClient({
               setTargetBedId("");
               setIsAdmitOpen(true);
             }}
-            className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md shadow-blue-500/10"
+            className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md shadow-blue-500/10 gap-2"
           >
-            <Plus className="h-4 w-4 me-2" />
+            <Plus className="h-4 w-4" />
             {t("admitPatient")}
           </Button>
         </div>
@@ -568,8 +568,8 @@ export default function AdmissionsDashboardClient({
 
         {/* Occupancy Rate */}
         <Card className="rounded-2xl border border-border/60 shadow-sm bg-card overflow-hidden text-start col-span-2 lg:col-span-1">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div className="space-y-2 flex-1 me-2">
+          <CardContent className="p-5 flex items-center justify-between gap-2">
+            <div className="space-y-2 flex-1">
               <p className="text-xs font-bold text-muted-foreground tracking-wider uppercase">
                 {t("occupancyRate")}
               </p>
@@ -868,11 +868,11 @@ export default function AdmissionsDashboardClient({
           <Button
             onClick={handleAdmitPatient}
             disabled={isAdmitting}
-            className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-sm text-xs h-10 px-5"
+            className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-sm text-xs h-10 px-5 gap-1.5"
           >
             {isAdmitting ? (
               <>
-                <RefreshCw className="h-4 w-4 animate-spin me-1.5" />
+                <RefreshCw className="h-4 w-4 animate-spin" />
                 {isRtl ? "جاري الإدخال..." : "Admitting..."}
               </>
             ) : (
@@ -935,9 +935,9 @@ export default function AdmissionsDashboardClient({
                 <Button
                   onClick={() => setIsVitalsOpen(!isVitalsFormExpanded)}
                   variant="outline"
-                  className="rounded-xl border-blue-500/30 bg-blue-500/5 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 text-xs py-1 h-8 shadow-sm"
+                  className="rounded-xl border-blue-500/30 bg-blue-500/5 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 text-xs py-1 h-8 shadow-sm gap-1"
                 >
-                  <Plus className="h-3.5 w-3.5 me-1" />
+                  <Plus className="h-3.5 w-3.5" />
                   {isVitalsFormExpanded ? (isRtl ? "إغلاق النموذج" : "Close Form") : t("recordVitals")}
                 </Button>
               </div>
@@ -1239,16 +1239,16 @@ export default function AdmissionsDashboardClient({
                   <Button
                     onClick={handleDischargePatient}
                     disabled={isDischarging}
-                    className="w-full mt-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 shadow-sm text-xs h-11"
+                    className="w-full mt-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 shadow-sm text-xs h-11 gap-1.5"
                   >
                     {isDischarging ? (
                       <>
-                        <RefreshCw className="h-4 w-4 animate-spin me-1.5" />
+                        <RefreshCw className="h-4 w-4 animate-spin" />
                         {isRtl ? "جاري التخريج والتعقيم..." : "Discharging..."}
                       </>
                     ) : (
                       <>
-                        <CheckCircle2 className="h-4 w-4 me-1.5" />
+                        <CheckCircle2 className="h-4 w-4" />
                         {isRtl ? "إنهاء الإدخال وتنبيه النظافة" : "Finalize Discharge & Clean Bed"}
                       </>
                     )}
