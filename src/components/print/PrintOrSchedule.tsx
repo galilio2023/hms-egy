@@ -51,7 +51,7 @@ export function PrintOrSchedule({
     >
       {/* Header Area */}
       <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-6">
-        <div className="text-right">
+        <div className="text-start">
           <h2 className="text-lg font-black">{hospitalName.split(" / ")[0]}</h2>
           <p className="text-xs text-slate-500">مجمع غرف العمليات والكتل الجراحية</p>
         </div>
@@ -61,14 +61,14 @@ export function PrintOrSchedule({
           </span>
           <p className="text-xs font-bold mt-1">تاريخ اليوم / Date: <span className="underline font-mono">{date}</span></p>
         </div>
-        <div className="text-left" dir="ltr">
+        <div className="text-end" dir="ltr">
           <h2 className="text-sm font-bold">{hospitalName.split(" / ")[1]}</h2>
           <p className="text-[10px] text-slate-500">Operating Suite Management</p>
         </div>
       </div>
 
       {/* Main Cases Table Grid */}
-      <table className="w-full border-collapse border border-black/40 text-xs text-right">
+      <table className="w-full border-collapse border border-black/40 text-xs text-start">
         <thead>
           <tr className="bg-slate-100 text-center font-bold">
             <th className="border border-black/40 p-2.5 w-12">التوقيت / Time</th>
@@ -117,9 +117,9 @@ export function PrintOrSchedule({
           <div className="h-10 w-64 border-b border-black/40 border-dotted" />
           <p className="text-[10px] text-slate-500">الاسم والتوقيع / Signature & ID: _______________________</p>
         </div>
-        <div className="space-y-4 text-left" dir="ltr">
+        <div className="space-y-4 text-end" dir="ltr">
           <p className="font-bold">Chief of Surgical Services / رئيس قسم العمليات والجراحة:</p>
-          <div className="h-10 w-64 border-b border-black/40 border-dotted me-auto" />
+          <div className="h-10 w-64 border-b border-black/40 border-dotted ms-auto" />
           <p className="text-[10px] text-slate-500">Signature / التوقيع: _______________________</p>
         </div>
       </div>

@@ -111,7 +111,7 @@ export async function submitInvoiceToETA(invoiceId: string) {
 /**
  * Background processor for ETA jobs.
  */
-async function processETAJob(jobId: string, hospitalId: string) {
+export async function processETAJob(jobId: string, hospitalId: string) {
   return await withTenantContext(hospitalId, async (tx) => {
     const [job] = await tx.select().from(backgroundJobs).where(eq(backgroundJobs.id, jobId)).limit(1);
     if (!job || job.status === "completed") return;

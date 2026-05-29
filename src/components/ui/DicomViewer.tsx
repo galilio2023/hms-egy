@@ -293,7 +293,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
           </div>
         ) : (
           <>
-            <div className="absolute top-2 inset-inline-end-2 z-10 bg-rose-600/95 text-white font-bold text-[9px] px-2 py-0.5 rounded-md border border-rose-500 shadow-md animate-pulse">
+            <div className="absolute top-2 end-2 z-10 bg-rose-600/95 text-white font-bold text-[9px] px-2 py-0.5 rounded-md border border-rose-500 shadow-md animate-pulse">
               {isRtl ? "معاينة غير معايرة" : "NON-DIAGNOSTIC PREVIEW"}
             </div>
             <canvas
@@ -311,7 +311,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
         )}
 
         {/* Slice selection navigator overlays */}
-        <div className="absolute bottom-4 inset-inline-start-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 border border-slate-800/80 px-3 py-1.5 rounded-full backdrop-blur-xs shadow-md">
+        <div className="absolute bottom-4 start-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 border border-slate-800/80 px-3 py-1.5 rounded-full backdrop-blur-xs shadow-md">
           <Button 
             size="icon" 
             variant="ghost" 

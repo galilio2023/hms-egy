@@ -37,14 +37,14 @@ export function PrintSurgicalConsentForm({
     >
       {/* Printable Header */}
       <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-6">
-        <div className="text-right">
+        <div className="text-start">
           <h2 className="text-lg font-black">{hospitalName.split(" / ")[0]}</h2>
           <p className="text-xs text-slate-600">جمهورية مصر العربية - وزارة الصحة</p>
         </div>
         <div className="text-center font-bold text-xl uppercase tracking-wider bg-black text-white px-4 py-2 rounded-lg">
           إقرار موافقة جراحية / Surgical Consent
         </div>
-        <div className="text-left" dir="ltr">
+        <div className="text-end" dir="ltr">
           <h2 className="text-sm font-bold">{hospitalName.split(" / ")[1]}</h2>
           <p className="text-[10px] text-slate-600">Arab Republic of Egypt - MOH</p>
         </div>

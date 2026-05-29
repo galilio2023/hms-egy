@@ -1660,7 +1660,7 @@ export function PatientProfileClient({
                       <div className="text-[10px]">شعار الوزارة</div>
                     </div>
 
-                    <div className="text-left space-y-1" dir="ltr">
+                    <div className="text-end space-y-1" dir="ltr">
                       <div>Ministry of Health & Population</div>
                       <div>Directorate of Health Affairs</div>
                       <div className="font-mono text-[9px] text-emerald-800">{selectedCertificateForPrint.serialNumber}</div>
@@ -1743,7 +1743,7 @@ export function PatientProfileClient({
                     </div>
 
                     {/* Doctor Signatures */}
-                    <div className="text-left space-y-3" dir="ltr">
+                    <div className="text-end space-y-3" dir="ltr">
                       <div>
                         <span className="text-neutral-500 block text-[9px]">Physician Signature:</span>
                         <span className="font-serif italic text-black font-bold block pt-1 border-b border-neutral-300 pb-0.5">{selectedCertificateForPrint.doctorNameEn || "Authorized Doctor"}</span>

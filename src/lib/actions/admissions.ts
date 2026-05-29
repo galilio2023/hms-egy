@@ -235,6 +235,7 @@ export async function dischargePatient(payload: DischargePatientPayload) {
         .set({
           status: "discharged",
           dischargeDate: now,
+          version: sql`${admissions.version} + 1`,
           updatedAt: now,
         })
         .where(eq(admissions.id, payload.admissionId));

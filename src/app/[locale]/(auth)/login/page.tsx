@@ -144,7 +144,7 @@ export default function LoginPage() {
                       name="email"
                       required
                       placeholder="name@hospital.com.eg"
-                      className="w-full py-3.5 ps-11 pe-4 bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800 focus:border-teal-500 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-sans text-sm text-left"
+                      className="w-full py-3.5 ps-11 pe-4 bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800 focus:border-teal-500 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-sans text-sm text-start"
                     />
                   </div>
                 </div>
@@ -165,7 +165,7 @@ export default function LoginPage() {
                       name="password"
                       required
                       placeholder="••••••••"
-                      className="w-full py-3.5 ps-11 pe-4 bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800 focus:border-teal-500 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-sans text-sm text-left"
+                      className="w-full py-3.5 ps-11 pe-4 bg-slate-900/50 hover:bg-slate-900/80 focus:bg-[#0c1220] border border-slate-800 focus:border-teal-500 text-slate-100 placeholder-slate-600 rounded-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-sans text-sm text-start"
                     />
                   </div>
                 </div>

@@ -250,6 +250,7 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
           bloodType: data.bloodType || undefined,
           allergies: data.allergies || undefined,
           chronicConditions: data.chronicConditions || undefined,
+          version: sql`${patients.version} + 1`,
           updatedAt: new Date(),
         })
         .where(eq(patients.id, patientId));
