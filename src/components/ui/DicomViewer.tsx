@@ -10,7 +10,7 @@
 
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
 import { 
   ZoomIn, 
@@ -72,40 +72,39 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   const [loadError, setLoadError] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
+  // Synchronous render-phase reset to prevent stale imagery flashes
+  // This ensures that when imageUrl or currentSlice changes, the loading state is reset
+  // immediately before the browser can paint a stale frame.
+  const [prevImageUrl, setPrevImageUrl] = useState(imageUrl);
+  const [prevSlice, setPrevSlice] = useState(currentSlice);
+
+  if (imageUrl !== prevImageUrl || currentSlice !== prevSlice) {
+    setPrevImageUrl(imageUrl);
+    setPrevSlice(currentSlice);
+    setImageLoaded(false);
+    setLoadError(null);
+  }
+
   // Load image element
   useEffect(() => {
     let isMounted = true;
 
-    // Code Review Fix: IMMEDIATELY reset loading state to prevent drawing stale imagery
-    // from a previous patient while the new scan is streaming.
-    setImageLoaded(false);
-    imageRef.current = null;
-
     const isRawDicom = imageUrl?.toLowerCase().endsWith(".dcm");
     if (isRawDicom) {
-      setTimeout(() => {
-        if (isMounted) {
-          setLoadError(isRtl 
-            ? "ملفات DICOM (.dcm) الخام غير مدعومة مباشرة في المتصفح. يرجى استخدام رابط لمعاينة الصورة (JPEG/PNG)." 
-            : "Raw DICOM (.dcm) files are not supported natively in the browser. Please provide a server-rendered preview URL (JPEG/PNG).");
-        }
-      }, 0);
+      if (isMounted) {
+        setLoadError(isRtl
+          ? "ملفات DICOM (.dcm) الخام غير مدعومة مباشرة في المتصفح. يرجى استخدام رابط لمعاينة الصورة (JPEG/PNG)."
+          : "Raw DICOM (.dcm) files are not supported natively in the browser. Please provide a server-rendered preview URL (JPEG/PNG).");
+      }
       return () => {
         isMounted = false;
       };
     }
 
-    const timer = setTimeout(() => {
-      if (isMounted) setLoadError(null);
-    }, 0);
-
     const img = new Image();
-    // Default to high-fidelity X-ray placeholder if no URL is attached
-    // Code Review Fix: Dynamically replace {slice} token if provided to prevent static clinical hazards
-    img.src = imageUrl 
-      ? (imageUrl.includes("{slice}") ? imageUrl.replace("{slice}", String(currentSlice)) : imageUrl)
-      : "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80";
     img.crossOrigin = "anonymous";
+
+    // Code Review Fix: Attach listeners BEFORE setting src to avoid race conditions with cached images
     img.onload = () => {
       if (isMounted) {
         imageRef.current = img;
@@ -113,20 +112,23 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
       }
     };
     img.onerror = () => {
-      setTimeout(() => {
-        if (isMounted) {
-          setLoadError(isRtl 
-            ? "فشل تحميل الصورة التشخيصية. يرجى التحقق من إعدادات CORS على خادم PACS أو خادم الملفات." 
-            : "Failed to load diagnostic image. Please verify CORS configurations on the PACS host.");
-        }
-      }, 0);
+      if (isMounted) {
+        setLoadError(isRtl
+          ? "فشل تحميل الصورة التشخيصية. يرجى التحقق من إعدادات CORS على خادم PACS أو خادم الملفات."
+          : "Failed to load diagnostic image. Please verify CORS configurations on the PACS host.");
+      }
     };
+
+    // Default to high-fidelity X-ray placeholder if no URL is attached
+    // Code Review Fix: Dynamically replace {slice} token if provided to prevent static clinical hazards
+    img.src = imageUrl
+      ? (imageUrl.includes("{slice}") ? imageUrl.replace("{slice}", String(currentSlice)) : imageUrl)
+      : "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80";
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
     };
-  }, [imageUrl, isRtl]);
+  }, [imageUrl, currentSlice, isRtl]);
 
   // Redraw viewport whenever properties change
   useEffect(() => {
@@ -284,12 +286,13 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
         )}
 
         {/* Slice selection navigator overlays */}
-        <div className="absolute bottom-4 start-1/2 -translate-x-1/2 flex items-center gap-2 bg-slate-900/80 border border-slate-800/80 px-3 py-1.5 rounded-full backdrop-blur-xs shadow-md">
+        <div className="absolute bottom-4 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 flex items-center gap-2 bg-slate-900/80 border border-slate-800/80 px-3 py-1.5 rounded-full backdrop-blur-xs shadow-md">
           <Button 
             size="icon" 
             variant="ghost" 
-            onClick={() => setCurrentSlice(prev => isRtl ? Math.min(totalSlices, prev + 1) : Math.max(1, prev - 1))}
-            disabled={isRtl ? currentSlice === totalSlices : currentSlice === 1}
+            // In RTL, the first button is on the right and should be 'Backward' (-1)
+            onClick={() => setCurrentSlice(prev => Math.max(1, prev - 1))}
+            disabled={currentSlice === 1}
             className="h-6 w-6 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-full"
           >
             {isRtl ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -300,8 +303,9 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
           <Button 
             size="icon" 
             variant="ghost" 
-            onClick={() => setCurrentSlice(prev => isRtl ? Math.max(1, prev - 1) : Math.min(totalSlices, prev + 1))}
-            disabled={isRtl ? currentSlice === 1 : currentSlice === totalSlices}
+            // In RTL, the last button is on the left and should be 'Forward' (+1)
+            onClick={() => setCurrentSlice(prev => Math.min(totalSlices, prev + 1))}
+            disabled={currentSlice === totalSlices}
             className="h-6 w-6 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-full"
           >
             {isRtl ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
