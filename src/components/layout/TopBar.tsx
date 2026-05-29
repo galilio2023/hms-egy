@@ -146,7 +146,7 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
           >
             <motion.div
               animate={isNotificationOpen ? { rotate: [0, -10, 10, -10, 10, 0] } : {}}
-              transition={{ type: "spring", stiffness: 300, damping: 10 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
             >
               <Bell className="h-4.5 w-4.5" />
             </motion.div>
