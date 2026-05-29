@@ -14,7 +14,7 @@ function makeArabicVariantPattern(token: string): string {
 
   return token
     .split('')
-    .map(char => replacements[char] || char)
+    .map(char => replacements[char] || char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('');
 }
 
@@ -33,14 +33,17 @@ const VARIANT_PREFIXES_PATTERN_AR = ALL_PREFIXES_AR.map(makeArabicVariantPattern
 
 // 2. Arabic Stop-Tokens (to prevent over-anonymization of clinical verbs/states)
 // Note: "على" is excluded because it collides with the common name "علي" (Ali) in many scripts.
-// Includes anatomical terms and clinical procedures to prevent destroying clinical history.
+// This is a known trade-off where clinical prepositions are occasionally anonymized.
+// Includes anatomical terms, clinical procedures, and operational nouns to prevent destroying clinical history.
 const STOP_TOKENS_AR = [
   "اتحجز", "اتحول", "اتكتب", "اخد", "خد", "مات", "توفى", "تحسن", "ساءت",
   "ضغط", "الضغط", "نبض", "النبض", "حراره", "الحراره", "سكر", "السكر",
   "عشان", "بس", "لما", "انه", "انها", "تم", "يتم", "كان", "كانت",
   "في", "من", "الى", "مع", "بنا", "بواسطه",
   "الصدر", "البطن", "الظهر", "العين", "الراس", "المخ", "القلب", "الرحم", "الجلد",
-  "الاشعه", "الاشعة", "اشعه", "اشعة", "التحليل", "التحاليل", "العلاج", "الدواء", "الروشته", "الجرعه", "العينه"
+  "الاشعه", "الاشعة", "الاشعه", "اشعه", "اشعة", "التحليل", "التحاليل", "العلاج", "الدواء", "الروشته", "الجرعه", "العينه",
+  "عملية", "عمليه", "سونار", "رنين", "مقطعية", "مقطعيه", "عيادة", "عياده", "طوارئ", "طواريء",
+  "تذكرة", "تذكره", "تحويل", "استقبال", "رعاه", "رعاية", "عناية", "عنايه", "جبس", "مسحة", "مسحه"
 ].filter(t => t !== "على").sort((a, b) => b.length - a.length);
 
 const VARIANT_STOP_TOKENS_PATTERN_AR = STOP_TOKENS_AR.map(makeArabicVariantPattern).join("|");
@@ -53,6 +56,8 @@ const STOP_PATTERN_AR = `(?:${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR}|$
 const NAME_TOKEN_AR = `(?!(?:${STOP_PATTERN_AR})(?:$|[\\s\\p{P}]))\\p{Script=Arabic}{2,}`;
 const COMPOUND_NAME_AR = `(?:${NAME_TOKEN_AR}(?:\\s+${NAME_TOKEN_AR}){0,5})`;
 
+// Note: These patterns use global flags but MUST ONLY be used with String.replace()
+// to avoid shared state bugs with lastIndex that occur with .test() or .exec().
 const COMBINED_PATTERN_AR = new RegExp(
   `((?:^|[\\s\\p{P}])${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR})(?=$|[\\s\\p{P}])\\s+)(${COMPOUND_NAME_AR})(?=$|[\\s\\p{P}])`,
   "gu"
@@ -91,6 +96,7 @@ const MENTION_PATTERN = new RegExp(
  * Logic:
  * 1. Recursively traverses objects and arrays.
  * 2. Pre-converts all Eastern Arabic/Persian digits to Western Latin digits (0-9).
+ *    Note: Global latinization of numerals is a side effect of this function.
  * 3. Scrubs explicit 14-digit National IDs, 11-digit phone numbers, and common name prefixes.
  */
 export function anonymizePatientData(input: any, seen = new WeakSet()): any {

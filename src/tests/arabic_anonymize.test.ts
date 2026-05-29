@@ -62,12 +62,15 @@ describe('Arabic Anonymization Improvements', () => {
     expect(output).toBe('حضر المريض [PATIENT_NAME] اليوم');
   });
 
-  it('should NOT anonymize anatomical terms or procedures (Clinical Safety)', () => {
+  it('should NOT anonymize anatomical terms, procedures, or departments (Clinical Safety)', () => {
     const tests = [
       'كشف الصدر والبطن سليم',
       'طلب أشعة على الصدر',
       'تم تحليل العينة في المعمل',
-      'الجرعة المقررة من الدواء'
+      'الجرعة المقررة من الدواء',
+      'دخلت عملية جراحية',
+      'كشفت سونار اليوم',
+      'حول إلى طوارئ المستشفى'
     ];
     tests.forEach(input => {
       const output = anonymizePatientData(input);
