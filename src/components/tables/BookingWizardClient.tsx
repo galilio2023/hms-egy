@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { createAppointment, addToWaitingList, getDoctorAvailability } from "@/lib/actions/appointments";
-import { isEgyptianPublicHoliday } from "@/lib/utils/egypt";
+import { isEgyptianPublicHoliday, isWorkingDay } from "@/lib/utils/egypt";
 
 interface Patient {
   id: string;
@@ -112,14 +112,9 @@ export function BookingWizardClient({
       let isMounted = true;
       // 1. Cairo Timezone weekend check (Friday = 5, Saturday = 6)
       // Code Review Fix: Evaluation must be strictly in Cairo's timezone offset to prevent day-shift skews.
-      const [year, month, dayNum] = selectedDate.split("-").map(Number);
-      
-      // Create a UTC date representation of the selected day (midday to avoid edge offsets)
-      const utcDate = new Date(Date.UTC(year, month - 1, dayNum, 12, 0, 0));
-      const dateToCheck = toZonedTime(utcDate, "Africa/Cairo");
-      
-      const day = dateToCheck.getDay();
-      const isWeekend = day === 5 || day === 6;
+      // Use fromZonedTime to interpret the YYYY-MM-DD string as local Cairo 00:00:00.
+      const dateToCheck = fromZonedTime(selectedDate, "Africa/Cairo");
+      const isWeekend = !isWorkingDay(dateToCheck);
 
       setIsWeekendWarning(isWeekend);
       setQueueToWaitingList(false);
