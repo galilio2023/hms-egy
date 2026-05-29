@@ -42,7 +42,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   const totalSlices = 16; // Simulated CT/MRI series slices count
   
   // Layout states for responsive resizing
-  const { ref: containerRef, dimensions } = useResizeObserver(100);
+  const { ref: containerRef, dimensions, isStabilized } = useResizeObserver(100);
   
   // Panning & dragging states
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -141,11 +141,11 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     // Set internal resolution matching devicePixelRatio for clinical-grade sharpness
     // Code Review Fix: Use dimensions from ResizeObserver for reliable responsive layout
-    const displayWidth = dimensions.width || canvas.clientWidth || 640;
-    const displayHeight = dimensions.height || canvas.clientHeight || 360;
+    const displayWidth = dimensions.width;
+    const displayHeight = dimensions.height;
 
     // Code Review Fix: Defer drawing until layout stabilizes to avoid crashes or scaling anomalies
-    if (displayWidth === 0 || displayHeight === 0) return;
+    if (!isStabilized || displayWidth === 0 || displayHeight === 0) return;
 
     const targetWidth = Math.round(displayWidth * dpr);
     const targetHeight = Math.round(displayHeight * dpr);
@@ -239,7 +239,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   };
 
   return (
-    <div className="flex flex-col gap-4 bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-2xl" ref={containerRef}>
+    <div className="flex flex-col gap-4 bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-2xl">
       
       {/* Header telemetry info bar */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3 text-slate-400 text-[10px] font-mono">
@@ -253,7 +253,10 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
       </div>
 
       {/* Main Viewport Workspace */}
-      <div className="relative flex items-center justify-center bg-black border border-slate-900 rounded-xl overflow-hidden aspect-square sm:aspect-video w-full max-h-[360px]">
+      <div
+        ref={containerRef}
+        className="relative flex-1 overflow-hidden flex items-center justify-center bg-black border border-slate-900 rounded-xl aspect-square sm:aspect-video w-full max-h-[360px]"
+      >
         {loadError ? (
           <div className="flex flex-col items-center gap-3 text-center p-6">
             <ShieldAlert className="h-8 w-8 text-red-500 animate-pulse" />
@@ -273,8 +276,8 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
             </div>
             <canvas
               ref={canvasRef}
-              width={640}
-              height={360}
+              width={dimensions.width}
+              height={dimensions.height}
               className="w-full h-full object-contain cursor-move"
               style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)` }}
               onMouseDown={handleMouseDown}
