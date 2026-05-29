@@ -1,11 +1,10 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { withTenantContext } from "@/lib/db/tenant";
 import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "@db/schema/laboratory";
 import { staff, hospitals, hospitalSettings } from "@db/schema/core";
 import { admissions, beds, rooms } from "@db/schema/clinical";
-import { shifts } from "@db/schema/nursing";
+import { shifts, shiftAssignments } from "@db/schema/nursing";
 import { patients } from "@db/schema/patients";
 import { notifications, backgroundJobs } from "@db/schema/system";
 import { eq, and, sql, ilike, or, ne, inArray, isNull } from "drizzle-orm";
@@ -13,6 +12,7 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { sendResilientClinicalAlert } from "@/lib/sms/client";
+import { DbTransaction, withTenantContext } from "@/lib/db/tenant";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { latinizeNumerals } from "@/lib/utils/egypt";
 
@@ -143,8 +143,74 @@ export async function createLabOrder(data: CreateLabOrderInput) {
 
       // Trigger out-of-band notification for STAT orders
       if (data.priority === "stat") {
-        // TODO: Integrate with local SMS/WhatsApp provider (e.g. CEQUENS, VictoryLink)
-        console.log(`[OUT-OF-BAND] Trigger STAT alert for patient ${data.patientId}`);
+        // Resolve metadata for the background job
+        const [patientData] = await tx
+          .select({ nameAr: patients.nameAr, nameEn: patients.nameEn })
+          .from(patients)
+          .where(eq(patients.id, data.patientId));
+
+        const [doctorData] = await tx
+          .select({ nameAr: staff.nameAr, nameEn: staff.nameEn })
+          .from(staff)
+          .where(eq(staff.id, doctor.id));
+
+        const tests = await tx
+          .select({ nameAr: labTests.nameAr, nameEn: labTests.nameEn })
+          .from(labTests)
+          .where(inArray(labTests.id, data.testIds));
+
+        const bakedPayload = {
+          orderId: newOrder.id,
+          patientId: data.patientId,
+          patientNameAr: patientData?.nameAr,
+          patientNameEn: patientData?.nameEn,
+          doctorNameAr: doctorData?.nameAr,
+          doctorNameEn: doctorData?.nameEn,
+          testNamesAr: tests.map(t => t.nameAr).join(", "),
+          testNamesEn: tests.map(t => t.nameEn).join(", "),
+          admissionId: activeAdmission?.id || null,
+        };
+
+        // Queue the background job for reliability
+        const [job] = await tx.insert(backgroundJobs).values({
+          hospitalId,
+          jobType: "stat_lab_order",
+          payload: bakedPayload,
+          status: "pending",
+        }).returning();
+
+        after(async () => {
+          try {
+            await withTenantContext(hospitalId, async (bgTx) => {
+              await bgTx.update(backgroundJobs)
+                .set({ status: "processing", attempts: sql`${backgroundJobs.attempts} + 1`, updatedAt: new Date() })
+                .where(eq(backgroundJobs.id, job.id));
+            });
+
+            await dispatchStatLabOrderAlert(hospitalId, bakedPayload);
+
+            await withTenantContext(hospitalId, async (bgTx) => {
+              await bgTx.update(backgroundJobs)
+                .set({ status: "completed", updatedAt: new Date() })
+                .where(eq(backgroundJobs.id, job.id));
+            });
+          } catch (err) {
+            console.error("[STAT LAB ORDER GATEWAY] Asynchronous alert dispatch failed:", err);
+            try {
+              await withTenantContext(hospitalId, async (bgTx) => {
+                await bgTx.update(backgroundJobs)
+                  .set({
+                    status: "failed",
+                    lastError: err instanceof Error ? err.message : String(err),
+                    updatedAt: new Date()
+                  })
+                  .where(eq(backgroundJobs.id, job.id));
+              });
+            } catch (innerErr) {
+              console.error("[STAT LAB ORDER GATEWAY] Failed to update background job status to failed:", innerErr);
+            }
+          }
+        });
       }
 
       // Fetch hospital slug for revalidation
@@ -449,29 +515,37 @@ export async function saveLabResults(data: SaveLabResultInput) {
           runAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minute window for physician acknowledgment
         });
 
-        after(() => {
-          withTenantContext(hospitalId, async (tx) => {
-            try {
-              await tx.update(backgroundJobs)
+        after(async () => {
+          try {
+            await withTenantContext(hospitalId, async (bgTx) => {
+              await bgTx.update(backgroundJobs)
                 .set({ status: "processing", attempts: sql`${backgroundJobs.attempts} + 1`, updatedAt: new Date() })
                 .where(eq(backgroundJobs.id, job.id));
+            });
 
-              await dispatchCriticalLabAlerts(hospitalId, bakedPayload, tx);
+            await dispatchCriticalLabAlerts(hospitalId, bakedPayload);
 
-              await tx.update(backgroundJobs)
+            await withTenantContext(hospitalId, async (bgTx) => {
+              await bgTx.update(backgroundJobs)
                 .set({ status: "completed", updatedAt: new Date() })
                 .where(eq(backgroundJobs.id, job.id));
-            } catch (err) {
-              console.error("[CRITICAL LAB ALERT GATEWAY] Asynchronous alert dispatch failed:", err);
-              await tx.update(backgroundJobs)
-                .set({
-                  status: "failed",
-                  lastError: err instanceof Error ? err.message : String(err),
-                  updatedAt: new Date()
-                })
-                .where(eq(backgroundJobs.id, job.id));
+            });
+          } catch (err) {
+            console.error("[CRITICAL LAB ALERT GATEWAY] Asynchronous alert dispatch failed:", err);
+            try {
+              await withTenantContext(hospitalId, async (bgTx) => {
+                await bgTx.update(backgroundJobs)
+                  .set({
+                    status: "failed",
+                    lastError: err instanceof Error ? err.message : String(err),
+                    updatedAt: new Date()
+                  })
+                  .where(eq(backgroundJobs.id, job.id));
+              });
+            } catch (innerErr) {
+              console.error("[CRITICAL LAB ALERT GATEWAY] Failed to update background job status to failed:", innerErr);
             }
-          }).catch((err) => console.error("[TENANT CONTEXT] Failed to establish background context for lab alerts:", err));
+          }
         });
       }
 
@@ -597,11 +671,10 @@ async function dispatchCriticalLabAlerts(
     doctorNameAr?: string;
     doctorNameEn?: string;
     doctorPhone?: string;
-  },
-  tx: Parameters<Parameters<typeof withTenantContext>[1]>[0]
+  }
 ) {
   const { orderId, criticalItemIds } = payload;
-  try {
+  const resolvedData = await withTenantContext(hospitalId, async (tx) => {
     // 0. Fetch hospital settings for WhatsApp template verification
     const settings = await tx
       .select({ approvedWhatsappTemplates: hospitalSettings.approvedWhatsappTemplates })
@@ -628,7 +701,7 @@ async function dispatchCriticalLabAlerts(
       .limit(1)
       .then((res) => res[0]);
 
-    if (!orderData) return;
+    if (!orderData) return null;
 
     // 2. Resolve Patient Location (Safety Fix for Ward Awareness)
     let locationEn = "Outpatient / General";
@@ -665,21 +738,54 @@ async function dispatchCriticalLabAlerts(
       .innerJoin(labTests, eq(labOrderItems.labTestId, labTests.id))
       .where(inArray(labOrderItems.id, criticalItemIds));
 
-    if (items.length === 0) return;
+    if (items.length === 0) return null;
 
-    // 4. Construct Aggregated Payload
-    const findingsEn = items.map(i => `${i.testNameEn}: ${i.resultValue} (Ref: ${i.normalRange || "N/A"})`).join(", ");
-    const findingsAr = items.map(i => `${i.testNameAr}: ${i.resultValue} (الطبيعي: ${i.normalRange || "غير محدد"})`).join("، ");
+    // 4. Resolve Active Ward Nurse Desk
+    const activeNurses = await tx
+      .select({ phone: staff.phone })
+      .from(staff)
+      .innerJoin(shifts, eq(staff.id, shifts.staffId))
+      .where(and(
+        eq(staff.hospitalId, hospitalId),
+        inArray(staff.role, ["NURSE", "OR_NURSE"]),
+        eq(staff.isActive, true),
+        eq(shifts.status, "active"),
+        isNull(shifts.endTime),
+        // If admitted, target nurses in that department, otherwise all active nurses
+        orderData.departmentId
+          ? eq(shifts.departmentId, orderData.departmentId)
+          : sql`true`
+      ));
 
-    const alertPayloadBase = {
-      hospitalId,
-      patientId: orderData.patientId,
-      reminderType: "CRITICAL_LAB_ALERT",
-      entityType: "clinical_alert" as const,
-      entityId: orderId,
-      approvedWhatsappTemplates: settings?.approvedWhatsappTemplates || [],
+    return {
+      settings,
+      isWhatsAppApproved,
+      orderData,
+      locationEn,
+      locationAr,
+      items,
+      activeNurses,
     };
+  });
 
+  if (!resolvedData) return;
+
+  const { items, orderData, settings, isWhatsAppApproved, locationAr, locationEn, activeNurses } = resolvedData;
+
+  // 5. Construct Aggregated Payload
+  const findingsEn = items.map(i => `${i.testNameEn}: ${i.resultValue} (Ref: ${i.normalRange || "N/A"})`).join(", ");
+  const findingsAr = items.map(i => `${i.testNameAr}: ${i.resultValue} (الطبيعي: ${i.normalRange || "غير محدد"})`).join("، ");
+
+  const alertPayloadBase = {
+    hospitalId,
+    patientId: orderData.patientId,
+    reminderType: "CRITICAL_LAB_ALERT",
+    entityType: "clinical_alert" as const,
+    entityId: orderId,
+    approvedWhatsappTemplates: settings?.approvedWhatsappTemplates || [],
+  };
+
+  try {
     // A. Alert Ordering Physician
     if (payload.doctorPhone) {
       await sendResilientClinicalAlert({
@@ -702,23 +808,7 @@ async function dispatchCriticalLabAlerts(
       });
     }
 
-    // B. Alert Active Ward Nurse Desk (Routing to nurses currently on shift in the patient's department)
-    const activeNurses = await tx
-      .select({ phone: staff.phone })
-      .from(staff)
-      .innerJoin(shifts, eq(staff.id, shifts.staffId))
-      .where(and(
-        eq(staff.hospitalId, hospitalId),
-        inArray(staff.role, ["NURSE", "OR_NURSE"]),
-        eq(staff.isActive, true),
-        eq(shifts.status, "active"),
-        isNull(shifts.endTime),
-        // If admitted, target nurses in that department, otherwise all active nurses
-        orderData.departmentId
-          ? eq(shifts.departmentId, orderData.departmentId)
-          : sql`true`
-      ));
-
+    // B. Alert Active Ward Nurse Desk
     for (const nurse of activeNurses) {
       if (nurse.phone) {
         await sendResilientClinicalAlert({
@@ -731,6 +821,7 @@ async function dispatchCriticalLabAlerts(
     }
   } catch (error) {
     console.error("[CRITICAL LAB ALERT GATEWAY] Failed to dispatch out-of-band alerts:", error);
+    throw error;
   }
 }
 
@@ -815,4 +906,152 @@ export async function processEscalateLabAlert(jobId: string, hospitalId: string)
       }
     }
   });
+}
+
+/**
+ * Helper to dispatch STAT lab order alerts.
+ * Routes to the Pathology Dispatcher and, for inpatients, the Charge Nurse of the ward.
+ */
+async function dispatchStatLabOrderAlert(
+  hospitalId: string,
+  payload: {
+    orderId: string;
+    patientId: string;
+    patientNameAr?: string;
+    patientNameEn?: string;
+    doctorNameAr?: string;
+    doctorNameEn?: string;
+    testNamesAr?: string;
+    testNamesEn?: string;
+    admissionId: string | null;
+  }
+) {
+  const { orderId, patientId, admissionId } = payload;
+
+  // 1. Resolve all necessary data within the database transaction
+  const resolvedData = await withTenantContext(hospitalId, async (tx) => {
+    // A. Fetch hospital settings for WhatsApp template verification
+    const settings = await tx
+      .select({ approvedWhatsappTemplates: hospitalSettings.approvedWhatsappTemplates })
+      .from(hospitalSettings)
+      .where(eq(hospitalSettings.hospitalId, hospitalId))
+      .limit(1)
+      .then((res) => res[0]);
+
+    const isWhatsAppApproved = settings?.approvedWhatsappTemplates?.includes("stat_order_dispatch");
+
+    // B. Resolve Location
+    let locationEn = "Central Outpatient Phlebotomy - Lab Reception, Ground Floor";
+    let locationAr = "سحب عينات العيادات الخارجية - استقبال المعمل، الدور الأرضي";
+    let wardId: string | null = null;
+
+    if (admissionId) {
+      const locData = await tx
+        .select({
+          roomNumber: rooms.roomNumber,
+          bedNumber: beds.bedNumber,
+          departmentId: rooms.departmentId,
+        })
+        .from(admissions)
+        .leftJoin(beds, eq(admissions.bedId, beds.id))
+        .leftJoin(rooms, eq(beds.roomId, rooms.id))
+        .where(eq(admissions.id, admissionId))
+        .limit(1)
+        .then((res) => res[0]);
+
+      if (locData) {
+        locationEn = `Room ${locData.roomNumber}, Bed ${locData.bedNumber}`;
+        locationAr = `غرفة ${locData.roomNumber}، سرير ${locData.bedNumber}`;
+        wardId = locData.departmentId;
+      }
+    }
+
+    // C. Resolve Recipients
+    const recipients: { phone: string; nameEn: string; nameAr: string }[] = [];
+
+    // C1. Pathology Dispatcher
+    const dispatcher = await tx
+      .select({ phone: staff.phone, nameEn: staff.nameEn, nameAr: staff.nameAr })
+      .from(staff)
+      .innerJoin(shifts, eq(staff.id, shifts.staffId))
+      .innerJoin(shiftAssignments, eq(shifts.id, shiftAssignments.shiftId))
+      .where(and(
+        eq(staff.hospitalId, hospitalId),
+        eq(shifts.status, "active"),
+        isNull(shifts.endTime),
+        eq(shiftAssignments.assignmentCode, "PATHOLOGY_DISPATCHER"),
+        isNull(shiftAssignments.releasedAt)
+      ))
+      .limit(1)
+      .then(res => res[0]);
+
+    if (dispatcher) recipients.push(dispatcher);
+
+    // C2. Charge Nurse (for Inpatients)
+    if (wardId) {
+      const chargeNurse = await tx
+        .select({ phone: staff.phone, nameEn: staff.nameEn, nameAr: staff.nameAr })
+        .from(staff)
+        .innerJoin(shifts, eq(staff.id, shifts.staffId))
+        .innerJoin(shiftAssignments, eq(shifts.id, shiftAssignments.shiftId))
+        .where(and(
+          eq(staff.hospitalId, hospitalId),
+          eq(shifts.status, "active"),
+          isNull(shifts.endTime),
+          eq(shiftAssignments.assignmentCode, "CHARGE_NURSE"),
+          eq(shiftAssignments.departmentId, wardId),
+          isNull(shiftAssignments.releasedAt)
+        ))
+        .limit(1)
+        .then(res => res[0]);
+
+      if (chargeNurse) recipients.push(chargeNurse);
+    }
+
+    return {
+      settings,
+      isWhatsAppApproved,
+      locationEn,
+      locationAr,
+      recipients,
+    };
+  });
+
+  // 2. Perform Network I/O outside of the transaction block (Connection Pool Protection)
+  const alertPayloadBase = {
+    hospitalId,
+    patientId,
+    reminderType: "STAT_LAB_ORDER",
+    entityType: "clinical_alert" as const,
+    entityId: orderId,
+    approvedWhatsappTemplates: resolvedData.settings?.approvedWhatsappTemplates || [],
+  };
+
+  try {
+    for (const recipient of resolvedData.recipients) {
+      if (recipient.phone) {
+        await sendResilientClinicalAlert({
+          ...alertPayloadBase,
+          phoneNumber: recipient.phone,
+          messageAr: `🚨 طلب معمل عاجل (STAT): ${payload.testNamesAr || ""} للمريض ${payload.patientNameAr || ""} في ${resolvedData.locationAr}. طبيب معالج: ${payload.doctorNameAr || ""}. يرجى التوجه والتنفيذ فوراً.`,
+          messageEn: `🚨 STAT LAB ORDER: ${payload.testNamesEn || ""} for Patient ${payload.patientNameEn || ""} at ${resolvedData.locationEn}. Ordered by ${payload.doctorNameEn || ""}. Proceed immediately.`,
+          channelPriority: resolvedData.isWhatsAppApproved ? ["whatsapp", "sms"] : ["sms"],
+          whatsappTemplate: resolvedData.isWhatsAppApproved ? {
+            name: "stat_order_dispatch",
+            languageCode: "ar",
+            parameters: [
+              payload.patientNameAr || "مريض",
+              payload.testNamesAr || "تحاليل",
+              resolvedData.locationAr,
+              payload.doctorNameAr || "طبيب"
+            ]
+          } : undefined
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[STAT LAB ORDER GATEWAY] Failed to dispatch out-of-band alerts:", error);
+    // Rethrow to allow background job status to be marked as failed
+    throw error;
+  }
 }
