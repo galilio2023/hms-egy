@@ -21,9 +21,9 @@ export interface Dimensions {
  * @param debounceMs Delay in milliseconds for debouncing dimension updates.
  * @returns { ref, dimensions } A callback ref to attach to the element and the current dimensions.
  */
-export function useResizeObserver(debounceMs: number = 100) {
+export function useResizeObserver(debounceMs: number = 50) {
   const [dimensions, setDimensions] = useState<Dimensions>({ width: 0, height: 0 });
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
   const prevDimensionsRef = useRef<Dimensions>({ width: 0, height: 0 });
 
