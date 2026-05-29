@@ -1,6 +1,14 @@
 import { latinizeNumerals } from "@/lib/utils/egypt";
 
 /**
+ * Removes Arabic vocalization marks (Tashkeel) to ensure consistent dictionary matching.
+ * Comprehensive range includes standard harakat, shadda, sukun, and dagger alif.
+ */
+function stripTashkeel(text: string): string {
+  return text.replace(/[\u064B-\u065F\u0670]/g, "");
+}
+
+/**
  * Helper to create a regex-safe pattern that matches common Arabic orthographic variations
  * (Alif hamzas, Taa Marbuta/Haa, Yaa/Alef Maksura) without destructive normalization.
  * Uses single-pass mapping to avoid corruption from sequential replacements.
@@ -13,10 +21,23 @@ function makeArabicVariantPattern(token: string): string {
   };
 
   return token
-    .split('')
-    .map(char => replacements[char] || char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('');
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape first to avoid escaping generated brackets
+    .replace(/[أإآاةهييى]/g, (match) => replacements[match]);
 }
+
+// Numeral Redaction Constants (Support Western, Eastern Arabic, and Persian digits)
+const ANY_DIGIT = "[\\d\\u0660-\\u0669\\u06F0-\\u06F9]";
+const DIGIT_0 = "[0\\u0660\\u06F0]";
+const DIGIT_1 = "[1\\u0661\\u06F1]";
+const DIGIT_2 = "[2\\u0662\\u06F2]";
+const DIGIT_1025 = "[0125\\u0660\\u0661\\u0662\\u0665\\u06F0\\u06F1\\u06F2\\u06F5]";
+
+const START_BOUNDARY = "(?:^|[\\s\\p{P}])";
+const END_BOUNDARY = "(?=$|[\\s\\p{P}])";
+
+const NID_PATTERN = new RegExp(`(${START_BOUNDARY})[234\\u0662-\\u0664\\u06F2-\\u06F4]${ANY_DIGIT}{13}${END_BOUNDARY}`, "gu");
+const PHONE_PATTERN_1 = new RegExp(`(${START_BOUNDARY})(?:\\+?${DIGIT_2}${DIGIT_0}|${DIGIT_0})?${DIGIT_1}${DIGIT_1025}${ANY_DIGIT}{8}${END_BOUNDARY}`, "gu");
+const PHONE_PATTERN_2 = new RegExp(`(${START_BOUNDARY})${DIGIT_0}{2}${DIGIT_2}${DIGIT_0}${DIGIT_1}${DIGIT_1025}${ANY_DIGIT}{8}${END_BOUNDARY}`, "gu");
 
 // 1. Arabic Prefix Dictionaries (Move to module scope for performance)
 // Note: Definite articles and prepositions (ال/لل) are handled via PROCLITICS_AR.
@@ -35,22 +56,41 @@ const VARIANT_PREFIXES_PATTERN_AR = ALL_PREFIXES_AR.map(makeArabicVariantPattern
 // Note: "على" is excluded because it collides with the common name "علي" (Ali) in many scripts.
 // This is a known trade-off where clinical prepositions are occasionally anonymized.
 // Includes anatomical terms, clinical procedures, and operational nouns to prevent destroying clinical history.
+const PRONOUNS_AND_CONJUNCTIONS_AR = [
+  "هو", "هي", "هم", "هن", "هما",
+  "هذا", "هذه", "ذلك", "تلك", "هؤلاء",
+  "عن", "مع", "في", "الي", "الى",
+  "لكن", "ان", "أن", "لان", "لأن"
+];
+
 const STOP_TOKENS_AR = [
   "اتحجز", "اتحول", "اتكتب", "اخد", "خد", "مات", "توفى", "تحسن", "ساءت",
-  "ضغط", "الضغط", "نبض", "النبض", "حراره", "الحراره", "سكر", "السكر",
+  "ضغط", "نبض", "حراره", "سكر",
   "عشان", "بس", "لما", "انه", "انها", "تم", "يتم", "كان", "كانت",
   "في", "من", "الى", "مع", "بنا", "بواسطه",
   "الصدر", "البطن", "الظهر", "العين", "الراس", "المخ", "القلب", "الرحم", "الجلد",
   "الاشعه", "الاشعة", "الاشعه", "اشعه", "اشعة", "التحليل", "التحاليل", "العلاج", "الدواء", "الروشته", "الجرعه", "العينه",
   "عملية", "عمليه", "سونار", "رنين", "مقطعية", "مقطعيه", "عيادة", "عياده", "طوارئ", "طواريء",
-  "تذكرة", "تذكره", "تحويل", "استقبال", "رعاه", "رعاية", "عناية", "عنايه", "جبس", "مسحة", "مسحه"
+  "تذكرة", "تذكره", "تحويل", "استقبال", "رعاه", "رعاية", "عناية", "عنايه", "جبس", "مسحة", "مسحه",
+  ...PRONOUNS_AND_CONJUNCTIONS_AR
 ].filter(t => t !== "على").sort((a, b) => b.length - a.length);
 
 const VARIANT_STOP_TOKENS_PATTERN_AR = STOP_TOKENS_AR.map(makeArabicVariantPattern).join("|");
 
+// Clinical Context Tokens for "على" Bypass logic
+const CLINICAL_CONTEXT_TOKENS_AR = [
+  // Anatomy
+  "صدر", "بطن", "ظهر", "راس", "قلب", "قدم", "يد", "عين", "معده",
+  // Departments & Facilities
+  "استقبال", "رعايه", "طوارئ", "عياده", "معمل", "اشعه", "حسابات",
+  // Financial/Administrative
+  "حساب", "فاتوره", "مستحق", "مديونيه", "تأمين"
+];
+const CLINICAL_CONTEXT_PATTERN_AR = CLINICAL_CONTEXT_TOKENS_AR.map(makeArabicVariantPattern).join("|");
+
 // Proclitics: و, ف, ب, ل, وال, فال, بال, ال, لل
 const PROCLITICS_AR = "(?:[وفب]?(?:ال|لل)|[وفبل])";
-const STOP_PATTERN_AR = `(?:${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR}|${VARIANT_STOP_TOKENS_PATTERN_AR}))`;
+const STOP_PATTERN_AR = `(?:${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR}|${VARIANT_STOP_TOKENS_PATTERN_AR}|${CLINICAL_CONTEXT_PATTERN_AR}))`;
 
 // Compound Name Logic: Match 1-5 tokens (Egyptian 5-part names), ensuring tokens aren't clinical stop-tokens.
 const NAME_TOKEN_AR = `(?!(?:${STOP_PATTERN_AR})(?:$|[\\s\\p{P}]))\\p{Script=Arabic}{2,}`;
@@ -89,15 +129,36 @@ const MENTION_PATTERN = new RegExp(
 );
 
 /**
+ * Helper to handle the "على" (Ali/On) bypass logic.
+ * If the identified name starts with "على", it checks if the subsequent text
+ * contains clinical context tokens that would indicate it's a preposition.
+ */
+function shouldBypassAliRedaction(nameMatch: string, remainingText: string): boolean {
+  const strippedName = stripTashkeel(nameMatch).trim();
+  const normalizedName = strippedName.replace(/ى/g, "ي");
+  const startsWithAli = normalizedName === "علي" || normalizedName.startsWith("علي ");
+
+  if (!startsWithAli) return false;
+
+  const fullTextAfterName = (nameMatch + " " + remainingText).trim();
+  const tokens = fullTextAfterName.split(/[\s\p{P}]+/u).slice(0, 7);
+
+  return tokens.some(token => {
+    const strippedToken = stripTashkeel(token);
+    return new RegExp(`^${PROCLITICS_AR}?(${CLINICAL_CONTEXT_PATTERN_AR})$`).test(strippedToken);
+  });
+}
+
+/**
  * Sanitizes sensitive personal patient identifiers (PII) from conversational
  * transcripts or structured clinical data to comply with Egyptian Data Protection
  * Law No. 151 of 2020 cross-border sovereignty.
  *
  * Logic:
  * 1. Recursively traverses objects and arrays.
- * 2. Pre-converts all Eastern Arabic/Persian digits to Western Latin digits (0-9).
- *    Note: Global latinization of numerals is a side effect of this function.
- * 3. Scrubs explicit 14-digit National IDs, 11-digit phone numbers, and common name prefixes.
+ * 2. Strips Arabic Tashkeel for consistent dictionary matching.
+ * 3. Scrubs explicit 14-digit National IDs and 11-digit phone numbers regardless of numeral system.
+ * 4. Redacts common name prefixes and multi-word names while preserving clinical integrity via context-aware bypasses.
  */
 export function anonymizePatientData(input: any, seen = new WeakSet()): any {
   if (input === null || input === undefined) return input;
@@ -139,24 +200,36 @@ export function anonymizePatientData(input: any, seen = new WeakSet()): any {
     }
   }
 
-  let text = input;
+  let text = stripTashkeel(input);
 
-  // 1. Scrub 14-digit Egyptian National ID patterns (Precise match for 2nd/3rd/4th century births)
-  // Pre-convert Eastern Arabic digits to Latin digits for these specific numeric scrubbers.
-  let sanitized = latinizeNumerals(text);
-  sanitized = sanitized.replace(/\b[234]\d{13}\b/g, "[NATIONAL_ID]");
+  // 1. Scrub 14-digit Egyptian National ID patterns (Supports Western, Eastern, and Persian numerals)
+  let sanitized = text.replace(NID_PATTERN, (match, p1) => `${p1}[NATIONAL_ID]`);
 
   // 2. Scrub phone numbers (international, Egyptian mobile blocks, 10-11 digits)
-  // Target: +20..., 010..., 011..., 012..., 015..., 00201...
-  sanitized = sanitized.replace(/\b(?:\+?20|0)?1[0125]\d{8}\b/g, "[PHONE_NUMBER]");
-  sanitized = sanitized.replace(/\b00201[0125]\d{8}\b/g, "[PHONE_NUMBER]");
+  sanitized = sanitized.replace(PHONE_PATTERN_1, (match, p1) => `${p1}[PHONE_NUMBER]`);
+  sanitized = sanitized.replace(PHONE_PATTERN_2, (match, p1) => `${p1}[PHONE_NUMBER]`);
 
   // 3. Scrub common name prefixes and multi-word names (Arabic & English)
-  sanitized = sanitized.replace(COMBINED_PATTERN_AR, (match, p1) => `${p1}[PATIENT_NAME]`);
-  sanitized = sanitized.replace(PREFIX_PATTERN_EN, (match, p1) => `${p1}[PATIENT_NAME]`);
+  sanitized = sanitized.replace(COMBINED_PATTERN_AR, (match, p1, p2, offset) => {
+    if (typeof p2 !== "string") return match;
+    const remainingText = sanitized.substring(offset + match.length);
+    if (shouldBypassAliRedaction(p2, remainingText)) return match;
+    return `${p1}[PATIENT_NAME]`;
+  });
+
+  sanitized = sanitized.replace(PREFIX_PATTERN_EN, (match, p1, p2, p3, offset) => {
+    // English prefix pattern might have more groups, but we only care about p1 and p2 if they exist
+    if (typeof p1 !== "string") return match;
+    return `${p1}[PATIENT_NAME]`;
+  });
 
   // 4. Scrub explicit name mentions like "Patient name is [X]" or "اسمه [X]"
-  sanitized = sanitized.replace(MENTION_PATTERN, (match, p1) => `${p1}[PATIENT_NAME]`);
+  sanitized = sanitized.replace(MENTION_PATTERN, (match, p1, p2, offset) => {
+    if (typeof p2 !== "string") return match;
+    const remainingText = sanitized.substring(offset + match.length);
+    if (shouldBypassAliRedaction(p2, remainingText)) return match;
+    return `${p1}[PATIENT_NAME]`;
+  });
 
   return sanitized;
 }
