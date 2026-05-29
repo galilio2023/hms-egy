@@ -29,6 +29,4 @@ async function migrate() {
   process.exit(0);
 }
 
-if (require.main === module) {
-  migrate();
-}
+migrate();

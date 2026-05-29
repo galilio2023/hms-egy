@@ -478,11 +478,16 @@ async function dispatchCriticalAlerts(
         entityId: vitalId,
         // Only attempt WhatsApp if the template is approved for this hospital
         channelPriority: isWhatsAppApproved ? ["whatsapp", "sms"] : ["sms"],
+        // Pass pre-fetched templates to avoid redundant DB lookup in sendWhatsAppMessage
+        approvedWhatsappTemplates: settings?.approvedWhatsappTemplates || [],
         whatsappTemplate: isWhatsAppApproved
           ? {
               name: "mews_critical_alert",
               languageCode: "ar",
-              parameters: [patient.nameAr || patient.nameEn || "", String(mewsScore)],
+              parameters: [
+                patient.nameAr ? patient.nameAr : `\u200E${patient.nameEn}\u200F`,
+                String(mewsScore)
+              ],
             }
           : undefined,
       });
