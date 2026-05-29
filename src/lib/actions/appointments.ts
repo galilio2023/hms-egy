@@ -264,8 +264,7 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
     return { success: false, error: "Hospital context missing" };
   }
 
-  const targetDateAbs = new Date(date);
-  const targetDateCairo = toCairoTime(targetDateAbs);
+  const targetDateCairo = toCairoTime(date);
   const normalizedDate = new Date(Date.UTC(
     targetDateCairo.getFullYear(),
     targetDateCairo.getMonth(),
@@ -323,28 +322,18 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
           );
 
           // Standard buffer: Can only book future slots if target date is today
-          const nowServer = new Date();
-          const nowCairo = toCairoTime(nowServer);
+          const nowCairo = toCairoTime(new Date());
+          const isSameDay = targetDateCairo.toDateString() === nowCairo.toDateString();
 
           let isFuture = true;
-          if (targetDateCairo.toDateString() === nowCairo.toDateString()) {
-            // Both are now Cairo-relative JS Dates.
-            // But be careful: targetDateCairo might have arbitrary time if it came from 'new Date()'
-            // Actually targetDateCairo's time doesn't matter for toDateString() comparison of the day.
-
+          if (isSameDay) {
             const [sh, sm] = slotTime.split(":").map(Number);
-            // Create a Date object for the slot in Cairo time
             const slotDateTimeCairo = new Date(targetDateCairo);
             slotDateTimeCairo.setHours(sh, sm, 0, 0);
             isFuture = slotDateTimeCairo.getTime() > nowCairo.getTime();
-          } else if (targetDateCairo < nowCairo) {
-            const todayCairo = new Date(nowCairo);
-            todayCairo.setHours(0, 0, 0, 0);
-            const targetDayCairo = new Date(targetDateCairo);
-            targetDayCairo.setHours(0, 0, 0, 0);
-            if (targetDayCairo < todayCairo) {
-              isFuture = false;
-            }
+          } else {
+            // Since we already ruled out "same day", any target date less than now is in the past
+            isFuture = targetDateCairo > nowCairo;
           }
 
           slots.push({
