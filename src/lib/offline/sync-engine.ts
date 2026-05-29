@@ -47,8 +47,9 @@ export function initializeSyncEngineKey(secretFromSession: string) {
 export function purgeSyncEngineKey() {
   sessionSecret = null;
   cryptoKeyCache = null;
+  edgeSyncEngine.clearInMemoryOutbox();
   if (typeof window !== "undefined") {
-    console.log("[EDGE SECURITY] Successfully purged dynamic encryption keys from memory.");
+    console.log("[EDGE SECURITY] Successfully purged dynamic encryption keys and memory outbox.");
   }
 }
 
@@ -323,10 +324,19 @@ export class LocalSyncEngine {
 
   /**
    * Empties the local cache (used upon successful synchronization).
+   * Also wipes IndexedDB cache for those items.
    */
   async clearOutbox() {
     this.inMemoryOutbox = [];
     await this.saveToPersistentCache();
+  }
+
+  /**
+   * Explicitly clears the in-memory outbox during security purges.
+   * Does NOT wipe IndexedDB; only prevents PHI leaks in JS heap.
+   */
+  clearInMemoryOutbox() {
+    this.inMemoryOutbox = [];
   }
 
   /**
@@ -453,10 +463,3 @@ export class LocalSyncEngine {
 }
 
 export const edgeSyncEngine = new LocalSyncEngine();
-
-// Code Review Fix: Session-end safety trigger for shared Egyptian hospital terminals
-if (typeof window !== "undefined") {
-  window.addEventListener("beforeunload", () => {
-    purgeSyncEngineKey();
-  });
-}
