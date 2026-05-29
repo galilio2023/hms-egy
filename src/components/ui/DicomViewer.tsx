@@ -11,6 +11,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { useResizeObserver } from "@/hooks/use-resize-observer";
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -41,36 +42,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   const totalSlices = 16; // Simulated CT/MRI series slices count
   
   // Layout states for responsive resizing
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const observerRef = useRef<ResizeObserver | null>(null);
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Code Review Fix: Use callback ref for ResizeObserver to ensure robust initialization
-  // and cleanup, preventing potential memory leaks in non-React 19 environments.
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-    if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
-    }
-
-    if (node) {
-      const resizeObserver = new ResizeObserver((entries) => {
-        const entry = entries[0];
-        if (entry && entry.contentRect.width > 0) {
-          // Debounce dimension updates to prevent layout thrashing
-          resizeTimeoutRef.current = setTimeout(() => {
-            setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
-          }, 100);
-        }
-      });
-      
-      resizeObserver.observe(node);
-      observerRef.current = resizeObserver;
-    }
-  }, []);
+  const { ref: containerRef, dimensions } = useResizeObserver(100);
   
   // Panning & dragging states
   const [pan, setPan] = useState({ x: 0, y: 0 });
