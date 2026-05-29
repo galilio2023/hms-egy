@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/drawer";
 import { searchPatientsAction } from "@/lib/actions/patients";
 import { admitPatient, dischargePatient, recordInpatientVitals } from "@/lib/actions/admissions";
+import { edgeSyncEngine } from "@/lib/offline/sync-engine";
 
 interface BedDataRow {
   bedId: string;
@@ -365,6 +366,26 @@ export default function AdmissionsDashboardClient({
       });
 
       if (res.success) {
+        // Offline Survivability: Queue update to local outbox for LSN synchronization
+        // This handles cases where WAN connectivity is unstable but the Serverless
+        // function managed a one-off execution, or if we transition to pure offline path.
+        edgeSyncEngine.queueWrite({
+          tableName: "vitals_flowsheet",
+          action: "INSERT",
+          entityId: (res as { vitalId: string }).vitalId,
+          payload: {
+            patientId: selectedBed.patientId,
+            bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
+            bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,
+            heartRate: vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined,
+            respiratoryRate: vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined,
+            temperature: vitalsInput.temperature || undefined,
+            oxygenSaturation: vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined,
+            weightKg: vitalsInput.weightKg || undefined,
+            heightCm: vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined,
+          }
+        }).catch(err => console.warn("[LSN] Failed to queue vital write:", err));
+
         toast.success(t("recordVitalsSuccess"));
         setIsVitalsOpen(false);
         // Clear inputs

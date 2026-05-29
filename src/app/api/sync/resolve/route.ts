@@ -10,17 +10,40 @@ const TABLE_MAP: Record<string, typeof patients | typeof admissions | typeof vit
   vitals_flowsheet: vitalsFlowsheet,
 };
 
+/**
+ * Strict whitelist filter for sync payloads to prevent mass-assignment vulnerabilities.
+ */
+function filterPayload(tableName: string, payload: Record<string, unknown>): Record<string, unknown> {
+  const allowedFields: Record<string, string[]> = {
+    patients: ["nameAr", "nameEn", "nationalId", "passportNumber", "dob", "gender", "contactPhone", "address", "governorate", "bloodType"],
+    admissions: ["patientId", "bedId", "admittingDoctorId", "admissionDate", "reason", "status"],
+    vitals_flowsheet: ["patientId", "recordedBy", "recordedAt", "bloodPressureSystolic", "bloodPressureDiastolic", "heartRate", "respiratoryRate", "temperature", "oxygenSaturation", "weightKg", "heightCm"],
+  };
+
+  const fields = allowedFields[tableName] || [];
+  const filtered: Record<string, unknown> = {};
+  for (const field of fields) {
+    if (payload[field] !== undefined) {
+      filtered[field] = payload[field];
+    }
+  }
+  return filtered;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const op = await req.json();
-    const { tableName, entityId, version, payload, action } = op;
+    const { tableName, entityId, payload, action } = op;
 
     const table = TABLE_MAP[tableName];
     if (!table) {
       return NextResponse.json({ error: `Unsupported table: ${tableName}` }, { status: 400 });
     }
 
-    // Fetch current server state
+    // 1. Sanitize Payload (Security: Prevent Mass-Assignment)
+    const sanitizedPayload = filterPayload(tableName, payload);
+
+    // 2. Fetch current server state
     const [currentRecord] = await db
       .select({
         version: table.version,
@@ -33,7 +56,7 @@ export async function POST(req: NextRequest) {
     if (!currentRecord) {
       if (action === "INSERT") {
         await db.insert(table).values({
-          ...payload,
+          ...sanitizedPayload,
           id: entityId,
           version: 1,
           createdAt: new Date(),
@@ -44,37 +67,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Record not found" }, { status: 404 });
     }
 
-    // LWW (Last-Write-Wins) Conflict Resolution
-    // We compare timestamps to ensure the absolute latest clinical data wins,
-    // regardless of whether it arrived late due to offline survivability.
+    // 3. LWW (Last-Write-Wins) Conflict Resolution with Clock-Skew Guard
     const clientTimestamp = op.timestamp;
     const serverUpdatedAt = currentRecord.updatedAt ? new Date(currentRecord.updatedAt).getTime() : 0;
+    const now = Date.now();
 
-    if (clientTimestamp < serverUpdatedAt) {
+    // Sanity check: If client clock is more than 24 hours in the future, it's likely a misconfiguration.
+    const MAX_CLOCK_SKEW = 24 * 60 * 60 * 1000;
+    const isClockHeavilySkewed = clientTimestamp > now + MAX_CLOCK_SKEW;
+
+    if (clientTimestamp < serverUpdatedAt || isClockHeavilySkewed) {
       return NextResponse.json({
         status: "ignored",
-        message: "Stale update: Server already has a newer revision of this record.",
+        message: isClockHeavilySkewed
+          ? "Clock skew detected: Client timestamp is too far in the future."
+          : "Stale update: Server already has a newer revision of this record.",
         serverVersion: currentRecord.version
       }, { status: 200 }); // Return 200 so client clears it from outbox
     }
 
-    // If no conflict, apply the database changes to prevent data loss
+    // 4. Apply the database changes
     if (action === "UPDATE") {
       await db.update(table)
         .set({
-          ...payload,
+          ...sanitizedPayload,
           version: sql`${table.version} + 1`,
           updatedAt: new Date(),
         })
         .where(eq(table.id, entityId));
     } else if (action === "INSERT") {
-      await db.insert(table).values({
-        ...payload,
-        id: entityId,
-        version: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+      // Record exists but action was INSERT - likely a sync re-run, treat as update if LWW allows
+      await db.update(table)
+        .set({
+          ...sanitizedPayload,
+          updatedAt: new Date(),
+        })
+        .where(eq(table.id, entityId));
     } else if (action === "DELETE") {
       await db.delete(table).where(eq(table.id, entityId));
     }
