@@ -92,8 +92,10 @@ const CLINICAL_CONTEXT_PATTERN_AR = CLINICAL_CONTEXT_TOKENS_AR.map(makeArabicVar
 const PROCLITICS_AR = "(?:[وفب]?(?:ال|لل)|[وفبل])";
 const STOP_PATTERN_AR = `(?:${PROCLITICS_AR}?(?:${VARIANT_PREFIXES_PATTERN_AR}|${VARIANT_STOP_TOKENS_PATTERN_AR}|${CLINICAL_CONTEXT_PATTERN_AR}))`;
 
-// Pre-compiled regex for "Ali" bypass logic performance optimization
-const CLINICAL_BYPASS_RE = new RegExp(`^${PROCLITICS_AR}?(${CLINICAL_CONTEXT_PATTERN_AR})$`, "u");
+// Pre-compiled regex for "Ali" bypass logic performance optimization.
+// Note: We prioritize preserving clinical instruction utility over 100% name redaction
+// in high-ambiguity prepositional contexts (e.g., Ali vs. "On" for anatomy).
+const CLINICAL_BYPASS_RE = new RegExp(`^${PROCLITICS_AR}?(${CLINICAL_CONTEXT_PATTERN_AR})$`, "ui");
 
 // Compound Name Logic: Match 1-5 tokens (Egyptian 5-part names), ensuring tokens aren't clinical stop-tokens.
 const NAME_TOKEN_AR = `(?!(?:${STOP_PATTERN_AR})(?:$|[\\s\\p{P}]))\\p{Script=Arabic}{2,}`;
