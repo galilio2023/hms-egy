@@ -70,6 +70,7 @@ export async function updateHospitalSettings(
       etaClientId,
       etaClientSecret,
       etaTaxpayerActivityCode,
+      approvedWhatsappTemplates,
     } = validated.data;
 
     // Fetch active planTier and existing settings from database
@@ -150,6 +151,7 @@ export async function updateHospitalSettings(
           etaClientId: etaClientId || null,
           etaClientSecret: finalEtaClientSecret,
           etaTaxpayerActivityCode: etaTaxpayerActivityCode || "8610",
+          approvedWhatsappTemplates: approvedWhatsappTemplates || [],
           updatedAt: new Date(),
         });
       } else {
@@ -171,6 +173,7 @@ export async function updateHospitalSettings(
             etaClientId: etaClientId || null,
             etaClientSecret: finalEtaClientSecret,
             etaTaxpayerActivityCode: etaTaxpayerActivityCode || "8610",
+            approvedWhatsappTemplates: approvedWhatsappTemplates || [],
             updatedAt: new Date(),
           })
           .where(eq(hospitalSettings.hospitalId, hospitalId));

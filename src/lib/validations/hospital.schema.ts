@@ -75,6 +75,9 @@ export const hospitalSettingsSchema = z.object({
   etaClientId: nullableCoercedString,
   etaClientSecret: nullableCoercedString,
   etaTaxpayerActivityCode: z.string().max(20).default("8610"),
+
+  // WhatsApp Templates
+  approvedWhatsappTemplates: z.array(z.string().regex(/^[a-z0-9_]+$/, "Template names must be lowercase alphanumeric with underscores")).optional().default([]),
 });
 
 export type HospitalSettingsType = z.infer<typeof hospitalSettingsSchema>;

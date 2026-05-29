@@ -313,7 +313,7 @@ async function sendWhatsAppMessage(
   // Strict template validator for Meta Business API template-matching constraints
   if (template) {
     // Code Review Fix: Move APPROVED_TEMPLATES to DB-backed hospital_settings
-    let approvedTemplates: string[] = ["mews_critical_alert"];
+    let approvedTemplates: string[] = [];
     
     try {
       const settings = await db
