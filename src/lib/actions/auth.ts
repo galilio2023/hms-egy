@@ -1,7 +1,7 @@
 "use server";
 
 import { db, withBypassContext } from "@/lib/db";
-import { users } from "@db/schema/auth";
+import { users, sessions } from "@db/schema/auth";
 import { eq } from "drizzle-orm";
 import { authInstance } from "@/lib/auth";
 
@@ -53,7 +53,8 @@ export async function loginAction(
         throw new Error("Invalid credentials");
       }
 
-      // 3. Reset failed attempts counter on success
+      // 3. Reset failed attempts counter on success and fetch session
+      let sessionId: string | undefined;
       await withBypassContext(async (tx) => {
         await tx
           .update(users)
@@ -63,14 +64,20 @@ export async function loginAction(
             updatedAt: new Date(),
           })
           .where(eq(users.email, email));
+
+        // Fetch the session ID from the database using the token
+        const dbSession = await tx.query.sessions.findFirst({
+          where: eq(sessions.token, result.token),
+        });
+        sessionId = dbSession?.id;
       });
 
       // 4. Handle forced password change check
       if (result.user.isPasswordExpired) {
-        return { success: true, redirectTo: "/change-password", sessionId: result.session.id };
+        return { success: true, redirectTo: "/change-password", sessionId };
       }
 
-      return { success: true, redirectTo: "/", sessionId: result.session.id };
+      return { success: true, redirectTo: "/", sessionId };
 
     } catch (authError) {
       // 5. Track failed login attempt on credentials exception
