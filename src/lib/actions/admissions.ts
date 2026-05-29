@@ -485,7 +485,9 @@ async function dispatchCriticalAlerts(
               name: "mews_critical_alert",
               languageCode: "ar",
               parameters: [
-                patient.nameAr ? patient.nameAr : `\u200E${patient.nameEn}\u200F`,
+                patient.nameAr
+                  ? patient.nameAr
+                  : (patient.nameEn ? `\u200E${patient.nameEn}\u200F` : ""),
                 String(mewsScore)
               ],
             }

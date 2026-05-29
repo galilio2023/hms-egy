@@ -324,8 +324,8 @@ async function sendWhatsAppMessage(
     // Code Review Fix: Move APPROVED_TEMPLATES to DB-backed hospital_settings
     let approvedTemplates: string[] = preFetchedTemplates || [];
     
-    // Only query DB if templates weren't pre-fetched by the caller
-    if (!preFetchedTemplates || preFetchedTemplates.length === 0) {
+    // Only query DB if templates were not passed (distinguish between undefined and explicitly empty [])
+    if (preFetchedTemplates === undefined) {
       try {
         const settings = await db
           .select({ approvedWhatsappTemplates: hospitalSettings.approvedWhatsappTemplates })
