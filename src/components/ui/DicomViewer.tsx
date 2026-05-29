@@ -11,6 +11,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { useResizeObserver } from "@/hooks/use-resize-observer";
 import { 
   ZoomIn, 
   ZoomOut, 
@@ -41,36 +42,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
   const totalSlices = 16; // Simulated CT/MRI series slices count
   
   // Layout states for responsive resizing
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const observerRef = useRef<ResizeObserver | null>(null);
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Code Review Fix: Use callback ref for ResizeObserver to ensure robust initialization
-  // and cleanup, preventing potential memory leaks in non-React 19 environments.
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-    if (resizeTimeoutRef.current) {
-      clearTimeout(resizeTimeoutRef.current);
-    }
-
-    if (node) {
-      const resizeObserver = new ResizeObserver((entries) => {
-        const entry = entries[0];
-        if (entry && entry.contentRect.width > 0) {
-          // Debounce dimension updates to prevent layout thrashing
-          resizeTimeoutRef.current = setTimeout(() => {
-            setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
-          }, 100);
-        }
-      });
-      
-      resizeObserver.observe(node);
-      observerRef.current = resizeObserver;
-    }
-  }, []);
+  const { ref: containerRef, dimensions } = useResizeObserver(100);
   
   // Panning & dragging states
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -79,6 +51,7 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDragging(true);
+    // Spatial dragging should always map 1:1 with cursor movement regardless of RTL/LTR
     dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   };
 
@@ -315,11 +288,11 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
           <Button 
             size="icon" 
             variant="ghost" 
-            onClick={() => setCurrentSlice(prev => Math.max(1, prev - 1))}
-            disabled={currentSlice === 1}
+            onClick={() => setCurrentSlice(prev => isRtl ? Math.min(totalSlices, prev + 1) : Math.max(1, prev - 1))}
+            disabled={isRtl ? currentSlice === totalSlices : currentSlice === 1}
             className="h-6 w-6 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-full"
           >
-            <ChevronLeft className="h-4 w-4" />
+            {isRtl ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
           <span className="text-[10px] text-slate-200 font-mono select-none px-2">
             Slice {currentSlice} / {totalSlices}
@@ -327,11 +300,11 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
           <Button 
             size="icon" 
             variant="ghost" 
-            onClick={() => setCurrentSlice(prev => Math.min(totalSlices, prev + 1))}
-            disabled={currentSlice === totalSlices}
+            onClick={() => setCurrentSlice(prev => isRtl ? Math.max(1, prev - 1) : Math.min(totalSlices, prev + 1))}
+            disabled={isRtl ? currentSlice === 1 : currentSlice === totalSlices}
             className="h-6 w-6 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-full"
           >
-            <ChevronRight className="h-4 w-4" />
+            {isRtl ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         </div>
       </div>
