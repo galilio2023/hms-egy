@@ -65,15 +65,16 @@ export async function getOrSchedule(date: Date | string, targetHospitalId?: stri
     return { success: false, error: "System Error: Hospital context is missing." };
   }
 
-  const targetDate = new Date(date);
+  const targetDateAbs = new Date(date);
+  const targetDateCairo = toCairoTime(targetDateAbs);
   const normalizedDate = new Date(Date.UTC(
-    targetDate.getUTCFullYear(),
-    targetDate.getUTCMonth(),
-    targetDate.getUTCDate(),
+    targetDateCairo.getFullYear(),
+    targetDateCairo.getMonth(),
+    targetDateCairo.getDate(),
     0, 0, 0, 0
   ));
 
-  const dayOfWeek = targetDate.getDay(); // 0 (Sunday) to 6 (Saturday)
+  const dayOfWeek = targetDateCairo.getDay(); // 0 (Sunday) to 6 (Saturday)
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {
@@ -235,15 +236,16 @@ export async function createSurgicalCase(
         await innerTx.execute(sql`SELECT id FROM staff WHERE id IN (${inClauseStaff}) FOR UPDATE`);
       }
 
-      const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
+      const scheduledAtAbs = new Date(validatedData.scheduledAt);
+      const scheduledAtCairo = toCairoTime(scheduledAtAbs);
       const scheduledDate = new Date(Date.UTC(
-        scheduledAt.getFullYear(),
-        scheduledAt.getMonth(),
-        scheduledAt.getDate(),
+        scheduledAtCairo.getFullYear(),
+        scheduledAtCairo.getMonth(),
+        scheduledAtCairo.getDate(),
         0, 0, 0, 0
       ));
 
-      const startTime = formatTimeStr(scheduledAt);
+      const startTime = formatTimeStr(scheduledAtAbs);
       const duration = validatedData.estimatedDuration;
       const endTime = addMinutesToTimeStr(startTime, duration);
 
@@ -275,7 +277,7 @@ export async function createSurgicalCase(
 
       // 2. Check overlaps with standard OR Blocks (unless bypassed)
       if (!bypassBlocks) {
-        const dayOfWeek = scheduledAt.getDay();
+        const dayOfWeek = scheduledAtCairo.getDay();
         const blocks = await innerTx
           .select()
           .from(orBlocks)

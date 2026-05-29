@@ -148,9 +148,12 @@ export function formatPatientNumber(hospitalCode: string, year: number, seq: num
 /**
  * Checks if a given date is a working day in Egypt (excludes Fridays and Saturdays).
  * Accounts for Africa/Cairo timezone.
+ *
+ * @param date - An absolute Date object or ISO string.
  */
-export function isWorkingDay(date: Date): boolean {
-  const zonedDate = toZonedTime(date, "Africa/Cairo");
+export function isWorkingDay(date: Date | string): boolean {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const zonedDate = toZonedTime(d, "Africa/Cairo");
   const day = zonedDate.getDay();
   return day !== 5 && day !== 6; // 5 = Friday, 6 = Saturday
 }
@@ -283,15 +286,20 @@ export function getPublicHolidays(year: number) {
 /**
  * Checks if a given date is an official public holiday in Egypt.
  * Resolves dates in the Africa/Cairo timezone to avoid off-by-one errors.
+ *
+ * @param date - An absolute Date object or ISO string representing a point in time.
  */
-export function isEgyptianPublicHoliday(date: Date): { isHoliday: boolean; nameAr?: string; nameEn?: string } | null {
-  const zoned = toZonedTime(date, "Africa/Cairo");
+export function isEgyptianPublicHoliday(date: Date | string): { isHoliday: boolean; nameAr?: string; nameEn?: string } | null {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const zoned = toZonedTime(d, "Africa/Cairo");
   const year = zoned.getFullYear();
   const month = zoned.getMonth();
   const day = zoned.getDate();
 
   const holidays = getPublicHolidays(year);
   for (const h of holidays) {
+    // Holidays in DB are stored as UTC midnight of that day.
+    // We compare the local YYYY-MM-DD components in Cairo time.
     const hZoned = toZonedTime(h.date, "Africa/Cairo");
     if (
       hZoned.getFullYear() === year &&

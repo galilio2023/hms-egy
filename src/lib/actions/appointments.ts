@@ -18,7 +18,9 @@ import { type User } from "@/types/auth-api.types";
 
 export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_show";
 
-// Helper: Formats a Date object's time to "HH:MM:SS" strictly in Cairo time
+// Helper: Formats a Date object's time to "HH:MM:SS" strictly in Cairo time.
+// Note: Use an absolute Date object (UTC/Server-local) to avoid double-zoning
+// as formatInTimeZone performs its own internal projection to Cairo.
 function formatTimeStr(date: Date) {
   return formatInTimeZone(date, "Africa/Cairo", "HH:mm:00");
 }
@@ -73,22 +75,28 @@ export async function createAppointment(data: AppointmentSchema, targetHospitalI
         await innerTx.execute(sql`SET LOCAL lock_timeout = '2000';`);
         await innerTx.execute(sql`SELECT id FROM staff WHERE id = ${validatedData.doctorId} FOR UPDATE`);
 
-      const scheduledAt = toCairoTime(new Date(validatedData.scheduledAt));
+      // 1. Interpret scheduledAt as an absolute point in time.
+      // If it comes from fromZonedTime in the client, it is already an absolute Date.
+      const scheduledAtAbs = new Date(validatedData.scheduledAt);
+
+      // 2. Project to Cairo to get the correct Year/Month/Day components for DB indexing
+      const scheduledAtCairo = toCairoTime(scheduledAtAbs);
       
       // Normalize date to UTC midnight (Y-M-D) to support clean index matching without off-by-one errors
       const scheduledDate = new Date(Date.UTC(
-        scheduledAt.getFullYear(),
-        scheduledAt.getMonth(),
-        scheduledAt.getDate(),
+        scheduledAtCairo.getFullYear(),
+        scheduledAtCairo.getMonth(),
+        scheduledAtCairo.getDate(),
         0, 0, 0, 0
       ));
 
-      const startTime = formatTimeStr(scheduledAt);
-      
+      // formatTimeStr internally uses formatInTimeZone which projects to Cairo.
+      // We MUST pass the absolute Date to avoid double-zoning.
+      const startTime = formatTimeStr(scheduledAtAbs);
       // Appointments default to a high-density 30-minute block duration
       const durationMs = 30 * 60 * 1000;
-      const endAt = new Date(scheduledAt.getTime() + durationMs);
-      const endTime = formatTimeStr(endAt);
+      const endAtAbs = new Date(scheduledAtAbs.getTime() + durationMs);
+      const endTime = formatTimeStr(endAtAbs);
 
       // 1. Verify doctor availability & check scheduling overlaps
       const doctorSchedules = await innerTx
@@ -256,11 +264,12 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
     return { success: false, error: "Hospital context missing" };
   }
 
-  const targetDate = toCairoTime(new Date(date));
+  const targetDateAbs = new Date(date);
+  const targetDateCairo = toCairoTime(targetDateAbs);
   const normalizedDate = new Date(Date.UTC(
-    targetDate.getFullYear(),
-    targetDate.getMonth(),
-    targetDate.getDate(),
+    targetDateCairo.getFullYear(),
+    targetDateCairo.getMonth(),
+    targetDateCairo.getDate(),
     0, 0, 0, 0
   ));
 
@@ -318,13 +327,24 @@ export async function getDoctorAvailability(doctorId: string, date: Date | strin
           const nowCairo = toCairoTime(nowServer);
 
           let isFuture = true;
-          if (targetDate.toDateString() === nowCairo.toDateString()) {
+          if (targetDateCairo.toDateString() === nowCairo.toDateString()) {
+            // Both are now Cairo-relative JS Dates.
+            // But be careful: targetDateCairo might have arbitrary time if it came from 'new Date()'
+            // Actually targetDateCairo's time doesn't matter for toDateString() comparison of the day.
+
             const [sh, sm] = slotTime.split(":").map(Number);
-            const slotDateTime = new Date(targetDate);
-            slotDateTime.setHours(sh, sm, 0, 0);
-            isFuture = slotDateTime.getTime() > nowCairo.getTime();
-          } else if (targetDate < nowCairo) {
-            isFuture = false;
+            // Create a Date object for the slot in Cairo time
+            const slotDateTimeCairo = new Date(targetDateCairo);
+            slotDateTimeCairo.setHours(sh, sm, 0, 0);
+            isFuture = slotDateTimeCairo.getTime() > nowCairo.getTime();
+          } else if (targetDateCairo < nowCairo) {
+            const todayCairo = new Date(nowCairo);
+            todayCairo.setHours(0, 0, 0, 0);
+            const targetDayCairo = new Date(targetDateCairo);
+            targetDayCairo.setHours(0, 0, 0, 0);
+            if (targetDayCairo < todayCairo) {
+              isFuture = false;
+            }
           }
 
           slots.push({
