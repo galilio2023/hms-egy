@@ -31,26 +31,44 @@ async function run() {
     ${diff}
   `;
 
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
-      })
-    });
+  const maxRetries = 3;
+  let attempt = 0;
+  let success = false;
 
-    const data = await response.json();
-    const review = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No review generated.';
+  while (attempt < maxRetries && !success) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }]
+        })
+      });
 
-    fs.writeFileSync('review.md', review);
-  } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    process.exit(1);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API responded with status ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      const review = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No review generated.';
+
+      fs.writeFileSync('review.md', review);
+      success = true;
+    } catch (error) {
+      attempt++;
+      console.warn(`Attempt ${attempt} failed: ${error.message}`);
+      if (attempt >= maxRetries) {
+        console.error('Error calling Gemini API after max retries:', error);
+        process.exit(1);
+      }
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
   }
 }
 
