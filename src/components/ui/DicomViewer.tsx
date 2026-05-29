@@ -33,7 +33,8 @@ interface DicomViewerProps {
 
 export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = false }: DicomViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+
   // Viewport states
   const [zoom, setZoom] = useState(1.0);
   const [brightness, setBrightness] = useState(100); // percentage
@@ -132,20 +133,19 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
 
   // Redraw viewport whenever properties change
   useEffect(() => {
-    if (!imageLoaded || !imageRef.current || !canvasRef.current) return;
+    if (!isStabilized || !imageLoaded || !imageRef.current || !canvasRef.current) return;
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     // Set internal resolution matching devicePixelRatio for clinical-grade sharpness
     // Code Review Fix: Use dimensions from ResizeObserver for reliable responsive layout
     const displayWidth = dimensions.width;
     const displayHeight = dimensions.height;
 
-    // Code Review Fix: Defer drawing until layout stabilizes to avoid crashes or scaling anomalies
-    if (!isStabilized || displayWidth === 0 || displayHeight === 0) return;
+    // Double-check dimensions are valid before calculating targets
+    if (displayWidth === 0 || displayHeight === 0) return;
 
     const targetWidth = Math.round(displayWidth * dpr);
     const targetHeight = Math.round(displayHeight * dpr);
@@ -264,6 +264,18 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
               {loadError}
             </span>
           </div>
+        ) : !isStabilized ? (
+          /* Geometric skeleton loader to reserve layout space and prevent CLS */
+          <div className="w-full h-full flex items-center justify-center p-8">
+            <div className="w-full h-full border border-slate-800/50 rounded-lg flex flex-col items-center justify-center gap-4 bg-slate-900/20 relative overflow-hidden">
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-slate-800/10 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+              <div className="w-3/4 h-px bg-slate-800/50" />
+              <div className="w-1/2 h-px bg-slate-800/50" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-12 h-12 border-2 border-slate-800 rounded-full opacity-20" />
+              </div>
+            </div>
+          </div>
         ) : !imageLoaded ? (
           <div className="flex flex-col items-center gap-2 text-slate-500">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-500" />
@@ -276,8 +288,9 @@ export function DicomViewer({ imageUrl, procedureName = "Chest X-Ray", isRtl = f
             </div>
             <canvas
               ref={canvasRef}
-              width={dimensions.width}
-              height={dimensions.height}
+              /* Code Review Fix: Use stabilized dimensions with dpr to prevent immediate context re-allocation */
+              width={Math.round(dimensions.width * dpr)}
+              height={Math.round(dimensions.height * dpr)}
               className="w-full h-full object-contain cursor-move"
               style={{ filter: `brightness(${brightness}%) contrast(${contrast}%)` }}
               onMouseDown={handleMouseDown}

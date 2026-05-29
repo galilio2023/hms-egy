@@ -131,6 +131,11 @@
   to { transform: translateX(0); opacity: 1; }
 }
 
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
 @keyframes border-beam {
   0%, 100% { transform: translate(-50%, -50%) translate(0%, 0%); }
   25% { transform: translate(-50%, -50%) translate(100%, 0%); }
