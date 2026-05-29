@@ -440,14 +440,9 @@ export function latinizeNumerals(str: string): string {
 export const normalizeDecimal = (str: string | number | null | undefined): number | null => {
   if (str === null || str === undefined || String(str).trim() === "") return null;
 
-  const map: Record<string, string> = {
-    "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4", "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
-    "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4", "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9"
-  };
-
-  const normalized = String(str)
-    .replace(/[،,٫]/g, ".") // Convert Arabic, standard, and Eastern decimal separators to dots
-    .replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
+  // Convert Arabic, standard, and Eastern decimal separators to dots
+  // Then latinize any Eastern/Persian numerals
+  const normalized = latinizeNumerals(String(str).replace(/[،,٫]/g, "."));
   const num = Number(normalized);
   return isNaN(num) ? null : num;
 };
@@ -463,10 +458,6 @@ export const normalizeSearchTerm = (str: string): string => {
   // 1. Normalize Arabic characters (Alef, Yeh, Te Marbuta)
   const normArabic = normalizeArabic(lower);
   // 2. Normalize all Eastern and Persian numerals to Western digits
-  const map: Record<string, string> = {
-    "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4", "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
-    "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4", "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9"
-  };
-  return normArabic.replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
+  return latinizeNumerals(normArabic);
 };
 

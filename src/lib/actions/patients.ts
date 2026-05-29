@@ -9,7 +9,7 @@ import { patientSchema, type PatientSchema } from "@/lib/validations/patient.sch
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
-import { formatPatientNumber, normalizeArabic, toCairoTime } from "@/lib/utils/egypt";
+import { formatPatientNumber, normalizeArabic, toCairoTime, latinizeNumerals } from "@/lib/utils/egypt";
 import { revalidatePath } from "next/cache";
 import { fromZonedTime } from "date-fns-tz";
 import { type User } from "@/types/auth-api.types";
@@ -51,6 +51,7 @@ export async function registerPatient(data: PatientSchema) {
   }
 
   // Normalize Arabic name for indexed storage consistency
+  // Note: validatedData.nameAr is already latinized via Zod schema
   const normalizedNameAr = normalizeArabic(validatedData.nameAr);
 
   try {
@@ -204,7 +205,10 @@ export async function updatePatient(patientId: string, data: Partial<PatientSche
   }
 
   // Normalize Arabic name if provided
-  const normalizedNameAr = data.nameAr ? normalizeArabic(data.nameAr) : undefined;
+  // Note: Normally we should validate 'data' against patientSchema here,
+  // but for partial updates we ensure normalization manually if schema isn't re-run.
+  const latinizedNameAr = data.nameAr ? latinizeNumerals(data.nameAr) : undefined;
+  const normalizedNameAr = latinizedNameAr ? normalizeArabic(latinizedNameAr) : undefined;
 
   try {
     return await withTenantContext(hospitalId, async (tx) => {

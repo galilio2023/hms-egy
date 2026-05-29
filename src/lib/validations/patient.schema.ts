@@ -6,27 +6,26 @@ import { toZonedTime } from "date-fns-tz";
  * Preprocessor to normalize Eastern Arabic/Persian numerals (٠-٩) to Western Arabic (0-9).
  * Crucial for Egyptian localized keyboards.
  */
-const latinizedString = z.preprocess(
-  (val) => (typeof val === "string" ? latinizeNumerals(val) : val),
-  z.string()
-);
+const latinizedString = z.string().transform((val) => latinizeNumerals(val));
 
-const egyptianPhoneSchema = latinizedString
+const egyptianPhoneSchema = z.string()
+  .transform((val) => latinizeNumerals(val))
   .transform((val) => val.replace(/\s+/g, "")) // sanitize whitespace
   .refine((val) => /^(?:\+20|0020)?0?1[0125]\d{8}$/.test(val), {
     message: "Invalid Egyptian mobile number",
   });
 
 export const patientSchema = z.object({
-  nationalId: latinizedString
+  nationalId: z.string()
+    .transform((val) => latinizeNumerals(val))
     .optional()
     .or(z.literal(""))
     .refine((val) => !val || val === "" || validateNationalId(val), {
       message: "Invalid Egyptian National ID checksum or format.",
     }),
-  passportNumber: latinizedString.optional().or(z.literal("")),
-  nameAr: z.string().min(3, "Name in Arabic must be at least 3 characters"),
-  nameEn: z.string().min(3, "Name in English must be at least 3 characters"),
+  passportNumber: z.string().transform((val) => latinizeNumerals(val)).optional().or(z.literal("")),
+  nameAr: z.string().min(3, "Name in Arabic must be at least 3 characters").transform((val) => latinizeNumerals(val)),
+  nameEn: z.string().min(3, "Name in English must be at least 3 characters").transform((val) => latinizeNumerals(val)),
   dob: z.coerce.date(),
   gender: z.enum(["male", "female"]),
   governorate: z.string().refine((val) => getGovernorateCode(val) !== null, {
@@ -34,7 +33,7 @@ export const patientSchema = z.object({
   }),
   phone: egyptianPhoneSchema,
   email: z.string().email().optional().or(z.literal("")),
-  address: z.string().min(5, "Address must be at least 5 characters"),
+  address: z.string().min(5, "Address must be at least 5 characters").transform((val) => latinizeNumerals(val)),
   bloodType: z.string().optional(),
   allergies: z.array(z.string()).default([]),
   chronicConditions: z.array(z.string()).default([]),
