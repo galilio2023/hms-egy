@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. LWW (Last-Write-Wins) Conflict Resolution with Clock-Skew Guard
-    const clientTimestamp = op.timestamp;
+    const clientTimestamp = Number(op.timestamp) || Date.now();
     const serverUpdatedAt = currentRecord.updatedAt ? new Date(currentRecord.updatedAt).getTime() : 0;
     const now = Date.now();
 
@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
       await db.update(table)
         .set({
           ...sanitizedPayload,
+          version: sql`${table.version} + 1`,
           updatedAt: new Date(),
         })
         .where(eq(table.id, entityId));

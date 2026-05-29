@@ -126,6 +126,7 @@ interface SearchedPatient {
 
 interface AdmissionsDashboardClientProps {
   locale: string;
+  hospitalId: string;
   hospitalSlug: string;
   rooms: Room[];
   bedsData: BedDataRow[];
@@ -136,6 +137,7 @@ interface AdmissionsDashboardClientProps {
 
 export default function AdmissionsDashboardClient({
   locale,
+  hospitalId,
   hospitalSlug: _hospitalSlug,
   rooms,
   bedsData,
@@ -374,6 +376,7 @@ export default function AdmissionsDashboardClient({
           action: "INSERT",
           entityId: (res as { vitalId: string }).vitalId,
           payload: {
+            hospitalId: hospitalId,
             patientId: selectedBed.patientId,
             bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
             bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,

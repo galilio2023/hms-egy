@@ -218,6 +218,7 @@ export default async function AdmissionsPage({
     <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
       <AdmissionsDashboardClient
         locale={locale}
+        hospitalId={hospital.id}
         hospitalSlug={hospitalSlug}
         rooms={dashboardData.roomsList}
         bedsData={dashboardData.bedsWithAdmissions}
