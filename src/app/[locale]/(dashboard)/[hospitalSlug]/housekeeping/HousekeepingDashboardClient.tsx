@@ -45,9 +45,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, formatDistance } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { normalizeSearchTerm } from "@/lib/utils/egypt";
+import { normalizeSearchTerm, toCairoTime } from "@/lib/utils/egypt";
 import {
   createHousekeepingTask,
   assignHousekeepingTask,
@@ -143,8 +143,20 @@ export default function HousekeepingDashboardClient({
   const dateLocale = isRtl ? ar : enUS;
 
   const [mounted, setMounted] = React.useState(false);
+  // Using a stable currentTime to avoid hydration mismatches for relative time displays
+  const [currentTime, setCurrentTime] = React.useState<Date | null>(null);
+
   React.useEffect(() => {
     setMounted(true);
+    // Initialize currentTime only on client
+    setCurrentTime(new Date());
+
+    // Update time every minute to keep relative timestamps and overdue counts accurate
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
   }, []);
 
   // Tabs state: "queue" or "map"
@@ -205,12 +217,12 @@ export default function HousekeepingDashboardClient({
 
     // 4. Overdue (waiting > 2 hours) Count
     // Code Review Fix: Use stable reference and only initialize on client to prevent hydration mismatch
-    if (!mounted) return { avgMinutes, bedsCleanedTodayCount, inProgressCount, overdueCount: 0 };
+    if (!mounted || !currentTime) return { avgMinutes, bedsCleanedTodayCount, inProgressCount, overdueCount: 0 };
 
-    const now = new Date();
+    const now = toCairoTime(currentTime);
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     const overdueCount = tasks.filter(
-      (task) => task.status === "pending" && new Date(task.requestedAt) < twoHoursAgo
+      (task) => task.status === "pending" && toCairoTime(task.requestedAt).getTime() < twoHoursAgo.getTime()
     ).length;
 
     return {
@@ -219,7 +231,7 @@ export default function HousekeepingDashboardClient({
       inProgressCount,
       overdueCount
     };
-  }, [tasks, completedTasks, mounted]);
+  }, [tasks, completedTasks, mounted, currentTime]);
 
   // Filters tasks
   const filteredTasks = useMemo(() => {
@@ -645,10 +657,13 @@ export default function HousekeepingDashboardClient({
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredTasks.map((task) => {
-                const timeRequestedText = formatDistanceToNow(new Date(task.requestedAt), {
-                  locale: dateLocale,
-                  addSuffix: true,
-                });
+                // Ensure time display is deterministic during hydration
+                const timeRequestedText = (mounted && currentTime)
+                  ? formatDistance(toCairoTime(task.requestedAt), toCairoTime(currentTime), {
+                      locale: dateLocale,
+                      addSuffix: true,
+                    })
+                  : "—";
                 
                 const isUrgent = task.priority === "urgent";
                 const isAssigned = !!task.assignedTo;
