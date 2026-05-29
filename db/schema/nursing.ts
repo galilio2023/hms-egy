@@ -72,3 +72,29 @@ export const handoverNotes = pgTable("handover_notes", {
     hospitalPatientIdx: index("handover_hospital_patient_idx").on(table.hospitalId, table.patientId),
   };
 }).enableRLS();
+
+export const shiftAssignments = pgTable("shift_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hospitalId: uuid("hospital_id").references(() => hospitals.id, { onDelete: "cascade" }).notNull(),
+  shiftId: uuid("shift_id").references(() => shifts.id, { onDelete: "cascade" }).notNull(),
+
+  // E.g., 'CHARGE_NURSE', 'PATHOLOGY_DISPATCHER', 'TRIAGE_LEAD', 'CODE_BLUE_CAPTAIN'
+  assignmentCode: varchar("assignment_code", { length: 50 }).notNull(),
+
+  // The scope of the assignment (e.g., Charge Nurse OF the ICU)
+  departmentId: uuid("department_id").references(() => departments.id, { onDelete: "restrict" }),
+
+  // Allows mid-shift handoffs
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).defaultNow().notNull(),
+  releasedAt: timestamp("released_at", { withTimezone: true }),
+}, (table) => {
+  return {
+    tenantIsolation: pgPolicy("tenant_isolation_policy", {
+      for: "all",
+      to: "public",
+      using: sql`(current_setting('app.bypass_rls', true) = 'true') OR (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)`
+    }),
+    hospitalShiftIdx: index("sa_hospital_shift_idx").on(table.hospitalId, table.shiftId),
+    activeAssignmentIdx: index("sa_active_idx").on(table.hospitalId, table.assignmentCode, table.releasedAt),
+  };
+}).enableRLS();

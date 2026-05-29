@@ -2,7 +2,7 @@ import { relations } from "drizzle-orm";
 import { hospitals, hospitalSettings, departments, staff, operatingRooms, orBlocks, orBlockOverrides } from "./core";
 import { patients, patientConsents } from "./patients";
 import { rooms, beds, appointments, waitingList, admissions, dischargeSummaries, medicalRecords, vitalsFlowsheet } from "./clinical";
-import { nursingAssessments, shifts, handoverNotes } from "./nursing";
+import { nursingAssessments, shifts, handoverNotes, shiftAssignments } from "./nursing";
 import { housekeepingTasks } from "./housekeeping";
 import { medications, prescriptions, prescriptionItems, stockTransactions, medicationAdministration } from "./pharmacy";
 import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "./laboratory";
@@ -387,7 +387,7 @@ export const nursingAssessmentsRelations = relations(nursingAssessments, ({ one 
 }));
 
 // shifts Relations
-export const shiftsRelations = relations(shifts, ({ one }) => ({
+export const shiftsRelations = relations(shifts, ({ one, many }) => ({
   hospital: one(hospitals, {
     fields: [shifts.hospitalId],
     references: [hospitals.id],
@@ -398,6 +398,23 @@ export const shiftsRelations = relations(shifts, ({ one }) => ({
   }),
   department: one(departments, {
     fields: [shifts.departmentId],
+    references: [departments.id],
+  }),
+  assignments: many(shiftAssignments),
+}));
+
+// shiftAssignments Relations
+export const shiftAssignmentsRelations = relations(shiftAssignments, ({ one }) => ({
+  hospital: one(hospitals, {
+    fields: [shiftAssignments.hospitalId],
+    references: [hospitals.id],
+  }),
+  shift: one(shifts, {
+    fields: [shiftAssignments.shiftId],
+    references: [shifts.id],
+  }),
+  department: one(departments, {
+    fields: [shiftAssignments.departmentId],
     references: [departments.id],
   }),
 }));

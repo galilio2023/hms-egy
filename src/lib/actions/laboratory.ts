@@ -5,7 +5,7 @@ import { withTenantContext } from "@/lib/db/tenant";
 import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "@db/schema/laboratory";
 import { staff, hospitals, hospitalSettings } from "@db/schema/core";
 import { admissions, beds, rooms } from "@db/schema/clinical";
-import { shifts } from "@db/schema/nursing";
+import { shifts, shiftAssignments } from "@db/schema/nursing";
 import { patients } from "@db/schema/patients";
 import { notifications, backgroundJobs } from "@db/schema/system";
 import { eq, and, sql, ilike, or, ne, inArray, isNull } from "drizzle-orm";
@@ -143,8 +143,66 @@ export async function createLabOrder(data: CreateLabOrderInput) {
 
       // Trigger out-of-band notification for STAT orders
       if (data.priority === "stat") {
-        // TODO: Integrate with local SMS/WhatsApp provider (e.g. CEQUENS, VictoryLink)
-        console.log(`[OUT-OF-BAND] Trigger STAT alert for patient ${data.patientId}`);
+        // Resolve metadata for the background job
+        const [patientData] = await tx
+          .select({ nameAr: patients.nameAr, nameEn: patients.nameEn })
+          .from(patients)
+          .where(eq(patients.id, data.patientId));
+
+        const [doctorData] = await tx
+          .select({ nameAr: staff.nameAr, nameEn: staff.nameEn })
+          .from(staff)
+          .where(eq(staff.id, doctor.id));
+
+        const tests = await tx
+          .select({ nameAr: labTests.nameAr, nameEn: labTests.nameEn })
+          .from(labTests)
+          .where(inArray(labTests.id, data.testIds));
+
+        const bakedPayload = {
+          orderId: newOrder.id,
+          patientId: data.patientId,
+          patientNameAr: patientData?.nameAr,
+          patientNameEn: patientData?.nameEn,
+          doctorNameAr: doctorData?.nameAr,
+          doctorNameEn: doctorData?.nameEn,
+          testNamesAr: tests.map(t => t.nameAr).join(", "),
+          testNamesEn: tests.map(t => t.nameEn).join(", "),
+          admissionId: activeAdmission?.id || null,
+        };
+
+        // Queue the background job for reliability
+        const [job] = await tx.insert(backgroundJobs).values({
+          hospitalId,
+          jobType: "stat_lab_order",
+          payload: bakedPayload,
+          status: "pending",
+        }).returning();
+
+        after(() => {
+          withTenantContext(hospitalId, async (tx) => {
+            try {
+              await tx.update(backgroundJobs)
+                .set({ status: "processing", attempts: sql`${backgroundJobs.attempts} + 1`, updatedAt: new Date() })
+                .where(eq(backgroundJobs.id, job.id));
+
+              await dispatchStatLabOrderAlert(hospitalId, bakedPayload, tx);
+
+              await tx.update(backgroundJobs)
+                .set({ status: "completed", updatedAt: new Date() })
+                .where(eq(backgroundJobs.id, job.id));
+            } catch (err) {
+              console.error("[STAT LAB ORDER GATEWAY] Asynchronous alert dispatch failed:", err);
+              await tx.update(backgroundJobs)
+                .set({
+                  status: "failed",
+                  lastError: err instanceof Error ? err.message : String(err),
+                  updatedAt: new Date()
+                })
+                .where(eq(backgroundJobs.id, job.id));
+            }
+          }).catch((err) => console.error("[TENANT CONTEXT] Failed to establish background context for STAT alerts:", err));
+        });
       }
 
       // Fetch hospital slug for revalidation
@@ -815,4 +873,139 @@ export async function processEscalateLabAlert(jobId: string, hospitalId: string)
       }
     }
   });
+}
+
+/**
+ * Helper to dispatch STAT lab order alerts.
+ * Routes to the Pathology Dispatcher and, for inpatients, the Charge Nurse of the ward.
+ */
+async function dispatchStatLabOrderAlert(
+  hospitalId: string,
+  payload: {
+    orderId: string;
+    patientId: string;
+    patientNameAr?: string;
+    patientNameEn?: string;
+    doctorNameAr?: string;
+    doctorNameEn?: string;
+    testNamesAr?: string;
+    testNamesEn?: string;
+    admissionId: string | null;
+  },
+  tx: Parameters<Parameters<typeof withTenantContext>[1]>[0]
+) {
+  const { orderId, patientId, admissionId } = payload;
+  try {
+    // 0. Fetch hospital settings for WhatsApp template verification
+    const settings = await tx
+      .select({ approvedWhatsappTemplates: hospitalSettings.approvedWhatsappTemplates })
+      .from(hospitalSettings)
+      .where(eq(hospitalSettings.hospitalId, hospitalId))
+      .limit(1)
+      .then((res) => res[0]);
+
+    const isWhatsAppApproved = settings?.approvedWhatsappTemplates?.includes("stat_order_dispatch");
+
+    // 1. Resolve Location
+    let locationEn = "Central Outpatient Phlebotomy - Lab Reception, Ground Floor";
+    let locationAr = "سحب عينات العيادات الخارجية - استقبال المعمل، الدور الأرضي";
+    let wardId: string | null = null;
+
+    if (admissionId) {
+      const locData = await tx
+        .select({
+          roomNumber: rooms.roomNumber,
+          bedNumber: beds.bedNumber,
+          departmentId: rooms.departmentId,
+        })
+        .from(admissions)
+        .leftJoin(beds, eq(admissions.bedId, beds.id))
+        .leftJoin(rooms, eq(beds.roomId, rooms.id))
+        .where(eq(admissions.id, admissionId))
+        .limit(1)
+        .then((res) => res[0]);
+
+      if (locData) {
+        locationEn = `Room ${locData.roomNumber}, Bed ${locData.bedNumber}`;
+        locationAr = `غرفة ${locData.roomNumber}، سرير ${locData.bedNumber}`;
+        wardId = locData.departmentId;
+      }
+    }
+
+    const alertPayloadBase = {
+      hospitalId,
+      patientId,
+      reminderType: "STAT_LAB_ORDER",
+      entityType: "clinical_alert" as const,
+      entityId: orderId,
+      approvedWhatsappTemplates: settings?.approvedWhatsappTemplates || [],
+    };
+
+    // 2. Resolve Recipients
+    const recipients: { phone: string; nameEn: string; nameAr: string }[] = [];
+
+    // A. Pathology Dispatcher
+    const dispatcher = await tx
+      .select({ phone: staff.phone, nameEn: staff.nameEn, nameAr: staff.nameAr })
+      .from(staff)
+      .innerJoin(shifts, eq(staff.id, shifts.staffId))
+      .innerJoin(shiftAssignments, eq(shifts.id, shiftAssignments.shiftId))
+      .where(and(
+        eq(staff.hospitalId, hospitalId),
+        eq(shifts.status, "active"),
+        isNull(shifts.endTime),
+        eq(shiftAssignments.assignmentCode, "PATHOLOGY_DISPATCHER"),
+        isNull(shiftAssignments.releasedAt)
+      ))
+      .limit(1)
+      .then(res => res[0]);
+
+    if (dispatcher) recipients.push(dispatcher);
+
+    // B. Charge Nurse (for Inpatients)
+    if (wardId) {
+      const chargeNurse = await tx
+        .select({ phone: staff.phone, nameEn: staff.nameEn, nameAr: staff.nameAr })
+        .from(staff)
+        .innerJoin(shifts, eq(staff.id, shifts.staffId))
+        .innerJoin(shiftAssignments, eq(shifts.id, shiftAssignments.shiftId))
+        .where(and(
+          eq(staff.hospitalId, hospitalId),
+          eq(shifts.status, "active"),
+          isNull(shifts.endTime),
+          eq(shiftAssignments.assignmentCode, "CHARGE_NURSE"),
+          eq(shiftAssignments.departmentId, wardId),
+          isNull(shiftAssignments.releasedAt)
+        ))
+        .limit(1)
+        .then(res => res[0]);
+
+      if (chargeNurse) recipients.push(chargeNurse);
+    }
+
+    // 3. Dispatch Alerts
+    for (const recipient of recipients) {
+      if (recipient.phone) {
+        await sendResilientClinicalAlert({
+          ...alertPayloadBase,
+          phoneNumber: recipient.phone,
+          messageAr: `🚨 طلب معمل عاجل (STAT): ${payload.testNamesAr || ""} للمريض ${payload.patientNameAr || ""} في ${locationAr}. طبيب معالج: ${payload.doctorNameAr || ""}. يرجى التوجه والتنفيذ فوراً.`,
+          messageEn: `🚨 STAT LAB ORDER: ${payload.testNamesEn || ""} for Patient ${payload.patientNameEn || ""} at ${locationEn}. Ordered by ${payload.doctorNameEn || ""}. Proceed immediately.`,
+          channelPriority: isWhatsAppApproved ? ["whatsapp", "sms"] : ["sms"],
+          whatsappTemplate: isWhatsAppApproved ? {
+            name: "stat_order_dispatch",
+            languageCode: "ar",
+            parameters: [
+              payload.patientNameAr || "مريض",
+              payload.testNamesAr || "تحاليل",
+              locationAr,
+              payload.doctorNameAr || "طبيب"
+            ]
+          } : undefined
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[STAT LAB ORDER GATEWAY] Failed to dispatch out-of-band alerts:", error);
+  }
 }
