@@ -3,13 +3,16 @@
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
 import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "@db/schema/laboratory";
-import { staff, hospitals } from "@db/schema/core";
-import { admissions } from "@db/schema/clinical";
+import { staff, hospitals, hospitalSettings } from "@db/schema/core";
+import { admissions, beds, rooms } from "@db/schema/clinical";
+import { shifts } from "@db/schema/nursing";
 import { patients } from "@db/schema/patients";
-import { notifications } from "@db/schema/system";
-import { eq, and, sql, ilike, or, ne, inArray } from "drizzle-orm";
+import { notifications, backgroundJobs } from "@db/schema/system";
+import { eq, and, sql, ilike, or, ne, inArray, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendResilientClinicalAlert } from "@/lib/sms/client";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
 import { latinizeNumerals } from "@/lib/utils/egypt";
 
@@ -305,6 +308,8 @@ export async function saveLabResults(data: SaveLabResultInput) {
         .where(eq(labOrderItems.labOrderId, data.orderId));
 
       // 4. Process all items and prepare database operations
+      const criticalItemIds: string[] = [];
+
       const updatePromises = data.items.map(async (item) => {
         const specs = allOriginalItems.find(oi => oi.itemId === item.itemId);
         let finalIsCritical = item.isCritical; // Manual override from UI
@@ -374,6 +379,8 @@ export async function saveLabResults(data: SaveLabResultInput) {
 
         // 5. Trigger Critical Alert if item is critical
         if (finalIsCritical) {
+          criticalItemIds.push(item.itemId);
+
           await tx.insert(criticalValueAlerts).values({
             hospitalId,
             labOrderItemId: item.itemId,
@@ -396,14 +403,77 @@ export async function saveLabResults(data: SaveLabResultInput) {
               isRead: false,
             });
           }
-
-          // TODO: Trigger emergency out-of-band alert (SMS/WhatsApp)
-          console.log(`[OUT-OF-BAND] Emergency critical value alert for doctor ${orderMeta.doctorId}`);
         }
       });
 
       // Execute all updates in parallel to eliminate N+1 roundtrips
       await Promise.all(updatePromises);
+
+      // Trigger grouped out-of-band alerts for all critical items in this submission
+      if (criticalItemIds.length > 0) {
+        // Resolve safety strings for "baked-in" job metadata as per clinical safety requirements
+        const [patientData] = await tx
+          .select({ nameAr: patients.nameAr, nameEn: patients.nameEn })
+          .from(patients)
+          .where(eq(patients.id, orderMeta.patientId));
+
+        const [doctorData] = await tx
+          .select({ nameAr: staff.nameAr, nameEn: staff.nameEn, phone: staff.phone })
+          .from(staff)
+          .where(eq(staff.id, orderMeta.doctorId));
+
+        const bakedPayload = {
+          orderId: data.orderId,
+          criticalItemIds: criticalItemIds,
+          patientNameAr: patientData?.nameAr,
+          patientNameEn: patientData?.nameEn,
+          doctorNameAr: doctorData?.nameAr,
+          doctorNameEn: doctorData?.nameEn,
+          doctorPhone: doctorData?.phone,
+        };
+
+        // A. Queue the job in the database first to ensure survivability
+        const [job] = await tx.insert(backgroundJobs).values({
+          hospitalId,
+          jobType: "critical_lab_alert",
+          payload: bakedPayload,
+          status: "pending",
+        }).returning();
+
+        // B. Schedule an escalation job for 10 minutes from now (Safety Check)
+        await tx.insert(backgroundJobs).values({
+          hospitalId,
+          jobType: "escalate_critical_lab_alert",
+          payload: bakedPayload,
+          status: "pending",
+          runAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minute window for physician acknowledgment
+        });
+
+        after(() => {
+          withTenantContext(hospitalId, async (tx) => {
+            try {
+              await tx.update(backgroundJobs)
+                .set({ status: "processing", attempts: sql`${backgroundJobs.attempts} + 1`, updatedAt: new Date() })
+                .where(eq(backgroundJobs.id, job.id));
+
+              await dispatchCriticalLabAlerts(hospitalId, bakedPayload, tx);
+
+              await tx.update(backgroundJobs)
+                .set({ status: "completed", updatedAt: new Date() })
+                .where(eq(backgroundJobs.id, job.id));
+            } catch (err) {
+              console.error("[CRITICAL LAB ALERT GATEWAY] Asynchronous alert dispatch failed:", err);
+              await tx.update(backgroundJobs)
+                .set({
+                  status: "failed",
+                  lastError: err instanceof Error ? err.message : String(err),
+                  updatedAt: new Date()
+                })
+                .where(eq(backgroundJobs.id, job.id));
+            }
+          }).catch((err) => console.error("[TENANT CONTEXT] Failed to establish background context for lab alerts:", err));
+        });
+      }
 
       // 6. Check if all items are completed to mark order as completed
       const remainingItems = await tx
@@ -511,4 +581,238 @@ export async function acknowledgeCriticalAlert(alertId: string) {
     console.error("[LAB_ACTION] acknowledgeCriticalAlert error:", error);
     return { success: false, error: "Failed to acknowledge alert" };
   }
+}
+
+/**
+ * Helper to dispatch critical laboratory alerts with serverless execution guarantee.
+ * Aggregates all critical findings in a single submission for a specific order.
+ */
+async function dispatchCriticalLabAlerts(
+  hospitalId: string,
+  payload: {
+    orderId: string;
+    criticalItemIds: string[];
+    patientNameAr?: string;
+    patientNameEn?: string;
+    doctorNameAr?: string;
+    doctorNameEn?: string;
+    doctorPhone?: string;
+  },
+  tx: Parameters<Parameters<typeof withTenantContext>[1]>[0]
+) {
+  const { orderId, criticalItemIds } = payload;
+  try {
+    // 0. Fetch hospital settings for WhatsApp template verification
+    const settings = await tx
+      .select({ approvedWhatsappTemplates: hospitalSettings.approvedWhatsappTemplates })
+      .from(hospitalSettings)
+      .where(eq(hospitalSettings.hospitalId, hospitalId))
+      .limit(1)
+      .then((res) => res[0]);
+
+    const isWhatsAppApproved = settings?.approvedWhatsappTemplates?.includes("critical_lab_result_alert");
+
+    // 1. Fetch Order Metadata (Patient & Admission link only, names are in payload)
+    const orderData = await tx
+      .select({
+        patientId: labOrders.patientId,
+        admissionId: labOrders.admissionId,
+        departmentId: admissions.departmentId,
+      })
+      .from(labOrders)
+      .leftJoin(admissions, eq(labOrders.admissionId, admissions.id))
+      .where(and(
+        eq(labOrders.id, orderId),
+        eq(labOrders.hospitalId, hospitalId)
+      ))
+      .limit(1)
+      .then((res) => res[0]);
+
+    if (!orderData) return;
+
+    // 2. Resolve Patient Location (Safety Fix for Ward Awareness)
+    let locationEn = "Outpatient / General";
+    let locationAr = "عيادة خارجية / عام";
+
+    if (orderData.admissionId) {
+      const locData = await tx
+        .select({
+          roomNumber: rooms.roomNumber,
+          bedNumber: beds.bedNumber,
+        })
+        .from(admissions)
+        .leftJoin(beds, eq(admissions.bedId, beds.id))
+        .leftJoin(rooms, eq(beds.roomId, rooms.id))
+        .where(eq(admissions.id, orderData.admissionId))
+        .limit(1)
+        .then((res) => res[0]);
+
+      if (locData) {
+        locationEn = `Room ${locData.roomNumber}, Bed ${locData.bedNumber}`;
+        locationAr = `غرفة ${locData.roomNumber}، سرير ${locData.bedNumber}`;
+      }
+    }
+
+    // 3. Fetch all critical item details for this batch
+    const items = await tx
+      .select({
+        testNameAr: labTests.nameAr,
+        testNameEn: labTests.nameEn,
+        resultValue: labOrderItems.resultValue,
+        normalRange: labTests.normalRange,
+      })
+      .from(labOrderItems)
+      .innerJoin(labTests, eq(labOrderItems.labTestId, labTests.id))
+      .where(inArray(labOrderItems.id, criticalItemIds));
+
+    if (items.length === 0) return;
+
+    // 4. Construct Aggregated Payload
+    const findingsEn = items.map(i => `${i.testNameEn}: ${i.resultValue} (Ref: ${i.normalRange || "N/A"})`).join(", ");
+    const findingsAr = items.map(i => `${i.testNameAr}: ${i.resultValue} (الطبيعي: ${i.normalRange || "غير محدد"})`).join("، ");
+
+    const alertPayloadBase = {
+      hospitalId,
+      patientId: orderData.patientId,
+      reminderType: "CRITICAL_LAB_ALERT",
+      entityType: "clinical_alert" as const,
+      entityId: orderId,
+      approvedWhatsappTemplates: settings?.approvedWhatsappTemplates || [],
+    };
+
+    // A. Alert Ordering Physician
+    if (payload.doctorPhone) {
+      await sendResilientClinicalAlert({
+        ...alertPayloadBase,
+        phoneNumber: payload.doctorPhone,
+        messageAr: `🚨 [تنبيه مخبري حرج] د. ${payload.doctorNameAr || ""}\nالمريض: ${payload.patientNameAr || ""}\nالنتائج: ${findingsAr}\nالموقع: ${locationAr}\nيرجى المراجعة فوراً.`,
+        messageEn: `🚨 [CRITICAL LAB ALERT] Dr. ${payload.doctorNameEn || ""}\nPatient: ${payload.patientNameEn || ""}\nResults: ${findingsEn}\nLocation: ${locationEn}\nPlease review immediately.`,
+        channelPriority: isWhatsAppApproved ? ["whatsapp", "sms"] : ["sms"],
+        whatsappTemplate: isWhatsAppApproved ? {
+          name: "critical_lab_result_alert",
+          languageCode: "ar",
+          parameters: [
+            payload.doctorNameAr || "طبيب",
+            payload.patientNameAr || "مريض",
+            items.map(i => i.testNameAr).join(" - "),
+            items.map(i => `${i.resultValue} [${i.normalRange || "N/A"}]`).join(" - "),
+            locationAr
+          ]
+        } : undefined
+      });
+    }
+
+    // B. Alert Active Ward Nurse Desk (Routing to nurses currently on shift in the patient's department)
+    const activeNurses = await tx
+      .select({ phone: staff.phone })
+      .from(staff)
+      .innerJoin(shifts, eq(staff.id, shifts.staffId))
+      .where(and(
+        eq(staff.hospitalId, hospitalId),
+        inArray(staff.role, ["NURSE", "OR_NURSE"]),
+        eq(staff.isActive, true),
+        eq(shifts.status, "active"),
+        isNull(shifts.endTime),
+        // If admitted, target nurses in that department, otherwise all active nurses
+        orderData.departmentId
+          ? eq(shifts.departmentId, orderData.departmentId)
+          : sql`true`
+      ));
+
+    for (const nurse of activeNurses) {
+      if (nurse.phone) {
+        await sendResilientClinicalAlert({
+          ...alertPayloadBase,
+          phoneNumber: nurse.phone,
+          messageAr: `🚨 [تنبيه تمريض] نتائج مخبرية حرجة للمريض ${payload.patientNameAr || ""}\nالنتائج: ${findingsAr}\nالموقع: ${locationAr}\nتم إبلاغ الطبيب المعالج.`,
+          messageEn: `🚨 [NURSING ALERT] Critical lab results for patient ${payload.patientNameEn || ""}\nResults: ${findingsEn}\nLocation: ${locationEn}\nAttending physician has been notified.`,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[CRITICAL LAB ALERT GATEWAY] Failed to dispatch out-of-band alerts:", error);
+  }
+}
+
+/**
+ * Worker handler for lab alert escalation.
+ * Checks if critical items are acknowledged; if not, alerts the Registrar or Consultant on duty.
+ */
+export async function processEscalateLabAlert(jobId: string, hospitalId: string) {
+  return await withTenantContext(hospitalId, async (tx) => {
+    const [job] = await tx
+      .select()
+      .from(backgroundJobs)
+      .where(and(eq(backgroundJobs.id, jobId), eq(backgroundJobs.hospitalId, hospitalId)))
+      .limit(1);
+
+    if (!job || job.jobType !== "escalate_critical_lab_alert") return;
+
+    const payload = job.payload as {
+      orderId: string;
+      criticalItemIds: string[];
+      patientNameAr?: string;
+      patientNameEn?: string;
+    };
+    const { orderId, criticalItemIds } = payload;
+
+    // 1. Check for unacknowledged alerts in this batch
+    const unacknowledgedAlerts = await tx
+      .select()
+      .from(criticalValueAlerts)
+      .where(and(
+        inArray(criticalValueAlerts.labOrderItemId, criticalItemIds),
+        eq(criticalValueAlerts.acknowledgedByDoctor, false),
+        eq(criticalValueAlerts.hospitalId, hospitalId)
+      ));
+
+    if (unacknowledgedAlerts.length === 0) {
+      // All alerts acknowledged, no escalation needed
+      return;
+    }
+
+    // 2. Fetch escalation targets (On-Duty Doctors/Consultants in the same department)
+    // We fetch Order Metadata to find the department
+    const orderData = await tx
+      .select({
+        departmentId: admissions.departmentId,
+      })
+      .from(labOrders)
+      .leftJoin(admissions, eq(labOrders.admissionId, admissions.id))
+      .where(eq(labOrders.id, orderId))
+      .limit(1)
+      .then(res => res[0]);
+
+    if (!orderData) return;
+
+    const escalationTargets = await tx
+      .select({ phone: staff.phone, nameEn: staff.nameEn })
+      .from(staff)
+      .innerJoin(shifts, eq(staff.id, shifts.staffId))
+      .where(and(
+        eq(staff.hospitalId, hospitalId),
+        inArray(staff.role, ["DOCTOR", "SURGEON"]), // Escalating to senior clinical staff
+        eq(staff.isActive, true),
+        eq(shifts.status, "active"),
+        isNull(shifts.endTime),
+        orderData.departmentId
+          ? eq(shifts.departmentId, orderData.departmentId)
+          : sql`true`
+      ));
+
+    // 3. Dispatch Escalation Alerts
+    for (const target of escalationTargets) {
+      if (target.phone) {
+        await sendResilientClinicalAlert({
+          hospitalId,
+          phoneNumber: target.phone,
+          messageAr: `⚠️ [تصعيد طارئ] نتائج مخبرية حرجة للمريض ${payload.patientNameAr || "غير محدد"} لم يتم استلامها منذ 10 دقائق. يرجى التدخل الفوري.`,
+          messageEn: `⚠️ [ESCALATION ALERT] Critical lab results for patient ${payload.patientNameEn || "Unknown"} remain unacknowledged for 10 mins. Immediate clinical review required.`,
+          reminderType: "CRITICAL_LAB_ESCALATION",
+          entityType: "clinical_alert",
+          entityId: orderId,
+        });
+      }
+    }
+  });
 }
