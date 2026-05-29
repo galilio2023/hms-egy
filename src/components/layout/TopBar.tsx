@@ -145,8 +145,8 @@ export function TopBar({ onSearchClick, onMobileMenuClick }: TopBarProps) {
             className="p-2 hover:bg-muted/80 rounded-xl border border-border text-muted-foreground hover:text-foreground relative transition-all duration-200 hover:shadow-sm"
           >
             <motion.div
-              animate={isNotificationOpen ? { rotate: [0, -10, 10, -10, 10, 0] } : {}}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
+              animate={isNotificationOpen ? { rotate: [0, -10, 10, -10, 10, 0] } : { rotate: 0 }}
+              transition={{ type: "tween", duration: 0.35, ease: "easeInOut" }}
             >
               <Bell className="h-4.5 w-4.5" />
             </motion.div>
