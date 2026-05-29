@@ -1,11 +1,10 @@
-import { latinizeNumerals } from "@/lib/utils/egypt";
-
 /**
- * Removes Arabic vocalization marks (Tashkeel) to ensure consistent dictionary matching.
- * Comprehensive range includes standard harakat, shadda, sukun, and dagger alif.
+ * Removes Arabic vocalization marks (Tashkeel) and Kashida (Tatweel) to ensure
+ * consistent dictionary matching and prevent orthographic bypasses.
+ * Comprehensive range includes standard harakat, shadda, sukun, dagger alif, and kashida.
  */
 function stripTashkeel(text: string): string {
-  return text.replace(/[\u064B-\u065F\u0670]/g, "");
+  return text.replace(/[\u064B-\u065F\u0670\u0640]/g, "");
 }
 
 /**
@@ -139,8 +138,7 @@ const MENTION_PATTERN = new RegExp(
  * contains clinical context tokens that would indicate it's a preposition.
  */
 function shouldBypassAliRedaction(nameMatch: string, remainingText: string): boolean {
-  const strippedName = stripTashkeel(nameMatch).trim();
-  const normalizedName = strippedName.replace(/ى/g, "ي");
+  const normalizedName = nameMatch.trim().replace(/ى/g, "ي");
   const startsWithAli = normalizedName === "علي" || normalizedName.startsWith("علي ");
 
   if (!startsWithAli) return false;
@@ -148,7 +146,7 @@ function shouldBypassAliRedaction(nameMatch: string, remainingText: string): boo
   const fullTextAfterName = (nameMatch + " " + remainingText).trim();
   const tokens = fullTextAfterName.split(/[\s\p{P}]+/u).slice(0, 7);
 
-  return tokens.some(token => CLINICAL_BYPASS_RE.test(stripTashkeel(token)));
+  return tokens.some(token => CLINICAL_BYPASS_RE.test(token));
 }
 
 /**
@@ -212,21 +210,33 @@ export function anonymizePatientData(input: any, seen = new WeakSet()): any {
   sanitized = sanitized.replace(PHONE_PATTERN_2, (match, p1) => `${p1}[PHONE_NUMBER]`);
 
   // 3. Scrub common name prefixes and multi-word names (Arabic & English)
-  sanitized = sanitized.replace(COMBINED_PATTERN_AR, (match, p1, p2, offset) => {
+  sanitized = sanitized.replace(COMBINED_PATTERN_AR, (...args) => {
+    const match = args[0];
+    const p1 = args[1];
+    const p2 = args[2];
+    const offset = args[args.length - 2] as number;
+
     if (typeof p2 !== "string") return match;
     const remainingText = sanitized.substring(offset + match.length);
     if (shouldBypassAliRedaction(p2, remainingText)) return match;
     return `${p1}[PATIENT_NAME]`;
   });
 
-  sanitized = sanitized.replace(PREFIX_PATTERN_EN, (match, p1, p2, p3, offset) => {
-    // English prefix pattern might have more groups, but we only care about p1 and p2 if they exist
+  sanitized = sanitized.replace(PREFIX_PATTERN_EN, (...args) => {
+    const match = args[0];
+    const p1 = args[1];
+    // English prefix pattern might have more groups, but we only care about p1 (prefix + space)
     if (typeof p1 !== "string") return match;
     return `${p1}[PATIENT_NAME]`;
   });
 
   // 4. Scrub explicit name mentions like "Patient name is [X]" or "اسمه [X]"
-  sanitized = sanitized.replace(MENTION_PATTERN, (match, p1, p2, offset) => {
+  sanitized = sanitized.replace(MENTION_PATTERN, (...args) => {
+    const match = args[0];
+    const p1 = args[1];
+    const p2 = args[2];
+    const offset = args[args.length - 2] as number;
+
     if (typeof p2 !== "string") return match;
     const remainingText = sanitized.substring(offset + match.length);
     if (shouldBypassAliRedaction(p2, remainingText)) return match;
