@@ -1,7 +1,6 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { withTenantContext } from "@/lib/db/tenant";
 import { labTests, labOrders, labOrderItems, criticalValueAlerts } from "@db/schema/laboratory";
 import { staff, hospitals, hospitalSettings } from "@db/schema/core";
 import { admissions, beds, rooms } from "@db/schema/clinical";
