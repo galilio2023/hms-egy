@@ -68,36 +68,50 @@ export async function POST(req: NextRequest) {
 
       for (const field of floatFields) {
         if (payload[field] !== undefined) {
-          const val = safeParseFloat(payload[field] as string);
-          if (val !== undefined && isNaN(val)) {
-            return NextResponse.json({ error: `Invalid numeric value for ${field}` }, { status: 400 });
+          if (payload[field] === "" || payload[field] === null) {
+            sanitizedPayload[field] = null; // Enable field clearing in DB
+          } else {
+            const val = safeParseFloat(payload[field] as string);
+            if (val !== undefined && isNaN(val)) {
+              return NextResponse.json({ error: `Invalid numeric value for ${field}` }, { status: 400 });
+            }
+            sanitizedPayload[field] = val;
           }
-          sanitizedPayload[field] = val;
         }
       }
 
       for (const field of intFields) {
         if (payload[field] !== undefined) {
-          const val = safeParseInt(payload[field] as string);
-          if (val === undefined && payload[field] !== "" && payload[field] !== null) {
-            // safeParseInt returns undefined if it's NaN.
-            // We only want to error if it's truly a bad numeric string.
-            if (isNaN(parseInt(payload[field] as string, 10))) {
-              return NextResponse.json({ error: `Invalid integer value for ${field}` }, { status: 400 });
+          if (payload[field] === "" || payload[field] === null) {
+            sanitizedPayload[field] = null; // Enable field clearing in DB
+          } else {
+            const val = safeParseInt(payload[field] as string);
+            if (val === undefined && payload[field] !== "" && payload[field] !== null) {
+              // safeParseInt returns undefined if it's NaN.
+              // We only want to error if it's truly a bad numeric string.
+              if (isNaN(parseInt(payload[field] as string, 10))) {
+                return NextResponse.json({ error: `Invalid integer value for ${field}` }, { status: 400 });
+              }
             }
+            sanitizedPayload[field] = val;
           }
-          sanitizedPayload[field] = val;
         }
       }
     }
 
-    // 2. Fetch current server state
+    // 2. Fetch current server state (Strict Schema Selection)
+    const selectFields: Record<string, any> = {
+      version: (table as any).version,
+      updatedAt: (table as any).updatedAt,
+    };
+
+    // Safely check if hospitalId exists in the schema to prevent runtime SQL errors
+    if ("hospitalId" in table) {
+      selectFields.hospitalId = (table as any).hospitalId;
+    }
+
     const [currentRecord] = await db
-      .select({
-        version: table.version,
-        updatedAt: table.updatedAt,
-        hospitalId: (table as any).hospitalId,
-      })
+      .select(selectFields)
       .from(table)
       .where(eq(table.id, entityId))
       .limit(1);

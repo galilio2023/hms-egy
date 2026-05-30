@@ -357,17 +357,47 @@ export default function AdmissionsDashboardClient({
     try {
       const parsedTemp = vitalsInput.temperature ? safeParseFloat(vitalsInput.temperature) : undefined;
       const parsedWeight = vitalsInput.weightKg ? safeParseFloat(vitalsInput.weightKg) : undefined;
+      const parsedBpSys = vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined;
+      const parsedBpDia = vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined;
+      const parsedHr = vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined;
+      const parsedRr = vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined;
+      const parsedSpo2 = vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined;
+      const parsedHt = vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined;
+
+      // UI Validation: Block and notify user of invalid numeric entries
+      if (parsedTemp !== undefined && isNaN(parsedTemp)) {
+        toast.error(isRtl ? "الرجاء إدخال درجة حرارة صحيحة (مثال: ٣٧.٥)" : "Please enter a valid temperature (e.g. 37.5)");
+        setIsRecordingVitals(false);
+        return;
+      }
+      if (parsedWeight !== undefined && isNaN(parsedWeight)) {
+        toast.error(isRtl ? "الرجاء إدخال وزن صحيح (مثال: ٧٠.٢)" : "Please enter a valid weight (e.g. 70.2)");
+        setIsRecordingVitals(false);
+        return;
+      }
+      if (
+        (parsedBpSys === undefined && vitalsInput.bpSystolic !== "") ||
+        (parsedBpDia === undefined && vitalsInput.bpDiastolic !== "") ||
+        (parsedHr === undefined && vitalsInput.heartRate !== "") ||
+        (parsedRr === undefined && vitalsInput.respiratoryRate !== "") ||
+        (parsedSpo2 === undefined && vitalsInput.oxygenSaturation !== "") ||
+        (parsedHt === undefined && vitalsInput.heightCm !== "")
+      ) {
+        toast.error(isRtl ? "الرجاء إدخال أرقام صحيحة في جميع الحقول" : "Please enter valid numeric values in all fields.");
+        setIsRecordingVitals(false);
+        return;
+      }
 
       const payload = {
         patientId: selectedBed.patientId,
-        bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
-        bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,
-        heartRate: vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined,
-        respiratoryRate: vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined,
-        temperature: (parsedTemp !== undefined && !isNaN(parsedTemp)) ? String(parsedTemp) : undefined,
-        oxygenSaturation: vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined,
-        weightKg: (parsedWeight !== undefined && !isNaN(parsedWeight)) ? String(parsedWeight) : undefined,
-        heightCm: vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined,
+        bloodPressureSystolic: parsedBpSys,
+        bloodPressureDiastolic: parsedBpDia,
+        heartRate: parsedHr,
+        respiratoryRate: parsedRr,
+        temperature: parsedTemp !== undefined ? String(parsedTemp) : undefined,
+        oxygenSaturation: parsedSpo2,
+        weightKg: parsedWeight !== undefined ? String(parsedWeight) : undefined,
+        heightCm: parsedHt,
       };
 
       const res = await recordInpatientVitals(payload);

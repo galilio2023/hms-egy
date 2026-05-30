@@ -6,6 +6,7 @@
 import { format, formatDistanceToNow, differenceInDays, differenceInWeeks, differenceInMonths, differenceInYears } from "date-fns";
 import { arEG } from "date-fns/locale";
 import { tafqeet } from "./tafqeet";
+import { latinizeNumerals } from "./egypt";
 
 /**
  * Formats amount in Egyptian Pounds (EGP).
@@ -32,11 +33,16 @@ export function toEasternArabicNumerals(n: number | string): string {
 /**
  * Safely parses a string into an integer.
  * Always uses radix 10 and returns undefined instead of NaN for invalid inputs.
+ * Supports Eastern Arabic numerals.
  */
 export function safeParseInt(val: string | number | undefined | null): number | undefined {
   if (val === undefined || val === null || val === "") return undefined;
   if (typeof val === "number") return isNaN(val) ? undefined : Math.floor(val);
-  const parsed = parseInt(val, 10);
+
+  // Normalize Eastern Arabic numerals using robust utility
+  const normalized = latinizeNumerals(val.trim());
+
+  const parsed = parseInt(normalized, 10);
   return isNaN(parsed) ? undefined : parsed;
 }
 
@@ -44,19 +50,22 @@ export function safeParseInt(val: string | number | undefined | null): number | 
  * Safely parses a string into a float.
  * Returns undefined for empty/nullish inputs.
  * Returns NaN for invalid numeric strings to allow callers to handle errors.
+ * Supports Eastern Arabic numerals and Arabic decimal separators.
  */
 export function safeParseFloat(val: string | number | undefined | null): number | undefined {
   if (val === undefined || val === null || val === "") return undefined;
   if (typeof val === "number") return isNaN(val) ? undefined : val;
 
+  // Normalize Eastern Arabic numerals and decimal separators
+  const normalized = latinizeNumerals(val.trim().replace(/[٫،]/g, "."));
+
   // Use a strict regex to ensure the entire string is a valid number
   // to prevent parseFloat from partially parsing strings like "12.3.4"
-  const trimmed = val.trim();
-  if (!/^-?\d*(\.\d*)?$/.test(trimmed) || trimmed === "." || trimmed === "-") {
+  if (!/^-?\d*(\.\d*)?$/.test(normalized) || normalized === "." || normalized === "-") {
     return NaN;
   }
 
-  const parsed = parseFloat(trimmed);
+  const parsed = parseFloat(normalized);
   return parsed;
 }
 
