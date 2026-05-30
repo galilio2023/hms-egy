@@ -36,16 +36,19 @@ export function toEasternArabicNumerals(n: number | string): string {
  * Supports Eastern Arabic numerals.
  */
 export function safeParseInt(val: string | number | undefined | null): number | undefined {
-  if (val === undefined || val === null || val === "") return undefined;
+  if (val === undefined || val === null) return undefined;
   if (typeof val === "number") return isNaN(val) ? undefined : Math.floor(val);
 
-  // Normalize Eastern Arabic numerals
-  const normalized = latinizeNumerals(val.trim());
+  const trimmed = val.trim();
+  if (trimmed === "") return undefined;
+
+  // Normalize Eastern Arabic numerals and strip thousand separators (، and ,)
+  const normalized = latinizeNumerals(trimmed.replace(/[،,]/g, ""));
   const parsed = parseInt(normalized, 10);
 
   // Ensure it's a valid integer and that the entire string was consumed correctly
   const num = Number(normalized);
-  if (isNaN(parsed) || isNaN(num) || !Number.isInteger(num)) return undefined;
+  if (normalized === "" || isNaN(parsed) || isNaN(num) || !Number.isInteger(num)) return undefined;
   return parsed;
 }
 
@@ -55,14 +58,18 @@ export function safeParseInt(val: string | number | undefined | null): number | 
  * Supports Eastern Arabic numerals and Arabic decimal separators.
  */
 export function safeParseFloat(val: string | number | undefined | null): number | undefined {
-  if (val === undefined || val === null || val === "") return undefined;
+  if (val === undefined || val === null) return undefined;
   if (typeof val === "number") return isNaN(val) ? undefined : val;
 
-  // Normalize Eastern Arabic numerals and decimal separators
-  const normalized = latinizeNumerals(val.trim().replace(/[٫،]/g, "."));
+  const trimmed = val.trim();
+  if (trimmed === "") return undefined;
+
+  // Normalize Eastern Arabic numerals, decimal separators (٫), and strip thousand separators (، and ,)
+  const normalized = latinizeNumerals(trimmed.replace(/٫/g, ".").replace(/[،,]/g, ""));
   const parsed = Number(normalized);
 
-  return isNaN(parsed) ? undefined : parsed;
+  if (normalized === "" || isNaN(parsed)) return undefined;
+  return parsed;
 }
 
 /**

@@ -486,6 +486,11 @@ export class LocalSyncEngine {
   private async quarantineConflict(op: SyncOperation, reason: string): Promise<void> {
     if (typeof window !== "undefined" && window.indexedDB) {
       try {
+        if (!sessionSecret) {
+          console.error("[EDGE SYNC] Cannot quarantine: sessionSecret is missing.");
+          return;
+        }
+
         const quarantineKey = `hms_egypt_conflict_quarantine:${op.id}`;
         const data = {
           ...op,
@@ -493,7 +498,7 @@ export class LocalSyncEngine {
           quarantinedAt: Date.now()
         };
 
-        const encrypted = await encryptPayload(JSON.stringify(data), sessionSecret!);
+        const encrypted = await encryptPayload(JSON.stringify(data), sessionSecret);
         await idbStore.set(quarantineKey, encrypted);
 
         console.warn(`[EDGE SYNC] Operation ${op.id} moved to conflict quarantine.`);

@@ -394,9 +394,9 @@ export default function AdmissionsDashboardClient({
         bloodPressureDiastolic: parsedBpDia,
         heartRate: parsedHr,
         respiratoryRate: parsedRr,
-        temperature: parsedTemp !== undefined ? String(parsedTemp) : undefined,
+        temperature: parsedTemp,
         oxygenSaturation: parsedSpo2,
-        weightKg: parsedWeight !== undefined ? String(parsedWeight) : undefined,
+        weightKg: parsedWeight,
         heightCm: parsedHt,
       };
 
