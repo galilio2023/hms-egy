@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     };
 
     // Safely check if hospitalId exists in the schema to prevent runtime SQL errors
-    if ("hospitalId" in table) {
+    if (table && "hospitalId" in (table as any).$columns) {
       selectFields.hospitalId = (table as any).hospitalId;
     }
 

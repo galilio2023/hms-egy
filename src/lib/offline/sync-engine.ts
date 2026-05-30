@@ -22,7 +22,7 @@ export interface SyncResult {
   failures: { opId: string; reason: string }[];
 }
 
-// AES-GCM encryption/decryption keys
+// AES-GCM encryption/decryption keys (scoped to module)
 let cryptoKeyCache: CryptoKey | null = null;
 let sessionSecret: string | null = null;
 
@@ -33,6 +33,7 @@ let sessionSecret: string | null = null;
 export function initializeSyncEngineKey(secretFromSession: string) {
   sessionSecret = secretFromSession;
   cryptoKeyCache = null; // Reset cache so key is derived using new secret
+  edgeSyncEngine.setSessionSecret(secretFromSession);
   if (typeof window !== "undefined") {
     edgeSyncEngine.ensureInitialized().catch((err) =>
       console.error("[EDGE CACHE] Failed to restore from persistent cache with session key:", err)
@@ -47,6 +48,7 @@ export function initializeSyncEngineKey(secretFromSession: string) {
 export function purgeSyncEngineKey() {
   sessionSecret = null;
   cryptoKeyCache = null;
+  edgeSyncEngine.setSessionSecret(null);
   edgeSyncEngine.clearInMemoryOutbox();
   if (typeof window !== "undefined") {
     console.log("[EDGE SECURITY] Successfully purged dynamic encryption keys and memory outbox.");
@@ -218,6 +220,7 @@ const idbStore = new IndexedDBStore();
 
 export class LocalSyncEngine {
   private inMemoryOutbox: SyncOperation[] = [];
+  private sessionSecret: string | null = null;
   private isSyncing = false;
   private isOnline = true;
   private isQuarantined = false;
@@ -346,7 +349,7 @@ export class LocalSyncEngine {
     if (typeof window !== "undefined" && window.indexedDB) {
       try {
         const rawData = JSON.stringify(this.inMemoryOutbox);
-        const secretKey = sessionSecret;
+        const secretKey = this.sessionSecret;
         if (!secretKey) {
           throw new Error("[SECURITY ALERT] Unauthorized write attempt: Encryption key not initialized.");
         }
@@ -363,7 +366,7 @@ export class LocalSyncEngine {
    * Load cache on initialization.
    */
   async loadFromPersistentCache() {
-    if (!sessionSecret) {
+    if (!this.sessionSecret) {
       console.warn("[EDGE CACHE] Cannot load persistent cache: Encryption key not initialized yet.");
       return;
     }
@@ -371,7 +374,7 @@ export class LocalSyncEngine {
       try {
         const cached = await idbStore.get("hms_egypt_edge_outbox");
         if (cached) {
-          const decrypted = await decryptPayload(cached, sessionSecret);
+          const decrypted = await decryptPayload(cached, this.sessionSecret);
           this.inMemoryOutbox = JSON.parse(decrypted);
           this.isQuarantined = false;
           console.log(`[EDGE CACHE] Restored ${this.inMemoryOutbox.length} pending operations from persistent store.`);
@@ -451,7 +454,7 @@ export class LocalSyncEngine {
     if (response.status === 409) {
       const errorData = await response.json();
       console.error(`[EDGE SYNC] [CONFLICT] ${errorData.message}. Quarantining conflict for manual resolution.`);
-      
+
       // Move to quarantine instead of discarding
       await this.quarantineConflict(op, errorData.message || "Conflict detected");
 
@@ -486,7 +489,7 @@ export class LocalSyncEngine {
   private async quarantineConflict(op: SyncOperation, reason: string): Promise<void> {
     if (typeof window !== "undefined" && window.indexedDB) {
       try {
-        if (!sessionSecret) {
+        if (!this.sessionSecret) {
           console.error("[EDGE SYNC] Cannot quarantine: sessionSecret is missing.");
           return;
         }
@@ -498,7 +501,7 @@ export class LocalSyncEngine {
           quarantinedAt: Date.now()
         };
 
-        const encrypted = await encryptPayload(JSON.stringify(data), sessionSecret);
+        const encrypted = await encryptPayload(JSON.stringify(data), this.sessionSecret);
         await idbStore.set(quarantineKey, encrypted);
 
         console.warn(`[EDGE SYNC] Operation ${op.id} moved to conflict quarantine.`);
@@ -506,6 +509,13 @@ export class LocalSyncEngine {
         console.error("[EDGE CACHE] Failed to quarantine conflict:", err);
       }
     }
+  }
+
+  /**
+   * Internal setter for session secret.
+   */
+  setSessionSecret(secret: string | null) {
+    this.sessionSecret = secret;
   }
 }
 

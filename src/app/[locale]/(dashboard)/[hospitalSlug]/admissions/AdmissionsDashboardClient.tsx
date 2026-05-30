@@ -365,23 +365,23 @@ export default function AdmissionsDashboardClient({
       const parsedHt = vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined;
 
       // UI Validation: Block and notify user of invalid numeric entries using unified undefined checks
-      if (parsedTemp === undefined && vitalsInput.temperature !== "") {
+      if (vitalsInput.temperature && parsedTemp === undefined) {
         toast.error(t("validation.invalidTemperature"));
         setIsRecordingVitals(false);
         return;
       }
-      if (parsedWeight === undefined && vitalsInput.weightKg !== "") {
+      if (vitalsInput.weightKg && parsedWeight === undefined) {
         toast.error(t("validation.invalidWeight"));
         setIsRecordingVitals(false);
         return;
       }
       if (
-        (parsedBpSys === undefined && vitalsInput.bpSystolic !== "") ||
-        (parsedBpDia === undefined && vitalsInput.bpDiastolic !== "") ||
-        (parsedHr === undefined && vitalsInput.heartRate !== "") ||
-        (parsedRr === undefined && vitalsInput.respiratoryRate !== "") ||
-        (parsedSpo2 === undefined && vitalsInput.oxygenSaturation !== "") ||
-        (parsedHt === undefined && vitalsInput.heightCm !== "")
+        (vitalsInput.bpSystolic && parsedBpSys === undefined) ||
+        (vitalsInput.bpDiastolic && parsedBpDia === undefined) ||
+        (vitalsInput.heartRate && parsedHr === undefined) ||
+        (vitalsInput.respiratoryRate && parsedRr === undefined) ||
+        (vitalsInput.oxygenSaturation && parsedSpo2 === undefined) ||
+        (vitalsInput.heightCm && parsedHt === undefined)
       ) {
         toast.error(t("validation.invalidVitals"));
         setIsRecordingVitals(false);
