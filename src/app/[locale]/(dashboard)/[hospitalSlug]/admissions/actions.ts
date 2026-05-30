@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { withTenantContext } from "@/lib/db/tenant";
-import { beds, admissions, dischargeSummaries, vitalsFlowsheet, rooms } from "@db/schema/clinical";
+import { beds, admissions, dischargeSummaries, vitalsFlowsheet } from "@db/schema/clinical";
 import { housekeepingTasks } from "@db/schema/housekeeping";
 import { staff, hospitalSettings } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
@@ -12,10 +12,9 @@ import { eq, and, isNull, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { type User } from "@/types/auth-api.types";
-import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { AppError, ErrorCode } from "@/lib/utils/errors";
-import { validateVitals } from "./clinical";
+import { validateVitals } from "@/lib/actions/clinical";
 import { normalizeDecimal } from "@/lib/utils/egypt";
 import { calculateMEWS } from "@/lib/clinical/mews";
 import { sendResilientClinicalAlert } from "@/lib/sms/client";
@@ -215,7 +214,7 @@ export async function dischargePatient(payload: DischargePatientPayload) {
       const dischargingDoctorId = currentStaff?.id || admission.admittingDoctorId;
 
       // 2. Insert Discharge Summary
-      const [newSummary] = await tx
+      await tx
         .insert(dischargeSummaries)
         .values({
           hospitalId,
@@ -225,8 +224,7 @@ export async function dischargePatient(payload: DischargePatientPayload) {
           summaryEn: payload.summaryEn,
           dischargeCondition: payload.dischargeCondition,
           followUpInstructions: payload.followUpInstructions || null,
-        })
-        .returning();
+        });
 
       // 3. Mark the admission as discharged
       const now = new Date();

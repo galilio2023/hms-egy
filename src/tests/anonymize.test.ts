@@ -60,6 +60,7 @@ describe('Anonymization and Numeral Normalization', () => {
     });
 
     it('should handle circular references safely', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const input: any = { name: 'Patient Ahmed' };
       input.self = input;
       const output = anonymizePatientData(input);

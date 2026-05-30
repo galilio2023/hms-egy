@@ -3,7 +3,8 @@
  * consistent dictionary matching and prevent orthographic bypasses.
  * Comprehensive range includes standard harakat, shadda, sukun, dagger alif, and kashida.
  */
-function stripTashkeel(text: string): string {
+function stripTashkeel(text: unknown): string {
+  if (typeof text !== "string") return "";
   return text.replace(/[\u064B-\u065F\u0670\u0640]/g, "");
 }
 
@@ -35,7 +36,7 @@ const START_BOUNDARY = "(?:^|[\\s\\p{P}])";
 const END_BOUNDARY = "(?=$|[\\s\\p{P}])";
 
 const NID_PATTERN = new RegExp(`(${START_BOUNDARY})[234\\u0662-\\u0664\\u06F2-\\u06F4]${ANY_DIGIT}{13}${END_BOUNDARY}`, "gu");
-const PHONE_PATTERN_1 = new RegExp(`(${START_BOUNDARY})(?:\\+?${DIGIT_2}${DIGIT_0}|${DIGIT_0})?${DIGIT_1}${DIGIT_1025}${ANY_DIGIT}{8}${END_BOUNDARY}`, "gu");
+const PHONE_PATTERN_1 = new RegExp(`(${START_BOUNDARY})(?:\\+?${DIGIT_2}${DIGIT_0}|${DIGIT_0})${DIGIT_1}${DIGIT_1025}${ANY_DIGIT}{8}${END_BOUNDARY}`, "gu");
 const PHONE_PATTERN_2 = new RegExp(`(${START_BOUNDARY})${DIGIT_0}{2}${DIGIT_2}${DIGIT_0}${DIGIT_1}${DIGIT_1025}${ANY_DIGIT}{8}${END_BOUNDARY}`, "gu");
 
 // 1. Arabic Prefix Dictionaries (Move to module scope for performance)
@@ -132,6 +133,9 @@ const MENTION_PATTERN = new RegExp(
   "gui"
 );
 
+// Define regex in module scope to prevent garbage collection overhead during batch processing
+const TOKEN_SPLIT_RE = /[\s\p{P}]+/gu;
+
 /**
  * Helper to handle the "على" (Ali/On) bypass logic.
  * If the identified name starts with "على", it checks if the subsequent text
@@ -144,7 +148,7 @@ function shouldBypassAliRedaction(nameMatch: string, remainingText: string): boo
   if (!startsWithAli) return false;
 
   const fullTextAfterName = (nameMatch + " " + remainingText).trim();
-  const tokens = fullTextAfterName.split(/[\s\p{P}]+/u).slice(0, 7);
+  const tokens = fullTextAfterName.split(TOKEN_SPLIT_RE).slice(0, 3);
 
   return tokens.some(token => CLINICAL_BYPASS_RE.test(token));
 }
@@ -160,6 +164,7 @@ function shouldBypassAliRedaction(nameMatch: string, remainingText: string): boo
  * 3. Scrubs explicit 14-digit National IDs and 11-digit phone numbers regardless of numeral system.
  * 4. Redacts common name prefixes and multi-word names while preserving clinical integrity via context-aware bypasses.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function anonymizePatientData(input: any, seen = new WeakSet()): any {
   if (input === null || input === undefined) return input;
 
@@ -180,6 +185,7 @@ export function anonymizePatientData(input: any, seen = new WeakSet()): any {
     }
 
     // Handle Plain Objects
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sanitizedObj: Record<string, any> = {};
     for (const [key, value] of Object.entries(input)) {
       sanitizedObj[key] = anonymizePatientData(value, seen);
@@ -195,12 +201,12 @@ export function anonymizePatientData(input: any, seen = new WeakSet()): any {
     try {
       const parsed = JSON.parse(input);
       return JSON.stringify(anonymizePatientData(parsed));
-    } catch (e) {
+    } catch {
       // Not valid JSON, proceed as normal string
     }
   }
 
-  let text = stripTashkeel(input);
+  const text = stripTashkeel(input);
 
   // 1. Scrub 14-digit Egyptian National ID patterns (Supports Western, Eastern, and Persian numerals)
   let sanitized = text.replace(NID_PATTERN, (match, p1) => `${p1}[NATIONAL_ID]`);
