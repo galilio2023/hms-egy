@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { invoices } from "@db/schema/billing";
-import { backgroundJobs } from "@db/schema/system";
+import { backgroundJobs, auditLogs } from "@db/schema/system";
 import { eq, and, sql } from "drizzle-orm";
 import { etaClient } from "@/lib/eta/client";
 import { transformInvoiceToETADocument } from "@/lib/eta/transformer";
@@ -78,11 +78,21 @@ export async function submitInvoiceToETA(invoiceId: string) {
     };
 
     let etaDoc;
+    let auditLog;
     try {
-      etaDoc = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+      const result = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+      etaDoc = result.document;
+      auditLog = result.auditLogPayload;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { success: false, error: message };
+    }
+
+    if (auditLog) {
+      await db.insert(auditLogs).values({
+        ...auditLog,
+        createdAt: new Date(),
+      });
     }
     
     // 3. Queue Background Job for ETA Submission
@@ -141,7 +151,16 @@ export async function processETAJob(jobId: string, hospitalId: string) {
       if (!decryptedSecret) throw new Error("Failed to decrypt ETA secret");
 
       const creds = { clientId: settings.etaClientId, clientSecret: decryptedSecret };
-      const etaDoc = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+      const result = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+      const etaDoc = result.document;
+      const auditLog = result.auditLogPayload;
+
+      if (auditLog) {
+        await tx.insert(auditLogs).values({
+          ...auditLog,
+          createdAt: new Date(),
+        });
+      }
 
       const response = await etaClient.submitDocuments([etaDoc], creds);
 

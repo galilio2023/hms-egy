@@ -355,15 +355,18 @@ export default function AdmissionsDashboardClient({
 
     setIsRecordingVitals(true);
     try {
+      const parsedTemp = vitalsInput.temperature ? safeParseFloat(vitalsInput.temperature) : undefined;
+      const parsedWeight = vitalsInput.weightKg ? safeParseFloat(vitalsInput.weightKg) : undefined;
+
       const payload = {
         patientId: selectedBed.patientId,
         bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
         bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,
         heartRate: vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined,
         respiratoryRate: vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined,
-        temperature: vitalsInput.temperature ? String(safeParseFloat(vitalsInput.temperature)) : undefined,
+        temperature: (parsedTemp !== undefined && !isNaN(parsedTemp)) ? String(parsedTemp) : undefined,
         oxygenSaturation: vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined,
-        weightKg: vitalsInput.weightKg ? String(safeParseFloat(vitalsInput.weightKg)) : undefined,
+        weightKg: (parsedWeight !== undefined && !isNaN(parsedWeight)) ? String(parsedWeight) : undefined,
         heightCm: vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined,
       };
 

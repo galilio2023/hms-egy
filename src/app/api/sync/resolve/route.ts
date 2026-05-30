@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Sanitize Payload (Security: Prevent Mass-Assignment)
-    let sanitizedPayload = {
+    let sanitizedPayload: Record<string, any> = {
       ...filterPayload(tableName, payload),
       hospitalId: userHospitalId, // Force tenant isolation from session
     };
@@ -95,11 +95,17 @@ export async function POST(req: NextRequest) {
     const [currentRecord] = await db
       .select({
         version: table.version,
-        updatedAt: table.updatedAt
+        updatedAt: table.updatedAt,
+        hospitalId: (table as any).hospitalId,
       })
       .from(table)
       .where(eq(table.id, entityId))
       .limit(1);
+
+    // 2b. Verify Resource Ownership (BOLA Fix)
+    if (currentRecord && currentRecord.hospitalId !== userHospitalId) {
+      return NextResponse.json({ error: "Unauthorized: Resource tenant mismatch." }, { status: 403 });
+    }
 
     if (!currentRecord) {
       if (action === "INSERT") {

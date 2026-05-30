@@ -450,18 +450,17 @@ export class LocalSyncEngine {
 
     if (response.status === 409) {
       const errorData = await response.json();
-      console.error(`[EDGE SYNC] [CONFLICT] ${errorData.message}. Discarding stale local mutation.`);
+      console.error(`[EDGE SYNC] [CONFLICT] ${errorData.message}. Quarantining conflict for manual resolution.`);
       
-      // Return true to remove from outbox, effectively discarding the stale mutation.
-      // This allows the sync to proceed to other operations.
+      // Move to quarantine instead of discarding
+      await this.quarantineConflict(op, errorData.message || "Conflict detected");
 
       // TRIGGER DOWNWARD PULL: Force refresh local IndexedDB state from server truth
-      // In a real production LSN, this would call a dedicated fetch/reconcile endpoint.
       this.fetchLatestServerState().catch(err =>
         console.error("[EDGE SYNC] Failed to trigger emergency downward pull after conflict:", err)
       );
 
-      return true;
+      return true; // Still return true to remove from active outbox, but it's now in quarantine
     }
 
     const errorText = await response.text();
@@ -477,6 +476,30 @@ export class LocalSyncEngine {
     console.log("[EDGE SYNC] Initiating emergency downward state reconciliation...");
     // Implementation would involve fetching from /api/sync/pull or similar
     // For now, we log the intent as the architectural boundary for this task.
+  }
+
+  /**
+   * Quarantines a conflicting operation for manual user reconciliation.
+   * Prevents silent clinical data loss while keeping the outbox unblocked.
+   */
+  private async quarantineConflict(op: SyncOperation, reason: string): Promise<void> {
+    if (typeof window !== "undefined" && window.indexedDB) {
+      try {
+        const existingQuarantineRaw = await idbStore.get("hms_egypt_conflict_quarantine");
+        const existingQuarantine = existingQuarantineRaw
+          ? JSON.parse(await decryptPayload(existingQuarantineRaw, sessionSecret!))
+          : [];
+
+        existingQuarantine.push({ ...op, quarantineReason: reason, quarantinedAt: Date.now() });
+
+        const encrypted = await encryptPayload(JSON.stringify(existingQuarantine), sessionSecret!);
+        await idbStore.set("hms_egypt_conflict_quarantine", encrypted);
+
+        console.warn(`[EDGE SYNC] Operation ${op.id} moved to conflict quarantine.`);
+      } catch (err) {
+        console.error("[EDGE CACHE] Failed to quarantine conflict:", err);
+      }
+    }
   }
 }
 

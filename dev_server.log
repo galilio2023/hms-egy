@@ -1,0 +1,27 @@
+
+> hms-egy@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 588ms
+
+○ Compiling /[locale]/login ...
+ GET /en/login?redirect=%2Fen%2Fal-shifa%2Fadmissions 200 in 10.5s (next.js: 9.9s, proxy.ts: 13ms, application-code: 632ms)
+○ Compiling /api/auth/[...all] ...
+⨯ Error: DATABASE_URL is not set
+    at module evaluation (src/lib/db/index.ts:15:9)
+    at module evaluation (src/lib/auth/index.ts:5:1)
+    at module evaluation (src/app/api/auth/[...all]/route.ts:1:1)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/[...all]/route.js:19:3)
+  13 |
+  14 | if (!process.env.DATABASE_URL) {
+> 15 |   throw new Error("DATABASE_URL is not set");
+     |         ^
+  16 | }
+  17 |
+  18 | // Enable websocket support for Node / serverless environments {
+  page: '/api/auth/get-session'
+}
+ GET /api/auth/get-session 500 in 6.6s (next.js: 6.3s, application-code: 238ms)
