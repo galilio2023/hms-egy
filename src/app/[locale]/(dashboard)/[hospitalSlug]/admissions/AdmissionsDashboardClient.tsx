@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
-import { safeParseInt } from "@/lib/utils/formatting";
+import { safeParseInt, safeParseFloat } from "@/lib/utils/formatting";
 import { calculateMEWS } from "@/lib/clinical/mews";
 import {
   Bed as BedIcon,
@@ -355,17 +355,19 @@ export default function AdmissionsDashboardClient({
 
     setIsRecordingVitals(true);
     try {
-      const res = await recordInpatientVitals({
+      const payload = {
         patientId: selectedBed.patientId,
         bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
         bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,
         heartRate: vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined,
         respiratoryRate: vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined,
-        temperature: vitalsInput.temperature || undefined,
+        temperature: vitalsInput.temperature ? String(safeParseFloat(vitalsInput.temperature)) : undefined,
         oxygenSaturation: vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined,
-        weightKg: vitalsInput.weightKg || undefined,
+        weightKg: vitalsInput.weightKg ? String(safeParseFloat(vitalsInput.weightKg)) : undefined,
         heightCm: vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined,
-      });
+      };
+
+      const res = await recordInpatientVitals(payload);
 
       if (res.success) {
         // Offline Survivability: Queue update to local outbox for LSN synchronization
@@ -376,16 +378,8 @@ export default function AdmissionsDashboardClient({
           action: "INSERT",
           entityId: (res as { vitalId: string }).vitalId,
           payload: {
+            ...payload,
             hospitalId: hospitalId,
-            patientId: selectedBed.patientId,
-            bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
-            bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,
-            heartRate: vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined,
-            respiratoryRate: vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined,
-            temperature: vitalsInput.temperature || undefined,
-            oxygenSaturation: vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined,
-            weightKg: vitalsInput.weightKg || undefined,
-            heightCm: vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined,
           }
         }).catch(err => console.warn("[LSN] Failed to queue vital write:", err));
 

@@ -2,6 +2,8 @@ import { ETADocument, ETAInvoiceLine, ETATaxableItem, ETATaxTotal, ETAReceipt } 
 import { invoices, invoiceItems } from "@db/schema/billing";
 import { hospitals, hospitalSettings } from "@db/schema/core";
 import { patients } from "@db/schema/patients";
+import { auditLogs } from "@db/schema/system";
+import { db } from "@/lib/db";
 import Big from "big.js";
 import { createHash } from "crypto";
 import { formatInTimeZone } from "date-fns-tz";
@@ -27,7 +29,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
   const totalAmountValue = new Big(invoice.totalAmount);
   const isCitizen = !patient.passportNumber;
 
-  if (totalAmountValue.gt(50000)) {
+  if (totalAmountValue.gte(50000)) {
     const isValidNationalID = validateNationalId(patient.nationalId || "");
     if (isCitizen && !isValidNationalID) {
       throw new Error("Egyptian regulations require a valid 14-digit National ID (including valid birth date components) for citizen invoices exceeding 50,000 EGP.");
@@ -141,6 +143,23 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
         if (!name && (patient.nationalId || patient.passportNumber)) {
           throw new Error("ETA regulations require a valid receiver name when a National ID or Passport is provided.");
         }
+
+        if (!name) {
+          // Log warning to persistent audit_logs for financial audit compliance
+          db.insert(auditLogs).values({
+            hospitalId: hospital.id,
+            action: "ETA_DOCUMENT_FALLBACK_NAME",
+            entityType: "invoice",
+            entityId: invoice.id,
+            payload: {
+              invoiceNumber: invoice.invoiceNumber,
+              patientId: patient.id,
+              message: "Document submitted with fallback name 'مريض غير معروف' due to missing patient name.",
+            },
+            createdAt: new Date(),
+          }).catch(err => console.error("[ETA LOGGING ERROR] Failed to write audit log:", err));
+        }
+
         return name || "مريض غير معروف";
       })(),
     },
@@ -180,7 +199,7 @@ export function transformInvoiceToETAReceipt(
   const totalAmountValue = new Big(invoice.totalAmount);
   const isCitizen = !patient.passportNumber;
 
-  if (totalAmountValue.gt(50000)) {
+  if (totalAmountValue.gte(50000)) {
     const isValidNationalID = validateNationalId(patient.nationalId || "");
     if (isCitizen && !isValidNationalID) {
       throw new Error("Egyptian regulations require a valid 14-digit National ID (including valid birth date components) for citizen receipts exceeding 50,000 EGP.");
@@ -306,6 +325,23 @@ export function transformInvoiceToETAReceipt(
         if (!name && (patient.nationalId || patient.passportNumber)) {
           throw new Error("ETA regulations require a valid buyer name when a National ID or Passport is provided.");
         }
+
+        if (!name) {
+          // Log warning to persistent audit_logs for financial audit compliance
+          db.insert(auditLogs).values({
+            hospitalId: hospital.id,
+            action: "ETA_RECEIPT_FALLBACK_NAME",
+            entityType: "invoice",
+            entityId: invoice.id,
+            payload: {
+              invoiceNumber: invoice.invoiceNumber,
+              patientId: patient.id,
+              message: "Receipt submitted with fallback name 'مريض غير معروف' due to missing patient name.",
+            },
+            createdAt: new Date(),
+          }).catch(err => console.error("[ETA LOGGING ERROR] Failed to write audit log:", err));
+        }
+
         return name || "مريض غير معروف";
       })(),
     },

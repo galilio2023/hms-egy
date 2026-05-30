@@ -41,6 +41,26 @@ export function safeParseInt(val: string | number | undefined | null): number | 
 }
 
 /**
+ * Safely parses a string into a float.
+ * Returns undefined for empty/nullish inputs.
+ * Returns NaN for invalid numeric strings to allow callers to handle errors.
+ */
+export function safeParseFloat(val: string | number | undefined | null): number | undefined {
+  if (val === undefined || val === null || val === "") return undefined;
+  if (typeof val === "number") return isNaN(val) ? undefined : val;
+
+  // Use a strict regex to ensure the entire string is a valid number
+  // to prevent parseFloat from partially parsing strings like "12.3.4"
+  const trimmed = val.trim();
+  if (!/^-?\d*(\.\d*)?$/.test(trimmed) || trimmed === "." || trimmed === "-") {
+    return NaN;
+  }
+
+  const parsed = parseFloat(trimmed);
+  return parsed;
+}
+
+/**
  * Formats date in Arabic.
  */
 export function formatArabicDate(

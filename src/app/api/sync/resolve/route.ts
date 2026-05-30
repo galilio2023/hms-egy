@@ -3,11 +3,19 @@ import { db } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { patients } from "@db/schema/patients";
 import { admissions, vitalsFlowsheet } from "@db/schema/clinical";
+import { auth } from "@/lib/auth";
+import { safeParseFloat, safeParseInt } from "@/lib/utils/formatting";
 
 const TABLE_MAP: Record<string, typeof patients | typeof admissions | typeof vitalsFlowsheet> = {
   patients,
   admissions,
   vitals_flowsheet: vitalsFlowsheet,
+};
+
+type TableInsertMap = {
+  patients: typeof patients.$inferInsert;
+  admissions: typeof admissions.$inferInsert;
+  vitals_flowsheet: typeof vitalsFlowsheet.$inferInsert;
 };
 
 /**
@@ -32,6 +40,13 @@ function filterPayload(tableName: string, payload: Record<string, unknown>): Rec
 
 export async function POST(req: NextRequest) {
   try {
+    // 0. Authenticate & Verify Tenant Isolation (BOLA Fix)
+    const session = await auth();
+    if (!session || !session.user.hospitalId || session.user.hospitalId === "system-wide") {
+      return NextResponse.json({ error: "Unauthorized: Sync requires a valid hospital session context." }, { status: 403 });
+    }
+    const userHospitalId = session.user.hospitalId;
+
     const op = await req.json();
     const { tableName, entityId, payload, action } = op;
 
@@ -41,7 +56,40 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Sanitize Payload (Security: Prevent Mass-Assignment)
-    const sanitizedPayload = filterPayload(tableName, payload);
+    let sanitizedPayload = {
+      ...filterPayload(tableName, payload),
+      hospitalId: userHospitalId, // Force tenant isolation from session
+    };
+
+    // 1b. Clinical Data Normalization (Enforce Strict Types)
+    if (tableName === "vitals_flowsheet") {
+      const floatFields = ["temperature", "weightKg"];
+      const intFields = ["bloodPressureSystolic", "bloodPressureDiastolic", "heartRate", "respiratoryRate", "oxygenSaturation", "heightCm"];
+
+      for (const field of floatFields) {
+        if (payload[field] !== undefined) {
+          const val = safeParseFloat(payload[field] as string);
+          if (val !== undefined && isNaN(val)) {
+            return NextResponse.json({ error: `Invalid numeric value for ${field}` }, { status: 400 });
+          }
+          sanitizedPayload[field] = val;
+        }
+      }
+
+      for (const field of intFields) {
+        if (payload[field] !== undefined) {
+          const val = safeParseInt(payload[field] as string);
+          if (val === undefined && payload[field] !== "" && payload[field] !== null) {
+            // safeParseInt returns undefined if it's NaN.
+            // We only want to error if it's truly a bad numeric string.
+            if (isNaN(parseInt(payload[field] as string, 10))) {
+              return NextResponse.json({ error: `Invalid integer value for ${field}` }, { status: 400 });
+            }
+          }
+          sanitizedPayload[field] = val;
+        }
+      }
+    }
 
     // 2. Fetch current server state
     const [currentRecord] = await db
@@ -60,12 +108,12 @@ export async function POST(req: NextRequest) {
         }
 
         await db.insert(table).values({
-          ...sanitizedPayload,
+          ...(sanitizedPayload as TableInsertMap[keyof TableInsertMap]),
           id: entityId,
           version: 1,
           createdAt: new Date(),
           updatedAt: new Date(),
-        } as any);
+        });
         return NextResponse.json({ status: "synced" });
       }
       return NextResponse.json({ error: "Record not found" }, { status: 404 });
@@ -82,12 +130,12 @@ export async function POST(req: NextRequest) {
 
     if (clientTimestamp < serverUpdatedAt || isClockHeavilySkewed) {
       return NextResponse.json({
-        status: "ignored",
+        status: "conflict",
         message: isClockHeavilySkewed
           ? "Clock skew detected: Client timestamp is too far in the future."
           : "Stale update: Server already has a newer revision of this record.",
         serverVersion: currentRecord.version
-      }, { status: 200 }); // Return 200 so client clears it from outbox
+      }, { status: 409 }); // Return 409 Conflict so client discards it
     }
 
     // 4. Apply the database changes
