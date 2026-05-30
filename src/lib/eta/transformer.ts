@@ -67,7 +67,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
     const lineTotal = netTotal.plus(taxAmount).round(5);
 
     return {
-      description: item.descriptionEn,
+      description: (item.descriptionAr || item.descriptionEn || "خدمة طبية").trim(),
       itemType: item.etaItemCode?.startsWith("EG-") ? "EGS" : "GS1",
       itemCode: item.etaItemCode || `EG-${hospital.taxpayerId}-${item.type.toUpperCase()}`,
       unitType: "EA",
@@ -136,7 +136,13 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
       },
       type: patient.nationalId ? "P" : (patient.passportNumber ? "F" : "P"),
       id: patient.nationalId || patient.passportNumber || "",
-      name: patient.nameEn,
+      name: (() => {
+        const name = (patient.nameAr || patient.nameEn || "").trim();
+        if (!name && (patient.nationalId || patient.passportNumber)) {
+          throw new Error("ETA regulations require a valid receiver name when a National ID or Passport is provided.");
+        }
+        return name || "مريض غير معروف";
+      })(),
     },
     documentType: "I",
     documentTypeVersion: "1.0",
@@ -212,7 +218,7 @@ export function transformInvoiceToETAReceipt(
     const lineTotal = netTotal.plus(taxAmount).round(5);
 
     return {
-      description: item.descriptionEn,
+      description: (item.descriptionAr || item.descriptionEn || "خدمة طبية").trim(),
       itemType: item.etaItemCode?.startsWith("EG-") ? "EGS" : "GS1",
       itemCode: item.etaItemCode || `EG-${hospital.taxpayerId}-${item.type.toUpperCase()}`,
       unitType: "EA",
@@ -295,7 +301,13 @@ export function transformInvoiceToETAReceipt(
     buyer: {
       type: patient.nationalId ? "P" : (patient.passportNumber ? "F" : "P"),
       id: patient.nationalId || patient.passportNumber || undefined,
-      name: patient.nameEn,
+      name: (() => {
+        const name = (patient.nameAr || patient.nameEn || "").trim();
+        if (!name && (patient.nationalId || patient.passportNumber)) {
+          throw new Error("ETA regulations require a valid buyer name when a National ID or Passport is provided.");
+        }
+        return name || "مريض غير معروف";
+      })(),
     },
     posSerialNumber,
     taxpayerActivityCode: settings?.etaTaxpayerActivityCode || "8610",
