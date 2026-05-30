@@ -364,14 +364,14 @@ export default function AdmissionsDashboardClient({
       const parsedSpo2 = vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined;
       const parsedHt = vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined;
 
-      // UI Validation: Block and notify user of invalid numeric entries
-      if (parsedTemp !== undefined && isNaN(parsedTemp)) {
-        toast.error(isRtl ? "الرجاء إدخال درجة حرارة صحيحة (مثال: ٣٧.٥)" : "Please enter a valid temperature (e.g. 37.5)");
+      // UI Validation: Block and notify user of invalid numeric entries using unified undefined checks
+      if (parsedTemp === undefined && vitalsInput.temperature !== "") {
+        toast.error(t("validation.invalidTemperature"));
         setIsRecordingVitals(false);
         return;
       }
-      if (parsedWeight !== undefined && isNaN(parsedWeight)) {
-        toast.error(isRtl ? "الرجاء إدخال وزن صحيح (مثال: ٧٠.٢)" : "Please enter a valid weight (e.g. 70.2)");
+      if (parsedWeight === undefined && vitalsInput.weightKg !== "") {
+        toast.error(t("validation.invalidWeight"));
         setIsRecordingVitals(false);
         return;
       }
@@ -383,7 +383,7 @@ export default function AdmissionsDashboardClient({
         (parsedSpo2 === undefined && vitalsInput.oxygenSaturation !== "") ||
         (parsedHt === undefined && vitalsInput.heightCm !== "")
       ) {
-        toast.error(isRtl ? "الرجاء إدخال أرقام صحيحة في جميع الحقول" : "Please enter valid numeric values in all fields.");
+        toast.error(t("validation.invalidVitals"));
         setIsRecordingVitals(false);
         return;
       }

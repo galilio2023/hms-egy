@@ -481,19 +481,20 @@ export class LocalSyncEngine {
   /**
    * Quarantines a conflicting operation for manual user reconciliation.
    * Prevents silent clinical data loss while keeping the outbox unblocked.
+   * Uses individual keys to prevent race conditions during concurrent writes.
    */
   private async quarantineConflict(op: SyncOperation, reason: string): Promise<void> {
     if (typeof window !== "undefined" && window.indexedDB) {
       try {
-        const existingQuarantineRaw = await idbStore.get("hms_egypt_conflict_quarantine");
-        const existingQuarantine = existingQuarantineRaw
-          ? JSON.parse(await decryptPayload(existingQuarantineRaw, sessionSecret!))
-          : [];
+        const quarantineKey = `hms_egypt_conflict_quarantine:${op.id}`;
+        const data = {
+          ...op,
+          quarantineReason: reason,
+          quarantinedAt: Date.now()
+        };
 
-        existingQuarantine.push({ ...op, quarantineReason: reason, quarantinedAt: Date.now() });
-
-        const encrypted = await encryptPayload(JSON.stringify(existingQuarantine), sessionSecret!);
-        await idbStore.set("hms_egypt_conflict_quarantine", encrypted);
+        const encrypted = await encryptPayload(JSON.stringify(data), sessionSecret!);
+        await idbStore.set(quarantineKey, encrypted);
 
         console.warn(`[EDGE SYNC] Operation ${op.id} moved to conflict quarantine.`);
       } catch (err) {

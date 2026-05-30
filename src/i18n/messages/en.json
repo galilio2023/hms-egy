@@ -289,7 +289,12 @@
     "currentMedicalStaff": "Current Medical Staff",
     "mohSummaryWarning": "Please write the medical summary in both Arabic and English to comply with MOH requirements.",
     "bedPendingCleaning": "This bed is currently pending cleaning by the housekeeping team.",
-    "bedUnavailable": "This bed is currently unavailable due to maintenance or quarantine constraints."
+    "bedUnavailable": "This bed is currently unavailable due to maintenance or quarantine constraints.",
+    "validation": {
+      "invalidTemperature": "Please enter a valid temperature (e.g. 37.5)",
+      "invalidWeight": "Please enter a valid weight (e.g. 70.2)",
+      "invalidVitals": "Please enter valid numeric values in all fields."
+    }
   },
   "nursing": {
     "title": "Nursing Shift Dashboard",

@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
             sanitizedPayload[field] = null; // Enable field clearing in DB
           } else {
             const val = safeParseFloat(payload[field] as string);
-            if (val !== undefined && isNaN(val)) {
+            if (val === undefined) {
               return NextResponse.json({ error: `Invalid numeric value for ${field}` }, { status: 400 });
             }
             sanitizedPayload[field] = val;
@@ -86,12 +86,8 @@ export async function POST(req: NextRequest) {
             sanitizedPayload[field] = null; // Enable field clearing in DB
           } else {
             const val = safeParseInt(payload[field] as string);
-            if (val === undefined && payload[field] !== "" && payload[field] !== null) {
-              // safeParseInt returns undefined if it's NaN.
-              // We only want to error if it's truly a bad numeric string.
-              if (isNaN(parseInt(payload[field] as string, 10))) {
-                return NextResponse.json({ error: `Invalid integer value for ${field}` }, { status: 400 });
-              }
+            if (val === undefined) {
+              return NextResponse.json({ error: `Invalid integer value for ${field}` }, { status: 400 });
             }
             sanitizedPayload[field] = val;
           }

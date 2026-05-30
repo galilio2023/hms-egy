@@ -88,25 +88,29 @@ export async function submitInvoiceToETA(invoiceId: string) {
       return { success: false, error: message };
     }
 
-    if (auditLog) {
-      await db.insert(auditLogs).values({
-        ...auditLog,
-        createdAt: new Date(),
-      });
-    }
-    
-    // 3. Queue Background Job for ETA Submission
-    const [job] = await db.insert(backgroundJobs).values({
-      hospitalId,
-      jobType: "eta_invoice_submission",
-      payload: { invoiceId },
-      status: "pending",
-    }).returning();
+    // 3. Queue Background Job and Log Audit Metadata Atomically
+    const result = await db.transaction(async (tx) => {
+      if (auditLog) {
+        await tx.insert(auditLogs).values({
+          ...auditLog,
+          createdAt: new Date(),
+        });
+      }
+
+      const [job] = await tx.insert(backgroundJobs).values({
+        hospitalId,
+        jobType: "eta_invoice_submission",
+        payload: { invoiceId },
+        status: "pending",
+      }).returning();
+
+      return job;
+    });
 
     // Trigger immediate background processing
     after(() => {
-      processETAJob(job.id, hospitalId).catch(err =>
-        console.error(`[ETA BACKGROUND] Failed to initiate job ${job.id}:`, err)
+      processETAJob(result.id, hospitalId).catch(err =>
+        console.error(`[ETA BACKGROUND] Failed to initiate job ${result.id}:`, err)
       );
     });
 
