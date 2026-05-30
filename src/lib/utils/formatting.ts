@@ -43,7 +43,8 @@ export function safeParseInt(val: string | number | undefined | null): number | 
     return (isNaN(val) || !Number.isInteger(val)) ? undefined : val;
   }
 
-  const trimmed = val.trim();
+  // Strip zero-width characters and bidirectional marks common in Arabic text input
+  const trimmed = val.trim().replace(/[\u200B-\u200D\uFEFF\u200E\u200F]/g, "");
   if (trimmed === "") return undefined;
 
   // Normalize Eastern Arabic numerals and strip thousand separators (، and ,)
@@ -65,7 +66,8 @@ export function safeParseFloat(val: string | number | undefined | null): number 
   if (val === undefined || val === null) return undefined;
   if (typeof val === "number") return isNaN(val) ? undefined : val;
 
-  const trimmed = val.trim();
+  // Strip zero-width characters and bidirectional marks
+  const trimmed = val.trim().replace(/[\u200B-\u200D\uFEFF\u200E\u200F]/g, "");
   if (trimmed === "") return undefined;
 
   // Normalize Eastern Arabic numerals, decimal separators (٫), and strip thousand separators (، and ,)
