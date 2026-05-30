@@ -41,9 +41,9 @@ interface RecordVitalsPayload {
   bloodPressureDiastolic?: number;
   heartRate?: number;
   respiratoryRate?: number;
-  temperature?: string; // Stored as decimal in DB
+  temperature?: number | string; // Stored as decimal in DB
   oxygenSaturation?: number; // percentage
-  weightKg?: string; // Stored as decimal in DB
+  weightKg?: number | string; // Stored as decimal in DB
   heightCm?: number;
 }
 

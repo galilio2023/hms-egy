@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
-import { safeParseInt } from "@/lib/utils/formatting";
+import { safeParseInt, safeParseFloat } from "@/lib/utils/formatting";
 import { calculateMEWS } from "@/lib/clinical/mews";
 import {
   Bed as BedIcon,
@@ -355,17 +355,53 @@ export default function AdmissionsDashboardClient({
 
     setIsRecordingVitals(true);
     try {
-      const res = await recordInpatientVitals({
+      const parsedTemp = vitalsInput.temperature ? safeParseFloat(vitalsInput.temperature) : undefined;
+      const parsedWeight = vitalsInput.weightKg ? safeParseFloat(vitalsInput.weightKg) : undefined;
+      const parsedBpSys = vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined;
+      const parsedBpDia = vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined;
+      const parsedHr = vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined;
+      const parsedRr = vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined;
+      const parsedSpo2 = vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined;
+      const parsedHt = vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined;
+
+      // UI Validation: Block and notify user of invalid numeric entries using unified undefined checks
+      // Ignore whitespace-only inputs by using .trim()
+      if (vitalsInput.temperature?.trim() && parsedTemp === undefined) {
+        toast.error(t("validation.invalidTemperature"));
+        setIsRecordingVitals(false);
+        return;
+      }
+      if (vitalsInput.weightKg?.trim() && parsedWeight === undefined) {
+        toast.error(t("validation.invalidWeight"));
+        setIsRecordingVitals(false);
+        return;
+      }
+      if (
+        (vitalsInput.bpSystolic?.trim() && parsedBpSys === undefined) ||
+        (vitalsInput.bpDiastolic?.trim() && parsedBpDia === undefined) ||
+        (vitalsInput.heartRate?.trim() && parsedHr === undefined) ||
+        (vitalsInput.respiratoryRate?.trim() && parsedRr === undefined) ||
+        (vitalsInput.oxygenSaturation?.trim() && parsedSpo2 === undefined) ||
+        (vitalsInput.heightCm?.trim() && parsedHt === undefined)
+      ) {
+        toast.error(t("validation.invalidVitals"));
+        setIsRecordingVitals(false);
+        return;
+      }
+
+      const payload = {
         patientId: selectedBed.patientId,
-        bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
-        bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,
-        heartRate: vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined,
-        respiratoryRate: vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined,
-        temperature: vitalsInput.temperature || undefined,
-        oxygenSaturation: vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined,
-        weightKg: vitalsInput.weightKg || undefined,
-        heightCm: vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined,
-      });
+        bloodPressureSystolic: parsedBpSys,
+        bloodPressureDiastolic: parsedBpDia,
+        heartRate: parsedHr,
+        respiratoryRate: parsedRr,
+        temperature: parsedTemp,
+        oxygenSaturation: parsedSpo2,
+        weightKg: parsedWeight,
+        heightCm: parsedHt,
+      };
+
+      const res = await recordInpatientVitals(payload);
 
       if (res.success) {
         // Offline Survivability: Queue update to local outbox for LSN synchronization
@@ -376,16 +412,8 @@ export default function AdmissionsDashboardClient({
           action: "INSERT",
           entityId: (res as { vitalId: string }).vitalId,
           payload: {
+            ...payload,
             hospitalId: hospitalId,
-            patientId: selectedBed.patientId,
-            bloodPressureSystolic: vitalsInput.bpSystolic ? safeParseInt(vitalsInput.bpSystolic) : undefined,
-            bloodPressureDiastolic: vitalsInput.bpDiastolic ? safeParseInt(vitalsInput.bpDiastolic) : undefined,
-            heartRate: vitalsInput.heartRate ? safeParseInt(vitalsInput.heartRate) : undefined,
-            respiratoryRate: vitalsInput.respiratoryRate ? safeParseInt(vitalsInput.respiratoryRate) : undefined,
-            temperature: vitalsInput.temperature || undefined,
-            oxygenSaturation: vitalsInput.oxygenSaturation ? safeParseInt(vitalsInput.oxygenSaturation) : undefined,
-            weightKg: vitalsInput.weightKg || undefined,
-            heightCm: vitalsInput.heightCm ? safeParseInt(vitalsInput.heightCm) : undefined,
           }
         }).catch(err => console.warn("[LSN] Failed to queue vital write:", err));
 

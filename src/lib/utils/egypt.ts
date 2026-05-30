@@ -435,14 +435,14 @@ export function latinizeNumerals(str: string): string {
  * calculations or invoices as it will corrupt thousands-separator commas (e.g. 1,250.50).
  * 
  * Normalizes Eastern Arabic (٠-٩) and Persian (۰-۹) numerals to standard Western digits (0-9)
- * and converts Arabic/localized decimal separators (٫, ،) to standard dots (.).
+ * and converts Arabic decimal separators (٫) to standard dots (.).
+ * Thousands separators (، and ,) are stripped to prevent truncation.
  */
 export const normalizeDecimal = (str: string | number | null | undefined): number | null => {
   if (str === null || str === undefined || String(str).trim() === "") return null;
 
-  // Convert Arabic, standard, and Eastern decimal separators to dots
-  // Then latinize any Eastern/Persian numerals
-  const normalized = latinizeNumerals(String(str).replace(/[،,٫]/g, "."));
+  // Correctly handle separators: ٫ (decimal) -> ., ، (thousands) -> ""
+  const normalized = latinizeNumerals(String(str).replace(/٫/g, ".").replace(/[،,]/g, ""));
   const num = Number(normalized);
   return isNaN(num) ? null : num;
 };

@@ -6,6 +6,7 @@
 import { format, formatDistanceToNow, differenceInDays, differenceInWeeks, differenceInMonths, differenceInYears } from "date-fns";
 import { arEG } from "date-fns/locale";
 import { tafqeet } from "./tafqeet";
+import { latinizeNumerals } from "./egypt";
 
 /**
  * Formats amount in Egyptian Pounds (EGP).
@@ -31,13 +32,50 @@ export function toEasternArabicNumerals(n: number | string): string {
 
 /**
  * Safely parses a string into an integer.
- * Always uses radix 10 and returns undefined instead of NaN for invalid inputs.
+ * Returns undefined instead of NaN for invalid inputs or empty strings.
+ * Supports Eastern Arabic numerals.
  */
 export function safeParseInt(val: string | number | undefined | null): number | undefined {
-  if (val === undefined || val === null || val === "") return undefined;
-  if (typeof val === "number") return isNaN(val) ? undefined : Math.floor(val);
-  const parsed = parseInt(val, 10);
-  return isNaN(parsed) ? undefined : parsed;
+  if (val === undefined || val === null) return undefined;
+
+  // Consistency: Reject numeric floats to match string behavior
+  if (typeof val === "number") {
+    return (isNaN(val) || !Number.isInteger(val)) ? undefined : val;
+  }
+
+  // Strip zero-width characters and bidirectional marks common in Arabic text input
+  const trimmed = val.trim().replace(/[\u200B-\u200D\uFEFF\u200E\u200F]/g, "");
+  if (trimmed === "") return undefined;
+
+  // Normalize Eastern Arabic numerals and strip thousand separators (، and ,)
+  const normalized = latinizeNumerals(trimmed.replace(/[،,]/g, ""));
+  const parsed = parseInt(normalized, 10);
+
+  // Ensure it's a valid integer and that the entire string was consumed correctly
+  const num = Number(normalized);
+  if (normalized === "" || isNaN(parsed) || isNaN(num) || !Number.isInteger(num)) return undefined;
+  return parsed;
+}
+
+/**
+ * Safely parses a string into a float.
+ * Returns undefined instead of NaN for invalid inputs or empty strings.
+ * Supports Eastern Arabic numerals and Arabic decimal separators.
+ */
+export function safeParseFloat(val: string | number | undefined | null): number | undefined {
+  if (val === undefined || val === null) return undefined;
+  if (typeof val === "number") return isNaN(val) ? undefined : val;
+
+  // Strip zero-width characters and bidirectional marks
+  const trimmed = val.trim().replace(/[\u200B-\u200D\uFEFF\u200E\u200F]/g, "");
+  if (trimmed === "") return undefined;
+
+  // Normalize Eastern Arabic numerals, decimal separators (٫), and strip thousand separators (، and ,)
+  const normalized = latinizeNumerals(trimmed.replace(/٫/g, ".").replace(/[،,]/g, ""));
+  const parsed = Number(normalized);
+
+  if (normalized === "" || isNaN(parsed)) return undefined;
+  return parsed;
 }
 
 /**

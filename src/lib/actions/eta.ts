@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { invoices } from "@db/schema/billing";
-import { backgroundJobs } from "@db/schema/system";
+import { backgroundJobs, auditLogs } from "@db/schema/system";
 import { eq, and, sql } from "drizzle-orm";
 import { etaClient } from "@/lib/eta/client";
 import { transformInvoiceToETADocument } from "@/lib/eta/transformer";
@@ -78,20 +78,34 @@ export async function submitInvoiceToETA(invoiceId: string) {
     };
 
     let etaDoc;
+    let auditLog;
     try {
-      etaDoc = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+      const result = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+      etaDoc = result.document;
+      auditLog = result.auditLogPayload;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { success: false, error: message };
     }
-    
-    // 3. Queue Background Job for ETA Submission
-    const [job] = await db.insert(backgroundJobs).values({
-      hospitalId,
-      jobType: "eta_invoice_submission",
-      payload: { invoiceId },
-      status: "pending",
-    }).returning();
+
+    // 3. Queue Background Job and Log Audit Metadata Atomically
+    const job = await db.transaction(async (tx) => {
+      if (auditLog) {
+        await tx.insert(auditLogs).values({
+          ...auditLog,
+          createdAt: new Date(),
+        });
+      }
+
+      const [job] = await tx.insert(backgroundJobs).values({
+        hospitalId,
+        jobType: "eta_invoice_submission",
+        payload: { invoiceId },
+        status: "pending",
+      }).returning();
+
+      return job;
+    });
 
     // Trigger immediate background processing
     after(() => {
@@ -141,7 +155,19 @@ export async function processETAJob(jobId: string, hospitalId: string) {
       if (!decryptedSecret) throw new Error("Failed to decrypt ETA secret");
 
       const creds = { clientId: settings.etaClientId, clientSecret: decryptedSecret };
-      const etaDoc = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+      const transformResult = transformInvoiceToETADocument(invoice as unknown as Parameters<typeof transformInvoiceToETADocument>[0]);
+      const etaDoc = transformResult.document;
+      const auditLog = transformResult.auditLogPayload;
+
+      // Wrap background process in sub-transaction if supported by the provider,
+      // or rely on withTenantContext's outer transaction.
+      // Drizzle withTenantContext already provides an atomic transaction 'tx'.
+      if (auditLog) {
+        await tx.insert(auditLogs).values({
+          ...auditLog,
+          createdAt: new Date(),
+        });
+      }
 
       const response = await etaClient.submitDocuments([etaDoc], creds);
 

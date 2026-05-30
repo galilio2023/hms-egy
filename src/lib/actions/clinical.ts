@@ -29,9 +29,9 @@ interface VitalsInput {
   bloodPressureDiastolic?: number;
   heartRate?: number;
   respiratoryRate?: number;
-  temperature?: string; // Stored as decimal in DB, but passed as string/number
+  temperature?: string | number; // Stored as decimal in DB, but passed as string/number
   oxygenSaturation?: number;
-  weightKg?: string; // Stored as decimal in DB, but passed as string/number
+  weightKg?: string | number; // Stored as decimal in DB, but passed as string/number
   heightCm?: number;
 }
 

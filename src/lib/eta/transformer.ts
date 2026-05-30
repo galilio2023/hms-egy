@@ -15,11 +15,22 @@ export type InvoiceWithRelations = typeof invoices.$inferSelect & {
   patient: typeof patients.$inferSelect;
 };
 
+export interface TransformerResult<T> {
+  document: T;
+  auditLogPayload?: {
+    hospitalId: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    payload: any;
+  };
+}
+
 /**
  * Transforms an internal invoice into the ETA E-invoicing format.
  * Addresses Code Review findings: #2 (Foreign patient 50k rule), #4 (Big.js precision).
  */
-export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ETADocument {
+export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): TransformerResult<ETADocument> {
   const { hospital, patient, items } = invoice;
   const settings = hospital.settings;
 
@@ -27,7 +38,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
   const totalAmountValue = new Big(invoice.totalAmount);
   const isCitizen = !patient.passportNumber;
 
-  if (totalAmountValue.gt(50000)) {
+  if (totalAmountValue.gte(50000)) {
     const isValidNationalID = validateNationalId(patient.nationalId || "");
     if (isCitizen && !isValidNationalID) {
       throw new Error("Egyptian regulations require a valid 14-digit National ID (including valid birth date components) for citizen invoices exceeding 50,000 EGP.");
@@ -111,7 +122,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
 
   const totalAmount = totalNetAmount.plus(taxTotals.reduce((sum, tax) => sum.plus(tax.amount), new Big(0))).round(5);
 
-  return {
+  const document: ETADocument = {
     issuer: {
       address: {
         branchID: "0",
@@ -136,13 +147,7 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
       },
       type: patient.nationalId ? "P" : (patient.passportNumber ? "F" : "P"),
       id: patient.nationalId || patient.passportNumber || "",
-      name: (() => {
-        const name = (patient.nameAr || patient.nameEn || "").trim();
-        if (!name && (patient.nationalId || patient.passportNumber)) {
-          throw new Error("ETA regulations require a valid receiver name when a National ID or Passport is provided.");
-        }
-        return name || "مريض غير معروف";
-      })(),
+      name: (patient.nameAr || patient.nameEn || "").trim() || "مريض غير معروف",
     },
     documentType: "I",
     documentTypeVersion: "1.0",
@@ -162,6 +167,28 @@ export function transformInvoiceToETADocument(invoice: InvoiceWithRelations): ET
     totalItemsDiscountAmount: totalItemsDiscountAmount.toNumber(),
     taxTotals,
   };
+
+  const nameValue = (patient.nameAr || patient.nameEn || "").trim();
+  if (!nameValue && (patient.nationalId || patient.passportNumber)) {
+    throw new Error("ETA regulations require a valid receiver name when a National ID or Passport is provided.");
+  }
+
+  let auditLogPayload;
+  if (!nameValue) {
+    auditLogPayload = {
+      hospitalId: hospital.id,
+      action: "ETA_DOCUMENT_FALLBACK_NAME",
+      entityType: "invoice",
+      entityId: invoice.id,
+      payload: {
+        invoiceNumber: invoice.invoiceNumber,
+        patientId: patient.id,
+        message: "Document submitted with fallback name 'مريض غير معروف' due to missing patient name.",
+      },
+    };
+  }
+
+  return { document, auditLogPayload };
 }
 
 /**
@@ -172,7 +199,7 @@ export function transformInvoiceToETAReceipt(
   invoice: InvoiceWithRelations,
   posSerialNumber: string,
   previousReceiptUUID?: string
-): ETAReceipt {
+): TransformerResult<ETAReceipt> {
   const { hospital, patient, items } = invoice;
   const settings = hospital.settings;
 
@@ -180,7 +207,7 @@ export function transformInvoiceToETAReceipt(
   const totalAmountValue = new Big(invoice.totalAmount);
   const isCitizen = !patient.passportNumber;
 
-  if (totalAmountValue.gt(50000)) {
+  if (totalAmountValue.gte(50000)) {
     const isValidNationalID = validateNationalId(patient.nationalId || "");
     if (isCitizen && !isValidNationalID) {
       throw new Error("Egyptian regulations require a valid 14-digit National ID (including valid birth date components) for citizen receipts exceeding 50,000 EGP.");
@@ -277,7 +304,7 @@ export function transformInvoiceToETAReceipt(
     receiptUuid = createHash("sha256").update(rawHashInput).digest("hex");
   }
 
-  return {
+  const receipt: ETAReceipt = {
     receiptNumber: invoice.invoiceNumber,
     uuid: receiptUuid,
     previousReceiptUUID: previousReceiptUUID || "0000000000000000000000000000000000000000000000000000000000000000",
@@ -301,13 +328,7 @@ export function transformInvoiceToETAReceipt(
     buyer: {
       type: patient.nationalId ? "P" : (patient.passportNumber ? "F" : "P"),
       id: patient.nationalId || patient.passportNumber || undefined,
-      name: (() => {
-        const name = (patient.nameAr || patient.nameEn || "").trim();
-        if (!name && (patient.nationalId || patient.passportNumber)) {
-          throw new Error("ETA regulations require a valid buyer name when a National ID or Passport is provided.");
-        }
-        return name || "مريض غير معروف";
-      })(),
+      name: (patient.nameAr || patient.nameEn || "").trim() || "مريض غير معروف",
     },
     posSerialNumber,
     taxpayerActivityCode: settings?.etaTaxpayerActivityCode || "8610",
@@ -318,4 +339,26 @@ export function transformInvoiceToETAReceipt(
     taxTotals,
     totalAmount: totalAmount.toNumber(),
   };
+
+  const nameValue = (patient.nameAr || patient.nameEn || "").trim();
+  if (!nameValue && (patient.nationalId || patient.passportNumber)) {
+    throw new Error("ETA regulations require a valid buyer name when a National ID or Passport is provided.");
+  }
+
+  let auditLogPayload;
+  if (!nameValue) {
+    auditLogPayload = {
+      hospitalId: hospital.id,
+      action: "ETA_RECEIPT_FALLBACK_NAME",
+      entityType: "invoice",
+      entityId: invoice.id,
+      payload: {
+        invoiceNumber: invoice.invoiceNumber,
+        patientId: patient.id,
+        message: "Receipt submitted with fallback name 'مريض غير معروف' due to missing patient name.",
+      },
+    };
+  }
+
+  return { document: receipt, auditLogPayload };
 }
