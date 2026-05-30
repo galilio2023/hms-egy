@@ -89,7 +89,7 @@ export async function submitInvoiceToETA(invoiceId: string) {
     }
 
     // 3. Queue Background Job and Log Audit Metadata Atomically
-    const jobRecord = await db.transaction(async (tx) => {
+    const job = await db.transaction(async (tx) => {
       if (auditLog) {
         await tx.insert(auditLogs).values({
           ...auditLog,
@@ -109,8 +109,8 @@ export async function submitInvoiceToETA(invoiceId: string) {
 
     // Trigger immediate background processing
     after(() => {
-      processETAJob(jobRecord.id, hospitalId).catch(err =>
-        console.error(`[ETA BACKGROUND] Failed to initiate job ${jobRecord.id}:`, err)
+      processETAJob(job.id, hospitalId).catch(err =>
+        console.error(`[ETA BACKGROUND] Failed to initiate job ${job.id}:`, err)
       );
     });
 

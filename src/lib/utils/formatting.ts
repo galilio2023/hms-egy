@@ -37,7 +37,11 @@ export function toEasternArabicNumerals(n: number | string): string {
  */
 export function safeParseInt(val: string | number | undefined | null): number | undefined {
   if (val === undefined || val === null) return undefined;
-  if (typeof val === "number") return isNaN(val) ? undefined : Math.floor(val);
+
+  // Consistency: Reject numeric floats to match string behavior
+  if (typeof val === "number") {
+    return (isNaN(val) || !Number.isInteger(val)) ? undefined : val;
+  }
 
   const trimmed = val.trim();
   if (trimmed === "") return undefined;

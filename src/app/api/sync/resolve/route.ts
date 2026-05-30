@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     // 2b. Verify Resource Ownership (BOLA Fix)
-    if (currentRecord && currentRecord.hospitalId !== userHospitalId) {
+    if (currentRecord && "hospitalId" in currentRecord && currentRecord.hospitalId !== userHospitalId) {
       return NextResponse.json({ error: "Unauthorized: Resource tenant mismatch." }, { status: 403 });
     }
 
